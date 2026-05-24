@@ -5,6 +5,6 @@ import tailwind from '@astrojs/tailwind';
 export default defineConfig({
   integrations: [vue(), tailwind()],
   output: 'static',
-  site: 'https://walonpratibha938.github.io',
+  site: 'https://RookieInvestigator.github.io',
   base: '/iceberg_reforged',
 });
