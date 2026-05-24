@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useI18n } from '../lib/useI18n';
 import AboutModal from './AboutModal.vue';
 import ContactModal from './ContactModal.vue';
+import BulletinModal from './BulletinModal.vue';
 
 const props = defineProps({
   buildDate: { type: String, default: '' },
@@ -13,11 +14,16 @@ const { t } = useI18n();
 
 const showAbout = ref(false);
 const showContact = ref(false);
+const showBulletin = ref(false);
 </script>
 
 <template>
   <p>
     Chinese Oddities Iceberg · Community Curated
+    <span class="mx-2.5 text-white/10">|</span>
+    <button @click="showBulletin = true" class="hover:text-white/50 transition-colors cursor-pointer">
+      {{ t('bulletinLink') }}
+    </button>
     <span class="mx-2.5 text-white/10">|</span>
     <button @click="showAbout = true" class="hover:text-white/50 transition-colors cursor-pointer">
       {{ t('aboutLink') }}
@@ -28,6 +34,7 @@ const showContact = ref(false);
     </button>
   </p>
 
+  <BulletinModal v-if="showBulletin" @close="showBulletin = false" />
   <AboutModal v-if="showAbout" :buildDate="props.buildDate" :entryCount="props.entryCount" @close="showAbout = false" />
   <ContactModal v-if="showContact" @close="showContact = false" />
 </template>
