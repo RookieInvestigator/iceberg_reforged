@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useI18n } from '../lib/useI18n';
+import { url } from '../lib/baseUrl';
 
 const props = defineProps({
   buildDate: { type: String, default: '' },
@@ -66,9 +67,9 @@ onUnmounted(() => {
         class="mt-3 flex items-center gap-3 text-xs tracking-wider"
         :style="{ opacity: navIn ? 1 : 0, transition: 'opacity 0.35s ease-out' }"
       >
-        <a href="/minimal" class="text-white/25 hover:text-white/50 transition-colors">{{ t('minimalMode') }}</a>
+        <a :href="url('/minimal')" class="text-white/25 hover:text-white/50 transition-colors">{{ t('minimalMode') }}</a>
         <span class="text-white/10">|</span>
-        <a href="/on-this-day" class="text-white/25 hover:text-white/50 transition-colors">{{ t('onThisDay') }}</a>
+        <a :href="url('/on-this-day')" class="text-white/25 hover:text-white/50 transition-colors">{{ t('onThisDay') }}</a>
       </div>
     </div>
 

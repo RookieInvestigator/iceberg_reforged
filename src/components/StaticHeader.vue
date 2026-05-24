@@ -1,5 +1,6 @@
 <script setup>
 import { useI18n } from '../lib/useI18n';
+import { url } from '../lib/baseUrl';
 
 const props = defineProps({
   buildDate: { type: String, default: '' },
@@ -27,9 +28,9 @@ const { t } = useI18n();
         {{ props.buildDate }} <span class="mx-3 opacity-30">|</span> {{ props.entryCount }} {{ t('entries') }}
       </p>
       <div class="mt-3 flex items-center gap-3 text-xs tracking-wider">
-        <a href="/" class="text-white/25 hover:text-white/50 transition-colors">{{ t('fullMode') }}</a>
+        <a :href="url('/')" class="text-white/25 hover:text-white/50 transition-colors">{{ t('fullMode') }}</a>
         <span class="text-white/10">|</span>
-        <a href="/on-this-day" class="text-white/25 hover:text-white/50 transition-colors">{{ t('onThisDay') }}</a>
+        <a :href="url('/on-this-day')" class="text-white/25 hover:text-white/50 transition-colors">{{ t('onThisDay') }}</a>
       </div>
     </div>
   </div>

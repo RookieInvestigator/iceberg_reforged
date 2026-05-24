@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useI18n } from '../lib/useI18n';
+import { url } from '../lib/baseUrl';
 
 const props = defineProps({ allEvents: String });
 const allEvents = JSON.parse(props.allEvents);
@@ -132,7 +133,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick));
         <div class="flex items-center gap-4 mt-2">
           <a v-if="event.link" :href="event.link" target="_blank" rel="noopener noreferrer"
              class="text-white/25 hover:text-white/50 text-xs transition-colors">{{ t('externalLink') }} &nearr;</a>
-          <a v-if="event.item" :href="`/#${event.item}`"
+          <a v-if="event.item" :href="url(`/#${event.item}`)"
              class="text-white/25 hover:text-white/50 text-xs transition-colors">{{ t('relatedItem') }} &rarr;</a>
         </div>
       </div>
@@ -143,7 +144,7 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick));
 
     <!-- Back -->
     <div class="mt-16 pt-8 border-t border-white/10 text-center">
-      <a href="/" class="text-white/25 hover:text-white/50 text-sm transition-colors">&larr; {{ t('backToIceberg') }}</a>
+      <a :href="url('/')" class="text-white/25 hover:text-white/50 text-sm transition-colors">&larr; {{ t('backToIceberg') }}</a>
     </div>
   </div>
 </template>
