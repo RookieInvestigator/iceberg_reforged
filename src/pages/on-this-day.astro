@@ -1,0 +1,16 @@
+---
+// 历史上的今天 — 独立页面
+import BaseLayout from '../components/BaseLayout.astro';
+import OnThisDayApp from '../components/OnThisDayApp.vue';
+import { parseCSV } from '../lib/csv';
+
+const fs = await import('node:fs');
+const csvText = fs.readFileSync('public/data/on-this-day.csv', 'utf-8');
+const allEvents = parseCSV(csvText);
+---
+
+<BaseLayout>
+  <div class="relative w-full min-h-screen bg-black flex flex-col items-center">
+    <OnThisDayApp client:only="vue" allEvents={JSON.stringify(allEvents)} />
+  </div>
+</BaseLayout>
