@@ -15,7 +15,14 @@ const { t } = useI18n();
             <h2 class="text-lg font-bold text-white">{{ t('bulletinTitle') }}</h2>
             <button @click="$emit('close')" class="text-white/30 hover:text-white/60 text-xl leading-none">&times;</button>
           </div>
-          <p class="text-sm text-white/60 leading-relaxed whitespace-pre-line">{{ t('bulletinContent') }}</p>
+          <div class="text-sm text-white/60 leading-relaxed space-y-2">
+            <p>网站尚在开发中，部分功能暂未实装：</p>
+            <ul class="list-disc list-inside space-y-1">
+              <li>设置：沉浸模式</li>
+              <li>筛选：最新</li>
+              <li>设置：词条详情弹窗</li>
+            </ul>
+          </div>
         </div>
       </div>
     </Transition>

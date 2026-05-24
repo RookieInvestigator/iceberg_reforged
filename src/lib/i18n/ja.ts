@@ -77,5 +77,6 @@ export default {
 	relatedItem: '関連項目',
 	bulletinLink: 'お知らせ',
 	bulletinTitle: 'お知らせ',
-	bulletinContent: '既知の問題：\n設定：没入モード、\nフィルター：新着、\n設定：ポップアップは未実装です。',
+
+
 };
