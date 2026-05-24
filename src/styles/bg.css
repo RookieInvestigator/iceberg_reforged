@@ -17,7 +17,7 @@
 .bg-water-wave{position:absolute;left:0;right:0;top:-80px;height:160px;animation:bg-wf2 12s ease-in-out infinite;will-change:transform}
 .bg-water-wave svg{position:absolute;inset:0;width:200%;height:100%;animation:bg-wa 25s linear infinite;will-change:transform;transform:translateZ(0)}
 .bg-water-body{position:absolute;left:0;right:0;bottom:-200px;top:40px;background:#0a5a99;animation:bg-wf2 12s ease-in-out infinite}
-.bg-current{position:absolute;top:30%;bottom:0;left:-50%;width:200%;pointer-events:none;z-index:6;opacity:0.85;background:linear-gradient(110deg,transparent 20%,#020617 40%,transparent 60%,#020617 80%,transparent 100%);mask-image:linear-gradient(to bottom,transparent 0%,black 15%,black 100%);-webkit-mask-image:linear-gradient(to bottom,transparent 0%,black 15%,black 100%);animation:bg-fc 60s ease-in-out infinite;will-change:transform}
+
 .bg-mask{position:absolute;inset:0;pointer-events:none;z-index:8;background:linear-gradient(to bottom,transparent 60%,rgba(0,0,0,.7) 75%,#000 100%);animation:bg-id 18s ease-in-out infinite}
 /* Scroll pause: freeze background animations during scroll */
 .bg-root.paused * { animation-play-state: paused !important }
@@ -33,5 +33,5 @@
 @keyframes bg-fb{0%,100%{transform:translateY(0)}50%{transform:translateY(calc(-15px * var(--bg-hf, 1)))}}
 @keyframes bg-wa{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
 @keyframes bg-wa-bg{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-@keyframes bg-fc{0%,100%{transform:translateX(-15%);opacity:.35}50%{transform:translateX(15%);opacity:.6}}
+
 @keyframes bg-id{0%,100%{opacity:.8}50%{opacity:1}}

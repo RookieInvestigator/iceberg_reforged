@@ -55,9 +55,12 @@ const filterOpts = ['dim', 'hide'];
         <div class="mb-5">
           <div class="text-[0.6rem] font-bold text-white/30 uppercase tracking-[0.15em] mb-3">{{ t('interaction') }}</div>
           <div class="flex gap-1.5 mb-4">
-            <button v-for="o in detailOpts" :key="o" @click="detailMode.set(o)"
-              :class="['flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors', dm === o ? 'bg-white text-black' : 'text-white/40 hover:bg-white/10']">
-              {{ o === 'tooltip' ? t('detailTooltip') : t('detailModal') }}
+            <button @click="detailMode.set('tooltip')"
+              :class="['flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors', dm === 'tooltip' ? 'bg-white text-black' : 'text-white/40 hover:bg-white/10']">
+              {{ t('detailTooltip') }}
+            </button>
+            <button class="flex-1 py-2 px-2 rounded-lg text-xs font-medium text-white/40 opacity-40 pointer-events-none">
+              {{ t('detailModal') }}
             </button>
           </div>
           <div class="flex gap-1.5">
@@ -76,23 +79,21 @@ const filterOpts = ['dim', 'hide'];
               :class="['flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors', sr ? 'bg-white text-black' : 'text-white/40 hover:bg-white/10']">
               {{ t('randomBtn') }}
             </button>
-            <button @click="immersiveMode.set(!im)"
-              :class="['flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors', im ? 'bg-white text-black' : 'text-white/40 hover:bg-white/10']">
+            <button class="flex-1 py-2 px-2 rounded-lg text-xs font-medium text-white/40 opacity-40 pointer-events-none">
               {{ t('immersiveMode') }}
             </button>
           </div>
 
           <div class="text-[0.6rem] font-bold text-white/30 uppercase tracking-[0.15em] mt-4 mb-3">{{ t('itemMarkers') }}</div>
-          <div class="flex gap-1.5">
-            <button @click="showLinkEmoji.set(!linkEmoji)"
-              :class="['flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors', linkEmoji ? 'bg-white text-black' : 'text-white/40 hover:bg-white/10']">
+          <div class="flex gap-1.5 opacity-40 pointer-events-none">
+            <button class="flex-1 py-2 px-2 rounded-lg text-xs font-medium text-white/40">
               <span style="color:#f0a040">▲</span> {{ t('linkMarker') }}
             </button>
-            <button @click="showDescEmoji.set(!descEmoji)"
-              :class="['flex-1 py-2 px-2 rounded-lg text-xs font-medium transition-colors', descEmoji ? 'bg-white text-black' : 'text-white/40 hover:bg-white/10']">
+            <button class="flex-1 py-2 px-2 rounded-lg text-xs font-medium text-white/40">
               <span style="color:#40c8a0">●</span> {{ t('descLabel') }}
             </button>
           </div>
+          <p class="text-[0.6rem] text-white/15 mt-1.5">暂未实装</p>
 
           <div class="text-[0.6rem] font-bold text-white/30 uppercase tracking-[0.15em] mt-4 mb-3">{{ t('lang') }}</div>
           <div class="flex gap-1.5">

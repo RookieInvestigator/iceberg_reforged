@@ -53,12 +53,10 @@ const allItems = Object.values(data.tiers).flat();
                     data-tags={item.tags.join(',')} data-tag-emojis={item.emojis.join(',')} data-has-link={item.link ? '1' : '0'} data-has-desc={item.desc ? '1' : '0'}
                     style={`font-size: 1.15em; color: ${item.categoryColor}; --item-color: ${item.categoryColor};`}
                   >
-                    <span class="item-body">
-                      <span class="item-title transition-colors duration-200">{item.title}</span>
-                      {item.emojis.map((e) => (
-                        <span class="item-tag text-[0.5em] ml-1 relative -top-1 transition-colors duration-200">{e}</span>
-                      ))}
-                    </span>
+                    <span class="item-title transition-colors duration-200">{item.title}</span>
+                    {item.emojis.map((e) => (
+                      <span class="item-tag text-[0.5em] ml-[0.3em] relative -top-[0.08em] inline-flex items-center justify-center transition-colors duration-200">{e}</span>
+                    ))}
                   </span>
                 ))}
               </div>

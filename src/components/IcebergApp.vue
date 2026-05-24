@@ -166,9 +166,7 @@ function onSearchInput(val) {
               splFilter === 'hasDesc' ? 'bg-white/20 text-white hover:bg-white hover:text-black' : 'bg-transparent text-gray-500 hover:bg-white hover:text-black']">
             {{ t('hasDesc') }}
           </button>
-          <button @click="specialFilter.set(splFilter === 'isNew' ? 'all' : 'isNew')"
-            :class="['group flex items-center gap-2 px-3 py-1.5 text-[0.85rem] font-medium tracking-wide transition-colors duration-200 cursor-pointer select-none border-none',
-              splFilter === 'isNew' ? 'bg-white/20 text-white hover:bg-white hover:text-black' : 'bg-transparent text-gray-500 hover:bg-white hover:text-black']">
+          <button class="group flex items-center gap-2 px-3 py-1.5 text-[0.85rem] font-medium tracking-wide select-none border-none bg-transparent text-gray-600 opacity-40 cursor-not-allowed">
             {{ t('isNew') }}
           </button>
           <button @click="specialFilter.set(splFilter === 'noLinkNoDesc' ? 'all' : 'noLinkNoDesc')"

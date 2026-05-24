@@ -75,4 +75,6 @@ export default {
 	contactBilibili: 'B站',
 	contactGitHub: 'GitHub',
 	relatedItem: '关联词条',
+	bulletinLink: '公告板',
+	bulletinTitle: '公告板',
 };

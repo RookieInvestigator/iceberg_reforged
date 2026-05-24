@@ -75,4 +75,6 @@ export default {
 	contactBilibili: 'Bilibili',
 	contactGitHub: 'GitHub',
 	relatedItem: 'Related entry',
+	bulletinLink: 'Notice',
+	bulletinTitle: 'Bulletin Board',
 };
