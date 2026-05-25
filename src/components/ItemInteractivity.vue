@@ -5,6 +5,7 @@ import { activeCategories, activeTags, searchQuery, tagFilterMode, searchMode, h
 import { floatMode, filterMode } from '../lib/settingsStore';
 import { useI18n } from '../lib/useI18n';
 import ItemTooltip from './ItemTooltip.vue';
+import MobileSheet from './MobileSheet.vue';
 
 import Fuse from 'fuse.js';
 
@@ -37,6 +38,7 @@ const searchResults = computed(() => {
 
 const tip = reactive({ show: false, anchor: null, desc: '', noDesc: false, category: '', color: '', tags: '' });
 const tipRef = ref(null);
+const sheetItem = ref(null);
 const hoverTimer = ref(0);
 let currentItemEl = null;
 let activeItemEl = null;
@@ -186,7 +188,12 @@ function onClick(e) {
   const el = e.target.closest('.iceberg-item');
   if (!el) return;
   const item = findItem(el);
-  if (item?.link) window.open(item.link, '_blank', 'noopener');
+  if (!item) return;
+  if (window.innerWidth < 1024) {
+    sheetItem.value = { title: item.title, desc: item.desc, category: item.category, color: item.categoryColor, tags: (item.tags || []).join(' | '), link: item.link };
+  } else if (item.link) {
+    window.open(item.link, '_blank', 'noopener');
+  }
 }
 
 // Filter

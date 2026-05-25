@@ -1,20 +1,22 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { showRandomBtn, immersiveMode } from '../lib/settingsStore';
 import { useI18n } from '../lib/useI18n';
 import SettingsPanel from './SettingsPanel.vue';
 
-defineEmits(['random']);
+defineEmits(['random', 'toggleSidebar']);
 
 const { t } = useI18n();
 
 const showSettings = ref(false);
-const showBackTop = ref(false);
+const scrolled = ref(false);
 const showRandom = useStore(showRandomBtn);
 const immersive = useStore(immersiveMode);
+const atTop = computed(() => !scrolled.value);
 
-function onScroll() { showBackTop.value = window.scrollY > 400; }
+function onScroll() { scrolled.value = window.scrollY > 400; }
+function scrollBottom() { window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); }
 function scrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
 onMounted(() => window.addEventListener('scroll', onScroll, { passive: true }));
@@ -23,49 +25,63 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll));
 
 <template>
   <div
-    class="fixed bottom-6 z-[10001] flex flex-col gap-3"
+    class="fixed bottom-6 max-sm:bottom-4 max-sm:right-3 z-[10001] flex flex-col gap-3 max-sm:gap-2"
     :class="{ 'immersive-group': immersive }"
-    style="right: 48px"
+    style="right: 48px; padding-bottom: env(safe-area-inset-bottom, 0px)"
   >
+    <!-- Filter — always visible, toggles sidebar -->
+    <button class="fab-btn" :aria-label="t('filter')" @click="$emit('toggleSidebar')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+      </svg>
+    </button>
+
     <div
       class="flex flex-col gap-3"
       style="transition: transform 0.3s ease-out"
-      :style="{ transform: showBackTop ? 'translateY(-12px)' : 'translateY(24px)' }"
+      :style="{ transform: scrolled ? 'translateY(-12px)' : 'translateY(24px)' }"
     >
-      <button v-if="showRandom" class="fab-btn" style="border: 1px solid var(--color-surface-border)" :aria-label="t('randomEntry')" @click="$emit('random')">
+      <!-- Random -->
+      <button v-if="showRandom" class="fab-btn" :aria-label="t('randomEntry')" @click="$emit('random')">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="3" />
-          <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none" />
-          <circle cx="15.5" cy="15.5" r="1.5" fill="currentColor" stroke="none" />
+          <polyline points="16 3 21 3 21 8" /><line x1="4" y1="20" x2="21" y2="3" />
+          <polyline points="21 16 21 21 16 21" /><line x1="15" y1="15" x2="21" y2="21" />
+          <line x1="4" y1="4" x2="9" y2="9" />
         </svg>
       </button>
 
-      <button class="fab-btn" style="border: 1px solid var(--color-surface-border)" :aria-label="t('settings')" @click="showSettings = true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <line x1="4" y1="6" x2="20" y2="6" />
-          <line x1="6" y1="12" x2="18" y2="12" />
-          <line x1="8" y1="18" x2="16" y2="18" />
-          <circle cx="3" cy="6" r="1.5" fill="currentColor" stroke="none" />
-          <circle cx="20" cy="12" r="1.5" fill="currentColor" stroke="none" />
-          <circle cx="14" cy="18" r="1.5" fill="currentColor" stroke="none" />
+      <!-- Settings -->
+      <button class="fab-btn" :aria-label="t('settings')" @click="showSettings = true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
         </svg>
       </button>
 
+      <!-- Back to top / go to bottom -->
       <div
         style="transition: all 0.3s ease-out"
         :style="{
-          opacity: showBackTop ? 1 : 0,
-          transform: showBackTop ? 'translateY(0)' : 'translateY(12px)',
-          pointerEvents: showBackTop ? 'auto' : 'none',
+          opacity: scrolled ? 1 : 0,
+          transform: scrolled ? 'translateY(0)' : 'translateY(12px)',
+          pointerEvents: scrolled ? 'auto' : 'none',
         }"
       >
-        <button class="fab-btn" style="border: 1px solid var(--color-surface-border)" :aria-label="t('backToTop')" @click="scrollTop">
+        <button v-if="scrolled" class="fab-btn" :aria-label="t('backToTop')" @click="scrollTop">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="18 15 12 9 6 15" />
           </svg>
         </button>
       </div>
     </div>
+
+    <!-- Go to bottom (visible when at top) -->
+    <button v-if="atTop" class="fab-btn" :aria-label="t('backToTop')" @click="scrollBottom"
+      style="transition: all 0.3s ease-out">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </button>
   </div>
   <SettingsPanel v-if="showSettings" @close="showSettings = false" />
 </template>
@@ -74,6 +90,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll));
 .fab-btn {
   width: 44px; height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; cursor: pointer;
+  border: 1px solid var(--color-surface-border, #333);
   color: var(--color-text-secondary);
   background: color-mix(in srgb, var(--color-surface-alt) 50%, transparent);
   transition: background 0.25s ease, color 0.25s ease;

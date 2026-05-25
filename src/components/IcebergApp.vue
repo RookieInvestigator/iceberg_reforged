@@ -76,24 +76,48 @@ function onSearchInput(val) {
   clearTimeout(debounce);
   debounce = setTimeout(() => searchQuery.set(val), 150);
 }
+
+// Mobile drawer drag-to-dismiss
+let dragStartY = 0;
+let dragPanY = 0;
+function onDrawerTouchStart(e) { dragStartY = e.touches[0].clientY; dragPanY = 0; }
+function onDrawerTouchMove(e) {
+  dragPanY = e.touches[0].clientY - dragStartY;
+  if (dragPanY > 10 && sidebarRef.value) {
+    sidebarRef.value.style.transform = `translateY(${dragPanY}px)`;
+    sidebarRef.value.style.transition = 'none';
+  }
+}
+function onDrawerTouchEnd() {
+  if (!sidebarRef.value) return;
+  sidebarRef.value.style.transition = '';
+  if (dragPanY > 80) sidebarOpen.value = false;
+  else sidebarRef.value.style.transform = '';
+}
 </script>
 
 <template>
-  <!-- Sidebar toggle -->
-  <div v-if="sidebarOpen" class="fixed inset-0 z-[9999] hidden lg:block bg-transparent" @click="sidebarOpen = false" />
+  <!-- Sidebar overlay -->
+  <div v-if="sidebarOpen" class="fixed inset-0 z-[9999] bg-black/40 lg:bg-transparent" @click="sidebarOpen = false" />
+  <!-- Desktop sidebar toggle -->
   <button
     class="sidebar-toggle hidden lg:flex"
-    :style="{ left: sidebarOpen ? '-100px' : '0px' }"
+    :style="sidebarOpen ? { left: '-100px' } : { left: '0px' }"
     @click="sidebarOpen = !sidebarOpen"
     :aria-label="t('filter')"
   >
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-      <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="15" y2="12" /><line x1="3" y1="18" x2="9" y2="18" />
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="9 18 15 12 9 6" />
     </svg>
   </button>
 
   <!-- Sidebar panel -->
   <aside ref="sidebarRef" class="sidebar-panel" :class="{ open: sidebarOpen }" style="width:480px">
+    <!-- Mobile drag handle -->
+    <div class="drawer-handle lg:hidden"
+      @touchstart="onDrawerTouchStart" @touchmove="onDrawerTouchMove" @touchend="onDrawerTouchEnd">
+      <div class="drawer-handle-bar"></div>
+    </div>
     <div class="p-6 pl-8 pr-30 pt-20 pb-12 flex flex-col gap-6 w-full">
       <!-- Search -->
       <div>
@@ -216,7 +240,7 @@ function onSearchInput(val) {
   </div>
 
   <ItemInteractivity ref="interactivityRef" :allItems="props.allItems" />
-  <FloatingButtons :allItems="props.allItems" @random="onRandom" />
+  <FloatingButtons :allItems="props.allItems" @random="onRandom" @toggleSidebar="sidebarOpen = !sidebarOpen" />
 </template>
 
 <style scoped>
@@ -234,13 +258,29 @@ function onSearchInput(val) {
 .sidebar-panel { -ms-overflow-style: none; scrollbar-width: none; }
 .sidebar-toggle {
   position: fixed; top: 50%; transform: translateY(-50%); z-index: 10001;
-  width: 28px; height: 56px; display: flex; align-items: center; justify-content: center; cursor: pointer;
-  background: color-mix(in srgb, var(--color-sidebar-bg, #0a0a0a) 55%, transparent);
-  border: 1px solid var(--color-surface-border, #333); border-left: none;
-  color: var(--color-text-tertiary, #888);
-  transition: left 0.3s cubic-bezier(0.2, 0, 0, 1), background 0.25s ease, color 0.25s ease;
+  width: 20px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: transparent; border: none;
+  color: rgba(255,255,255,0.12);
+  transition: left 0.3s cubic-bezier(0.2, 0, 0, 1), color 0.25s ease;
 }
-.sidebar-toggle:hover { color: var(--color-text-primary, #fff); background: color-mix(in srgb, var(--color-surface-alt, #0a0a0a) 70%, transparent); }
+.sidebar-toggle:hover { color: rgba(255,255,255,0.35); }
+
+/* Mobile: bottom drawer */
+@media (max-width: 1023px) {
+  .sidebar-panel {
+    left: 0; right: 0; top: auto; bottom: 0; height: 70vh; width: 100% !important;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.95) 100%);
+    border-radius: 16px 16px 0 0;
+    transform: translateY(100%);
+  }
+  .sidebar-panel.open { transform: translateY(0); }
+  .sidebar-panel .p-6 { padding: 1rem 1.5rem 2rem !important; }
+}
+.drawer-handle { display: none; }
+@media (max-width: 1023px) {
+  .drawer-handle { display: flex; justify-content: center; padding: 10px 0 4px; cursor: grab; touch-action: none; }
+  .drawer-handle-bar { width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2); }
+}
 
 .filter-chip {
   display: inline-flex; align-items: center; gap: 6px;

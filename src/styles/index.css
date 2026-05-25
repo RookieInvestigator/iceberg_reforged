@@ -50,6 +50,21 @@
 .item-tag { color: #fff }
 /* 标记暂未实装 */
 
+/* ===== Mobile ===== */
+@media (max-width: 639px) {
+  .iceberg-item { font-size: 1rem !important; min-height: 40px; min-width: 40px; }
+  .item-tag { font-size: 0.55em !important; }
+  .iceberg-tier { padding-top: 1.5rem; padding-bottom: 1.5rem; min-height: 80px; }
+  .iceberg-tier h2 { font-size: 0.7rem; margin-bottom: 1rem; letter-spacing: 0.3em; }
+  .modal-panel { max-width: 92vw !important; max-height: 80vh; padding: 24px 20px; }
+  .hero-section h1 { font-size: 2.2rem !important; }
+  .hero-section .hero-float-name { font-size: 14px !important; }
+  #items-container { padding: 0 8px; }
+}
+@media (max-width: 1023px) {
+  .filter-chip { padding: 2px 8px; font-size: 0.72rem; }
+}
+
   /* ===== Tooltip — position: absolute 相对词条，native 跟随滚动 ===== */
   .tooltip-box {
     position: absolute;
