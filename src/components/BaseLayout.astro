@@ -3,13 +3,14 @@ import '../styles/index.css';
 import '../styles/bg.css';
 
 const base = import.meta.env.BASE_URL;
+const favicon = base === '/' ? '/assets/iceberg.svg' : base + 'assets/iceberg.svg';
 ---
 <!doctype html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" type="image/svg+xml" href={base.replace(/\/$/, '') + '/assets/iceberg.svg'} />
+    <link rel="icon" type="image/svg+xml" href={favicon} />
     <title>中文兔子洞冰山图</title>
     <style>
       /* 统一加载盾：冷启动和页面切换共用 */
@@ -66,6 +67,10 @@ const base = import.meta.env.BASE_URL;
         // 强制页面在顶部，浏览器可能恢复之前的滚动位置
         window.scrollTo(0, 0);
         if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+        // Safety: clear any leftover overflow lock from a mid-hero refresh
+        document.documentElement.style.overflow = '';
+        document.body.style.overflow = '';
+        document.documentElement.style.overscrollBehavior = '';
 
         var shield = document.getElementById('app-shield');
         if (!shield) return;

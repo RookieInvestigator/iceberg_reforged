@@ -44,7 +44,13 @@ function triggerExit() {
   window.scrollTo(0, 0);
   try { sessionStorage.setItem('iceberg_hero_done', '1'); } catch {}
   document.dispatchEvent(new CustomEvent('hero-exit'));
-  setTimeout(() => { removed.value = true; window.scrollTo(0, 0); }, EXIT_DURATION_MS);
+  setTimeout(() => {
+    removed.value = true;
+    window.scrollTo(0, 0);
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
+    document.documentElement.style.overscrollBehavior = '';
+  }, EXIT_DURATION_MS);
 }
 
 function onWheel(e) {
@@ -69,15 +75,21 @@ function onTouchMove(e) {
 let interval = 0;
 onMounted(() => {
   window.scrollTo(0, 0);
+  document.documentElement.style.overflow = 'hidden';
+  document.body.style.overflow = 'hidden';
+  document.documentElement.style.overscrollBehavior = 'none';
   document.dispatchEvent(new CustomEvent('hero-ready'));
   window.addEventListener('wheel', onWheel, { passive: false });
-  window.addEventListener('keydown', onKey);
+  window.addEventListener('keydown', onKey, { passive: false });
   window.addEventListener('touchstart', onTouchStart, { passive: true });
   window.addEventListener('touchmove', onTouchMove, { passive: false });
   interval = setInterval(() => { titles.value = slots.map(() => pickTitle()); }, 8000);
 });
 
 onUnmounted(() => {
+  document.documentElement.style.overflow = '';
+  document.body.style.overflow = '';
+  document.documentElement.style.overscrollBehavior = '';
   clearInterval(interval);
   window.removeEventListener('wheel', onWheel);
   window.removeEventListener('keydown', onKey);

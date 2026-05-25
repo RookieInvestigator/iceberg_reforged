@@ -103,7 +103,7 @@ function onDrawerTouchEnd() {
   <button
     class="sidebar-toggle hidden lg:flex"
     :style="sidebarOpen ? { left: '-100px' } : { left: '0px' }"
-    @click="sidebarOpen = !sidebarOpen"
+    @mousedown.stop @click="sidebarOpen = !sidebarOpen"
     :aria-label="t('filter')"
   >
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -240,7 +240,7 @@ function onDrawerTouchEnd() {
   </div>
 
   <ItemInteractivity ref="interactivityRef" :allItems="props.allItems" />
-  <FloatingButtons :allItems="props.allItems" @random="onRandom" @toggleSidebar="sidebarOpen = !sidebarOpen" />
+  <FloatingButtons :allItems="props.allItems" :sidebarOpen="sidebarOpen" @random="onRandom" @toggleSidebar="sidebarOpen = !sidebarOpen" />
 </template>
 
 <style scoped>
@@ -258,12 +258,13 @@ function onDrawerTouchEnd() {
 .sidebar-panel { -ms-overflow-style: none; scrollbar-width: none; }
 .sidebar-toggle {
   position: fixed; top: 50%; transform: translateY(-50%); z-index: 10001;
-  width: 20px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  width: 32px; height: 72px; display: flex; align-items: center; justify-content: center; cursor: pointer;
   background: transparent; border: none;
-  color: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.18);
   transition: left 0.3s cubic-bezier(0.2, 0, 0, 1), color 0.25s ease;
 }
-.sidebar-toggle:hover { color: rgba(255,255,255,0.35); }
+.sidebar-toggle:hover { color: rgba(255,255,255,0.50); }
+.sidebar-toggle svg { width: 22px; height: 22px; }
 
 /* Mobile: bottom drawer */
 @media (max-width: 1023px) {
