@@ -52,10 +52,12 @@
 
 /* ===== Mobile ===== */
 @media (max-width: 639px) {
-  .iceberg-item { font-size: 1rem !important; min-height: 40px; min-width: 40px; }
+  .iceberg-item { font-size: 1rem !important; min-height: 40px; min-width: 40px; padding: 0.1rem 0.25rem; }
   .item-tag { font-size: 0.55em !important; }
-  .iceberg-tier { padding-top: 1.5rem; padding-bottom: 1.5rem; min-height: 80px; }
+  .iceberg-tier { padding-top: 1rem; padding-bottom: 1rem; min-height: 80px; }
   .iceberg-tier h2 { font-size: 0.7rem; margin-bottom: 1rem; letter-spacing: 0.3em; }
+
+
   .modal-panel { max-width: 92vw !important; max-height: 80vh; padding: 24px 20px; }
   .hero-section h1 { font-size: 2.2rem !important; }
   .hero-section .hero-float-name { font-size: 14px !important; }
@@ -119,6 +121,8 @@
 
   /* ===== Hero — 完整移植自 React HeroSection ===== */
   .hero-section { position: fixed; inset: 0; z-index: 30; overflow: hidden; }
+
+
   .hero-exiting { pointer-events: none; }
   .hero-bg {
     position: absolute; inset: 0;
@@ -204,6 +208,9 @@
   .fade-up-enter-active { transition: opacity 0.4s ease-out, transform 0.35s cubic-bezier(0.2,0,0,1); }
   .fade-up-leave-active { transition: opacity 0.3s ease-in, transform 0.3s ease-in; }
   .fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(10px); }
+  .sheet-enter-active { transition: transform 0.35s cubic-bezier(0.2,0,0,1); }
+  .sheet-leave-active { transition: transform 0.25s ease-in; }
+  .sheet-enter-from, .sheet-leave-to { transform: translateY(100%); }
 
   /* ===== Modal/Sheet ===== */
   .modal-overlay { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); }

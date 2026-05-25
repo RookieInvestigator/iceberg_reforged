@@ -44,7 +44,7 @@ const allItems = Object.values(data.tiers).flat();
           >
             <div class="relative z-[2] w-full">
               <h2 class="text-center font-black text-[0.85rem] text-white/40 tracking-[0.5em] mb-10 uppercase">{tierName}</h2>
-              <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 mb-5 px-[var(--header-padding-x)]">
+              <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 max-sm:gap-x-1.5 max-sm:gap-y-1 max-sm:mb-3 px-[var(--header-padding-x)]">
                 {(data.tiers[tierName] || []).map(item => (
                   <span
                     class="iceberg-item inline-flex items-center font-bold cursor-crosshair py-0.5 px-1.5 max-sm:text-[1.05rem]"

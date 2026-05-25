@@ -106,6 +106,7 @@ function setItemClasses(el, align, below) {
 }
 
 function showTooltip(el, item) {
+  if (window.innerWidth < 1024) return;
   const rect = el.getBoundingClientRect();
   const vw = window.innerWidth;
   const cx = rect.left + rect.width / 2;
@@ -312,5 +313,5 @@ onUnmounted(() => {
 
 <template>
   <ItemTooltip ref="tipRef" v-bind="tip" @enter="currentItemEl = null" @leave="hideTooltip" />
-
+  <MobileSheet :item="sheetItem" @close="sheetItem = null" />
 </template>

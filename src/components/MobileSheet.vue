@@ -15,7 +15,7 @@ const { t } = useI18n();
     <Transition name="fade">
       <div v-if="item" class="fixed inset-0 z-[99998] bg-black/60" @click.self="$emit('close')" />
     </Transition>
-    <Transition name="fade-up">
+    <Transition name="sheet">
       <div v-if="item" class="fixed bottom-0 left-0 w-full z-[99999] px-6 pt-4 pb-9 rounded-t-3xl shadow-lg max-h-[85vh] overflow-y-auto text-left"
         style="background: var(--color-modal-bg, #111); box-shadow: 0 -10px 40px rgba(0,0,0,0.5)">
         <div class="mx-auto w-10 h-1 rounded-full bg-white/20 mb-5" />

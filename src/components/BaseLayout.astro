@@ -3,7 +3,7 @@ import '../styles/index.css';
 import '../styles/bg.css';
 
 const base = import.meta.env.BASE_URL;
-const favicon = base === '/' ? '/assets/iceberg.svg' : base + 'assets/iceberg.svg';
+const favicon = base === '/' ? '/assets/iceberg.svg' : base + '/assets/iceberg.svg';
 ---
 <!doctype html>
 <html lang="zh-CN">
@@ -67,10 +67,11 @@ const favicon = base === '/' ? '/assets/iceberg.svg' : base + 'assets/iceberg.sv
         // 强制页面在顶部，浏览器可能恢复之前的滚动位置
         window.scrollTo(0, 0);
         if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
-        // Safety: clear any leftover overflow lock from a mid-hero refresh
-        document.documentElement.style.overflow = '';
+        // Unlock scroll — always start scrollable
+        var root = document.scrollingElement || document.documentElement;
+        root.style.overflow = '';
         document.body.style.overflow = '';
-        document.documentElement.style.overscrollBehavior = '';
+        console.log('[base] UNLOCK', root.tagName, root.style.overflow, document.body.style.overflow);
 
         var shield = document.getElementById('app-shield');
         if (!shield) return;
