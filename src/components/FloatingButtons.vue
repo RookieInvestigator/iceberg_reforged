@@ -29,7 +29,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll));
     class="fab-group"
     :class="{ 'immersive-group': immersive }"
     :style="{
-      right: '48px',
+      right: '24px',
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       bottom: props.sidebarOpen && window.innerWidth < 1024 ? 'calc(70vh + 12px)' : undefined,
     }"
@@ -85,15 +85,12 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll));
 .fab-btn {
   width: 44px; height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; cursor: pointer;
-  border: 1px solid var(--color-surface-border, #333);
-  color: var(--color-text-secondary);
-  background: color-mix(in srgb, var(--color-surface-alt) 50%, transparent);
-  transition: background 0.25s ease, color 0.25s ease;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.04);
+  transition: color 0.15s, background 0.15s;
 }
-.fab-btn:hover {
-  background: color-mix(in srgb, var(--color-surface-alt) 75%, transparent);
-  color: var(--color-text-primary);
-}
+.fab-btn:hover { color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.08); }
 .fab-btn:active { transform: scale(0.94); transition: transform 0.1s ease; }
 .fab-nav-arrow { transition: transform 0.4s cubic-bezier(0.2,0,0,1); }
 .fab-nav-down { transform: rotate(180deg); }

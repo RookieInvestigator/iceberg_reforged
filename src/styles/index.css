@@ -48,6 +48,10 @@
   .iceberg-item.dimmed { opacity: 0.15; pointer-events: none; }
 
 .item-tag { color: #fff }
+
+
+
+
 /* 标记暂未实装 */
 
 /* ===== Mobile ===== */
@@ -208,9 +212,7 @@
   .fade-up-enter-active { transition: opacity 0.4s ease-out, transform 0.35s cubic-bezier(0.2,0,0,1); }
   .fade-up-leave-active { transition: opacity 0.3s ease-in, transform 0.3s ease-in; }
   .fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(10px); }
-  .sheet-enter-active { transition: transform 0.35s cubic-bezier(0.2,0,0,1); }
-  .sheet-leave-active { transition: transform 0.25s ease-in; }
-  .sheet-enter-from, .sheet-leave-to { transform: translateY(100%); }
+
 
   /* ===== Modal/Sheet ===== */
   .modal-overlay { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); }

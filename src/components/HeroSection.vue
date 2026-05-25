@@ -11,11 +11,8 @@ const SLOT_COUNT = 20;
 
 const exiting = ref(false);
 const removed = ref((() => {
-  try {
-    const done = sessionStorage.getItem('iceberg_hero_done') === '1';
-    console.log('[hero] init removed=', done, 'hero_done=', sessionStorage.getItem('iceberg_hero_done'));
-    return done;
-  } catch { console.log('[hero] init sessionStorage error'); return false; }
+  try { return sessionStorage.getItem('iceberg_hero_done') === '1'; }
+  catch { return false; }
 })());
 let exited = false;
 
@@ -40,7 +37,6 @@ function exit() {
     const root = document.scrollingElement || document.documentElement;
     root.style.overflow = '';
     document.body.style.overflow = '';
-    console.log('[hero] UNLOCK (exit timer)', root.style.overflow, document.body.style.overflow);
   }, EXIT_MS);
 }
 
@@ -54,11 +50,11 @@ function onTMove(e)   { if (!exiting.value) { e.preventDefault(); if (tY - e.tou
 const heroRef = ref(null);
 let interval = 0;
 onMounted(() => {
+  if (removed.value) return;
   window.scrollTo(0, 0);
   const root = document.scrollingElement || document.documentElement;
   root.style.overflow = 'hidden';
   document.body.style.overflow = 'hidden';
-  console.log('[hero] LOCK', root.tagName, root.style.overflow, document.body.style.overflow);
   document.dispatchEvent(new CustomEvent('hero-ready'));
   heroRef.value?.addEventListener('wheel', onWheel, { passive: false });
   heroRef.value?.addEventListener('touchstart', onTStart, { passive: true });

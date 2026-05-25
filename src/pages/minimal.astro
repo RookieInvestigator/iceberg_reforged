@@ -2,6 +2,7 @@
 // 简洁模式 — 原生滚动条，无 Hero
 import BaseLayout from '../components/BaseLayout.astro';
 import IcebergApp from '../components/IcebergApp.vue';
+import TierNav from '../components/TierNav.vue';
 import StaticHeader from '../components/StaticHeader.vue';
 import Footer from '../components/Footer.astro';
 import FooterModals from '../components/FooterModals.vue';
@@ -24,6 +25,7 @@ const allItems = Object.values(data.tiers).flat();
 
       <!-- 图例 + 交互 -->
       <div class="max-w-[900px] mx-auto mb-16 pb-10 border-b border-[#333]">
+        <TierNav client:only="vue" tierOrder={data.tierOrder} />
         <IcebergApp client:only="vue"
           categories={JSON.stringify(Object.entries(data.categoryColors))}
           tags={JSON.stringify(Object.entries(data.tagMap))}

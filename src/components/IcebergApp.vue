@@ -270,8 +270,9 @@ function onDrawerTouchEnd() {
 @media (max-width: 1023px) {
   .sidebar-panel {
     left: 0; right: 0; top: auto; bottom: 0; height: 70vh; width: 100% !important;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.95) 100%);
+    background: #111;
     border-radius: 16px 16px 0 0;
+    border: 1px solid rgba(255,255,255,0.06);
     transform: translateY(100%);
   }
   .sidebar-panel.open { transform: translateY(0); }
@@ -279,8 +280,8 @@ function onDrawerTouchEnd() {
 }
 .drawer-handle { display: none; }
 @media (max-width: 1023px) {
-  .drawer-handle { display: flex; justify-content: center; padding: 10px 0 4px; cursor: grab; touch-action: none; }
-  .drawer-handle-bar { width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2); }
+  .drawer-handle { display: flex; justify-content: center; padding: 10px 0 6px; cursor: grab; touch-action: none; }
+  .drawer-handle-bar { width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.15); }
 }
 
 .filter-chip {

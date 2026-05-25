@@ -71,7 +71,6 @@ const favicon = base === '/' ? '/assets/iceberg.svg' : base + '/assets/iceberg.s
         var root = document.scrollingElement || document.documentElement;
         root.style.overflow = '';
         document.body.style.overflow = '';
-        console.log('[base] UNLOCK', root.tagName, root.style.overflow, document.body.style.overflow);
 
         var shield = document.getElementById('app-shield');
         if (!shield) return;
