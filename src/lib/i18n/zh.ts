@@ -32,6 +32,7 @@ export default {
 	minimalMode: '简洁模式',
 	fullMode: '完整模式',
 	onThisDay: '历史上的今天',
+	ancientBook: '古籍',
 	backToIceberg: '返回冰山图',
 	loading: '加载中...',
 	lang: '语言',

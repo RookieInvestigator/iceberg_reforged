@@ -32,6 +32,7 @@ export default {
 	minimalMode: 'Minimal',
 	fullMode: 'Full',
 	onThisDay: 'On This Day',
+	ancientBook: 'Classical',
 	backToIceberg: 'Back to Iceberg',
 	loading: 'Loading...',
 	lang: 'Language',

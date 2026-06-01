@@ -70,6 +70,8 @@ onUnmounted(() => {
         <a :href="url('/minimal')" class="text-white/25 hover:text-white/50 transition-colors py-1">{{ t('minimalMode') }}</a>
         <span class="text-white/10">|</span>
         <a :href="url('/on-this-day')" class="text-white/25 hover:text-white/50 transition-colors py-1">{{ t('onThisDay') }}</a>
+        <span class="text-white/10">|</span>
+        <a :href="url('/ancient-book')" class="text-white/25 hover:text-white/50 transition-colors py-1">{{ t('ancientBook') }}</a>
       </div>
     </div>
 

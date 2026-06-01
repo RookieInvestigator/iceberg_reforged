@@ -32,6 +32,7 @@ export default {
 	minimalMode: 'ミニマル',
 	fullMode: 'フル',
 	onThisDay: '今日の歴史',
+	ancientBook: '古籍',
 	backToIceberg: '氷山図に戻る',
 	loading: '読み込み中...',
 	lang: '言語',

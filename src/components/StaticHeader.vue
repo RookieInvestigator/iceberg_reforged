@@ -31,6 +31,8 @@ const { t } = useI18n();
         <a :href="url('/')" class="text-white/25 hover:text-white/50 transition-colors">{{ t('fullMode') }}</a>
         <span class="text-white/10">|</span>
         <a :href="url('/on-this-day')" class="text-white/25 hover:text-white/50 transition-colors">{{ t('onThisDay') }}</a>
+        <span class="text-white/10">|</span>
+        <a :href="url('/ancient-book')" class="text-white/25 hover:text-white/50 transition-colors">{{ t('ancientBook') }}</a>
       </div>
     </div>
   </div>

@@ -1,25 +1,21 @@
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue';
+import { reactive, onMounted, onUnmounted } from 'vue';
 import { useI18n } from '../lib/useI18n';
-import { url } from '../lib/baseUrl';
+
+const props = defineProps({
+  bulletins: { type: Array, default: () => [] },
+});
 
 defineEmits(['close']);
 
 const { t } = useI18n();
-const bulletins = ref([]);
 const expanded = reactive({});
 
 function toggle(idx) { expanded[idx] = !expanded[idx]; }
 
-onMounted(async () => {
+onMounted(() => {
   document.getElementById('iceberg-bg')?.classList.add('paused');
-  try {
-    const res = await fetch(url('/data/bulletins.json'));
-    if (res.ok) {
-      bulletins.value = await res.json();
-      if (bulletins.value.length > 0) expanded[0] = true;
-    }
-  } catch {}
+  if (props.bulletins.length > 0) expanded[0] = true;
 });
 onUnmounted(() => {
   document.getElementById('iceberg-bg')?.classList.remove('paused');

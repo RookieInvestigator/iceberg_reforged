@@ -8,6 +8,7 @@ import BulletinModal from './BulletinModal.vue';
 const props = defineProps({
   buildDate: { type: String, default: '' },
   entryCount: { type: Number, default: 0 },
+  bulletins: { type: Array, default: () => [] },
 });
 
 const { t } = useI18n();
@@ -34,7 +35,7 @@ const showBulletin = ref(false);
     </button>
   </p>
 
-  <BulletinModal v-if="showBulletin" @close="showBulletin = false" />
+  <BulletinModal v-if="showBulletin" :bulletins="props.bulletins" @close="showBulletin = false" />
   <AboutModal v-if="showAbout" :buildDate="props.buildDate" :entryCount="props.entryCount" @close="showAbout = false" />
   <ContactModal v-if="showContact" @close="showContact = false" />
 </template>
