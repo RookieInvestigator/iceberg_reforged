@@ -1,452 +1,290 @@
 ---
-// 古籍模式 — wenyan-renderer parseWenyan + layoutWenyanPages 客户端执行
+// 古籍模式
 import BaseLayout from '../components/BaseLayout.astro';
 
 const fs = await import('node:fs');
+const path = await import('node:path');
 const raw = JSON.parse(fs.readFileSync('public/data/iceberg.json', 'utf-8'));
+const rawCSS = fs.readFileSync(path.resolve('src/lib/ancient-book/style.css'), 'utf-8');
 
-interface Meta { id:string; title:string; cat:string; color:string; tags:string[]; desc:string; link:string; }
-const meta: Meta[] = [];
-let code = '';
-const charItem: number[] = [];
-
-for (const tn of (raw.tierOrder||[])) {
+const tierOrder: string[] = raw.tierOrder||[];
+interface ItemExt { id:string; title:string; category:string; tags:string[]; desc:string; link:string; tier:string; }
+const allRaw: ItemExt[] = [];
+for (const tn of tierOrder) {
   for (const it of (raw.tiers[tn]||[])) {
-    const mi = meta.length;
-    meta.push({id:it.id,title:it.title,cat:it.category,color:raw.categoryColors?.[it.category]||raw.defaultColor||'#FFFFFF',tags:it.tags||[],desc:it.desc||'',link:it.link||''});
-    function push(s:string){for(const c of s){charItem.push(mi);code+=c;}}
-    push('【'+it.title+'】\n');
-    const ts=(it.tags||[]).length>0?'標籤：'+it.tags.join('，'):'';
-    push('（注：'+it.category+'。'+ts+'。）');
-    push((it.desc||'').replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'));
-    push('\n\n');
+    allRaw.push({ id:it.id, title:it.title, category:it.category, tags:it.tags||[], desc:it.desc||'', link:it.link||'', tier:tn });
   }
 }
+
+function toCN(n:number):string {
+  const d='零一二三四五六七八九';
+  if(n<10)return d[n]; if(n===10)return'十';
+  if(n<20)return'十'+(n%10?d[n%10]:'');
+  const t=Math.floor(n/10),o=n%10;return d[t]+'十'+(o?d[o]:'');
+}
+
+// 分類古名
+const catNames: Record<string,string> = {
+  '都市传说・事件・超自然现象':'廣知','鬼宅・异常地点':'凶宅','历史・疑案・假说':'史微',
+  '未确认生物':'物異','民俗・宗教・灵性':'禮殊','神话・志怪・传奇':'諾皋記',
+  '网络怪谈':'齊諧','真实犯罪・事故':'凶志','阴谋论・边缘理论':'陰符',
+  '边缘科学':'廣格物','预言・谶纬':'讖緯','骗局・营销・谣言':'局詐',
+  '城市神秘物件':'器奇','电视节目・放送・广播信号':'鏡聽','自然现象':'天咫','艺术与创作物':'藝文',
+};
+
+// 封裝數據流生成器
+function generateData(mode: 'category' | 'tier') {
+  let code = '';
+  const charItem: number[] = [];
+  interface Meta { id:string; title:string; cat:string; color:string; tags:string[]; desc:string; link:string; tier:string; }
+  const meta: Meta[] = [];
+
+  function pushAll(s:string, ii:number) { for(const c of s) { charItem.push(ii); code+=c; } }
+
+  // 書名頁（獨佔右頁）
+  pushAll('⚑【中文兔子洞冰山圖】', -1);
+  pushAll('\f', -1);
+
+  // 序言
+  if (raw.introText) {
+    pushAll('【序】\n' + raw.introText + '\n\n', -1);
+  }
+  pushAll('\f', -1);
+
+  if (mode === 'category') {
+    let volNum = 0;
+    for (const cat of Object.keys(raw.categoryColors||{})) {
+      const items = allRaw.filter(it => it.category === cat)
+        .sort((a,b) => tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier));
+      if (items.length === 0) continue;
+      volNum++;
+
+      const catName = catNames[cat] || cat;
+      const catColor = raw.categoryColors?.[cat] || raw.defaultColor || '#FFFFFF';
+
+      pushAll('⚐【' + catName + toCN(volNum) + '】', -1);
+      pushAll('\f', -1);
+
+      for (const it of items) {
+        const mi = meta.length;
+        meta.push({id:it.id,title:it.title,cat:it.category,color:catColor,tags:it.tags,desc:it.desc,link:it.link,tier:it.tier});
+        pushAll('【'+it.title+'】\n', mi);
+        const ts = (it.tags || []).length > 0 ? it.tags.join('　') : '';
+        if (ts) pushAll('（' + ts + '）', mi);
+        pushAll((it.desc||'').replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'), mi);
+        pushAll('\n\n', mi);
+      }
+    }
+  } else {
+    // 古典災異八層命名
+    const tierNames = ['甲志', '乙志', '丙志', '丁志', '戊志', '己志', '庚志', '辛志'];
+    let volNum = 0;
+    for (const tn of tierOrder) {
+      const items = allRaw.filter(it => it.tier === tn)
+        .sort((a,b) => Object.keys(raw.categoryColors||{}).indexOf(a.category) - Object.keys(raw.categoryColors||{}).indexOf(b.category));
+      if (items.length === 0) continue;
+
+      const tName = volNum < tierNames.length ? tierNames[volNum] : '極';
+      volNum++;
+
+      pushAll('⚐【' + tName + '】', -1);
+      pushAll('\f', -1);
+
+      for (const it of items) {
+        const catColor = raw.categoryColors?.[it.category] || raw.defaultColor || '#FFFFFF';
+        const mi = meta.length;
+        meta.push({id:it.id,title:it.title,cat:it.category,color:catColor,tags:it.tags,desc:it.desc,link:it.link,tier:it.tier});
+        pushAll('【'+it.title+'】\n', mi);
+        const ts = (it.tags || []).length > 0 ? it.tags.join('　') : '';
+        if (ts) pushAll('（' + ts + '）', mi);
+        pushAll((it.desc||'').replace(/<[^>]*>/g,'').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>'), mi);
+        pushAll('\n\n', mi);
+      }
+    }
+  }
+
+  return { code, charItem, meta };
+}
+
+const catData = generateData('category');
+const tierData = generateData('tier');
 ---
 
 <BaseLayout>
   <div id="root"></div>
-  <span id="dat" hidden set:text={JSON.stringify({code,charItem,meta})}></span>
+  <span id="dat" hidden set:text={JSON.stringify({ catData, tierData })}></span>
 
   <script is:inline>
-    var D = JSON.parse(document.getElementById('dat').textContent);
-    var CODE = D.code, CI = D.charItem, META = D.meta;
-    var COLS = 10, ROWS = 22; 
-    var tokens = [], spreads = [], MAX = 0, cur = 0;
-
-    function parseWenyan(t, ci) {
-      var R = [], i = 0;
-      var inHw=false, inCm=false, inBk=false, inVr=false;
-      function at(p) { return (p>=0&&p<ci.length)?ci[p]:-1; }
-      
-      var stops = '。！？.!?'; 
-      var pauses = '、，,：；:;'; 
-      var swallow = '“”‘’\'"{}［］[]—…-~·・ 　'; 
-      
-      function numToZh(s) {
-        var n = parseInt(s, 10);
-        if (s.length >= 4) {
-           var res='', d='〇一二三四五六七八九';
-           for(var j=0; j<s.length; j++) res += d[s[j]];
-           return res;
-        }
-        if (n <= 10) {
-           var d='〇一二三四五六七八九十';
-           return d[n];
-        }
-        if (n < 100) {
-           var d='〇一二三四五六七八九';
-           var ten = Math.floor(n/10), one = n%10;
-           if (ten === 1) return '十' + (one === 0 ? '' : d[one]);
-           if (ten === 2) return '廿' + (one === 0 ? '' : d[one]);
-           if (ten === 3) return '卅' + (one === 0 ? '' : d[one]);
-           return d[ten] + '十' + (one === 0 ? '' : d[one]);
-        }
-        var res='', d='〇一二三四五六七八九';
-        for(var j=0; j<s.length; j++) res += d[s[j]];
-        return res;
-      }
-
-      while (i < t.length) {
-        if (t[i] >= '0' && t[i] <= '9') {
-          var numStr = '';
-          var startIndex = i;
-          var hasDot = false;
-          
-          while(i < t.length && ((t[i] >= '0' && t[i] <= '9') || (t[i] === '.' && !hasDot && i+1 < t.length && t[i+1] >= '0' && t[i+1] <= '9'))) {
-            if (t[i] === '.') hasDot = true;
-            numStr += t[i++];
-          }
-          
-          var zh = '';
-          if (hasDot) {
-            var parts = numStr.split('.');
-            var intPart = parts[0];
-            var decPart = parts[1];
-            
-            zh += numToZh(intPart) + '點';
-            var d='〇一二三四五六七八九';
-            for (var m=0; m<decPart.length; m++) {
-              zh += d[parseInt(decPart[m], 10)];
-            }
-          } else {
-            zh = numToZh(numStr);
-          }
-
-          for (var k = 0; k < zh.length; k++) {
-            R.push({c: zh[k], cm: inCm, vr: inVr, bk: inBk, hw: inHw, ii: at(startIndex)});
-          }
-          continue; 
-        }
-
-        var ch = t[i];
-
-        if (ch === '\n') {
-          var n=1; while(i+1<t.length&&t[i+1]==='\n'){n++;i++;}
-          if(n>=2) R.push({c:'\n\n',cm:false,vr:false,bk:false,hw:false,nl:true,ii:at(i)});
-          i++; continue;
-        }
-        
-        if (stops.indexOf(ch) >= 0) {
-          if(R.length>0 && !R[R.length-1].nl) R[R.length-1].pn = '。';
-          i++; continue;
-        }
-
-        if (pauses.indexOf(ch) >= 0) {
-          if(R.length>0 && !R[R.length-1].nl && !R[R.length-1].pn) R[R.length-1].pn = '、';
-          i++; continue;
-        }
-
-        if (swallow.indexOf(ch) >= 0) {
-          i++; continue;
-        }
-
-        if (/[a-zA-Z]/.test(ch)) {
-          ch = String.fromCharCode(ch.charCodeAt(0) + 65248);
-        }
-
-        if (ch === '【') { inHw = true; i++; continue; }
-        if (ch === '】') { inHw = false; i++; continue; }
-        if (ch === '（' || ch === '(') { inCm = true; i++; continue; }
-        if (ch === '）' || ch === ')') { inCm = false; i++; continue; }
-        if (ch === '《' || ch === '<') { inBk = true; i++; continue; }
-        if (ch === '》' || ch === '>') { inBk = false; i++; continue; }
-        if (ch === '「' || ch === '『') { inVr = true; i++; continue; }
-        if (ch === '」' || ch === '』') { inVr = false; i++; continue; }
-
-        if (ch.trim() && ch!=='\r') {
-          R.push({c:ch, cm:inCm, vr:inVr, bk:inBk, hw:inHw, ii:at(i)});
-        }
-        i++;
-      }
-      return R;
-    }
-
-    function layoutPages(tokens) {
-      var L=[], page=0, col=0, row=0, idx=0;
-      while(idx<tokens.length) {
-        var t=tokens[idx];
-        if(t.nl){if(row>0){row=0;col++;if(col>=COLS){col=0;page++;}}idx++;continue;}
-        if(t.cm){
-          var B=[];while(idx<tokens.length&&tokens[idx].cm)B.push(tokens[idx++]);var bi=0;
-          while(bi<B.length){
-            var rl=ROWS-row;if(rl<=0){row=0;col++;if(col>=COLS){col=0;page++;}rl=ROWS;}
-            var n=Math.min(B.length-bi,rl*4), hr=Math.ceil(n/2);
-            for(var r=0;r<n;r++){var isR=r<hr, hp=isR?r:r-hr; L.push({c:B[bi+r].c,cm:true,vr:B[bi+r].vr,bk:B[bi+r].bk,hw:false,pn:'',ii:B[bi+r].ii,pg:page,cl:col,rw:row+Math.floor(hp/2),sc:isR?0:1,sr:(hp%2)});}
-            row+=Math.ceil(hr/2);bi+=n;
-          }
-        }else{
-          if(row>=ROWS){row=0;col++;if(col>=COLS){col=0;page++;}}
-          L.push({c:t.c,cm:false,vr:t.vr,bk:t.bk,hw:t.hw,pn:t.pn||'',ii:t.ii,pg:page,cl:col,rw:row});row++;idx++;
-        }
-      }
-      return L;
-    }
-
-    tokens = parseWenyan(CODE, CI);
-
-    function calcLayout() {
-      var VW = window.innerWidth, VH = window.innerHeight;
-      var fs = VW < 768 ? 16 : 21; 
-      
-      var rh = Math.floor(fs * 1.15); 
-      var cw = Math.floor(fs * 1.65); 
-      var sw = Math.floor(fs * 2.2);  
-      
-      var availH = VH - 100; 
-      var availW = VW - 40; 
-      
-      ROWS = Math.max(8, Math.floor(availH / rh) - 3); 
-      var singlePageW = (availW - sw - 16) / 2; 
-      COLS = Math.max(3, Math.floor(singlePageW / cw) - 2);
-
-      var cells = layoutPages(tokens);
-      
-      spreads = [];
-      for (var i=0;i<cells.length;i++) {
-        var s = Math.floor(cells[i].pg/2);
-        while(spreads.length<=s) spreads.push([[],[]]);
-        (cells[i].pg%2===0 ? spreads[s][0] : spreads[s][1]).push(cells[i]);
-      }
-      MAX = Math.max(0, spreads.length-1);
-      if (cur > MAX) cur = MAX; 
-      
-      var root = document.getElementById('wr');
-      if (root) {
-        root.style.setProperty('--rh', rh+'px'); 
-        root.style.setProperty('--cw', cw+'px'); 
-        root.style.setProperty('--fs', fs+'px');
-        root.style.setProperty('--sw', sw+'px');
-        root.style.setProperty('--cols', COLS);
-        root.style.setProperty('--rows', ROWS);
-      }
-      
-      if(document.getElementById('sc')) show(cur);
-    }
-
-    var resizeTimer;
-    window.addEventListener('resize', function() {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(calcLayout, 150);
-    });
-
-    var PC = { bg:'#f4ecd8', tx:'#2c2622', cr:'#a62b1f', mu:'#8c7e71' };
-    function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-    
-    function cn(n) { 
-      var d = '〇一二三四五六七八九';
-      if (n < 10) return d[n];
-      if (n === 10) return '十';
-      if (n < 20) return '十' + (n % 10 ? d[n % 10] : '');
-      if (n < 100) return d[Math.floor(n / 10)] + '十' + (n % 10 ? d[n % 10] : '');
-      if (n < 1000) {
-        var h = Math.floor(n / 100), r = n % 100;
-        if (r === 0) return d[h] + '百';
-        if (r < 10) return d[h] + '百〇' + d[r];
-        if (r < 20) return d[h] + '百一十' + (r % 10 ? d[r % 10] : '');
-        return d[h] + '百' + cn(r);
-      }
-      if (n < 10000) {
-        var th = Math.floor(n / 1000), r2 = n % 1000;
-        if (r2 === 0) return d[th] + '千';
-        if (r2 < 10) return d[th] + '千〇' + d[r2];
-        if (r2 < 100) return d[th] + '千〇' + cn(r2);
-        return d[th] + '千' + cn(r2);
-      }
-      return n.toString(); 
-    }
-
-    function cHTML(c) {
-      if (c.cm) {
-        var s = 'grid-column:'+(c.cl+1)+';grid-row:'+(c.rw+1)+';';
-        s += 'width:calc(var(--fs)*0.5);height:calc(var(--rh)*0.5);';
-        s += 'justify-self:center;align-self:center;';
-        s += (c.sc===0 ? 'margin-left:' : 'margin-right:') + 'calc(var(--fs)*0.5);';
-        s += (c.sr===0 ? 'margin-bottom:' : 'margin-top:') + 'calc(var(--rh)*0.5);';
-        return '<div class="c cm" style="'+s+'"><span>'+esc(c.c)+'</span></div>';
-      }
-      var cls = ['c'];
-      if (c.hw) cls.push('hw','clk');
-      if (c.vr) cls.push('vl'); 
-      if (c.bk) cls.push('bl'); 
-      var p = '';
-      if (c.pn) {
-        p = '<i class="pd">'+(c.pn==='。'
-          ? '<svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="3.5" fill="none" stroke="'+PC.cr+'" stroke-width="1.5"/></svg>'
-          : '<svg viewBox="0 0 10 10"><path d="M3 3Q7 7 8 5" stroke="'+PC.cr+'" stroke-width="2" fill="none" stroke-linecap="round"/></svg>')+'</i>';
-      }
-      return '<div class="'+cls.join(' ')+'" style="grid-column:'+(c.cl+1)+';grid-row:'+(c.rw+1)+'" data-ii="'+c.ii+'"><span>'+esc(c.c)+'</span>'+p+'</div>';
-    }
-
-    function spreadHTML(si) {
-      var s = spreads[si];
-      if (!s) return '<div class="sw">（無内容）</div>';
-      
-      function page(cells, isR) {
-        var rl = '<div class="pbr">';
-        for (var j=0; j<COLS; j++) rl += '<span class="rc'+(j?'':' rf')+'"></span>';
-        rl += '</div>';
-        
-        var ch = '';
-        if(cells) { for (var k=0;k<cells.length;k++) ch += cHTML(cells[k]); }
-        return '<div class="pg '+(isR?'r':'l')+'"><div class="gd">'+rl+ch+'</div></div>';
-      }
-      
-      var fishTail = '<svg width="14" viewBox="0 0 24 20" style="color:var(--pc-tx);margin:8px 0;flex-shrink:0"><path d="M0 0L24 0L16 10L24 20L0 20L8 10Z" fill="currentColor"/></svg>';
-      var fishTailInv = '<svg width="14" viewBox="0 0 24 20" style="color:var(--pc-tx);margin:8px 0;flex-shrink:0;transform:rotate(180deg)"><path d="M0 0L24 0L16 10L24 20L0 20L8 10Z" fill="currentColor"/></svg>';
-      
-      return '<div class="sw" data-si="'+si+'">'+
-        '<div class="bx"><div class="bx-in">'+
-          page(s[0], true)+
-          '<div class="sn">'+
-            '<span class="snl" style="flex: 0.25"></span>'+ 
-            fishTail+
-            '<span class="snt">中文兔子洞冰山圖</span><span class="sch">長卷展軸</span><span class="snm">'+cn(si*2+1)+'</span>'+
-            fishTailInv+
-            '<span class="snl" style="flex: 0.75"></span>'+
-          '</div>'+
-          page(s[1], false)+
-        '</div></div></div>';
-    }
-
-    var globalNoise = '<svg class="nz"><filter id="pf"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.04 0"/></filter><rect width="100%" height="100%" filter="url(#pf)"/></svg>';
-
-    document.getElementById('root').innerHTML =
-      '<div class="wr" id="wr">'+ globalNoise +'<div id="sc"></div>'+
-      '<nav class="nv"><div class="nv-in">'+
-        '<button id="np">下卷</button>'+
-        '<i class="nd"></i><span id="ni">第 一 展</span><i class="nd"></i>'+
-        '<button id="bp" disabled>上卷</button>'+
-      '</div></nav>'+
-      '<div class="ov" id="ov"><div class="dp"><button class="dc" id="dc">&times;</button><h2 id="dt"></h2><p class="dm" id="dm"></p><p class="dd" id="dd"></p><p class="dtg" id="dg"></p><a class="dl" id="dl" href="#" target="_blank" rel="noopener" hidden>訪問詞條鏈接 →</a></div></div></div>';
-
-    var scEl = document.getElementById('sc');
-    var prevBtn = document.getElementById('bp'), nextBtn = document.getElementById('np'), navInfo = document.getElementById('ni');
-    function show(i) {
-      if (i<0||i>MAX) return;
-      scEl.innerHTML = spreadHTML(i);
-      prevBtn.disabled = i===0;
-      nextBtn.disabled = i>=MAX;
-      navInfo.textContent = '第 '+cn(i+1)+' 展';
-      cur = i;
-    }
-
-    calcLayout();
-
-    prevBtn.onclick = function(){ if(cur>0) show(cur-1); };
-    nextBtn.onclick = function(){ if(cur<MAX) show(cur+1); };
-
-    document.addEventListener('keydown',function(e){
-      if(e.key==='ArrowLeft'){e.preventDefault();if(cur<MAX)show(cur+1);}
-      if(e.key==='ArrowRight'){e.preventDefault();if(cur>0)show(cur-1);}
-      if(e.key==='Escape')document.getElementById('ov').classList.remove('s');
-    });
-
-    var overlay = document.getElementById('ov');
-    document.getElementById('wr').addEventListener('click',function(e){
-      var c = e.target.closest('.c.clk'); if(!c) return;
-      var ii = parseInt(c.dataset.ii); if(isNaN(ii)||!META[ii]) return;
-      var it = META[ii];
-      document.getElementById('dt').textContent = it.title;
-      document.getElementById('dm').innerHTML = '<span style="color:'+it.color+'">'+it.cat+'</span>';
-      document.getElementById('dd').textContent = it.desc||'暫無描述';
-      document.getElementById('dg').textContent = it.tags.length?'標籤：'+it.tags.join(' · '):'';
-      var dl = document.getElementById('dl');
-      if(it.link){dl.href=it.link;dl.hidden=false;}else{dl.hidden=true;}
-      overlay.classList.add('s');
-    });
-    overlay.addEventListener('click',function(e){if(e.target===overlay)overlay.classList.remove('s');});
-    document.getElementById('dc').addEventListener('click',function(){overlay.classList.remove('s');});
+    window.__AB = JSON.parse(document.getElementById('dat').textContent);
+    document.dispatchEvent(new CustomEvent('ab-ready'));
   </script>
 
-  <style is:global>
-    .wr{
-      --cw:24px; --rh:24px; --fs:20px; --sw:16px; --cols:10; --rows:22;
-      --pc-bg:#f4ecd8; --pc-tx:#2c2622; --pc-cr:#a62b1f; --pc-mu:#8c7e71;
-      height:100vh; width:100vw; overflow:hidden;
-      font-family: 'Noto Serif TC', 'Kozuka Mincho Pr6N', 'TW-Sung', 'MingLiU', serif;
-      font-feature-settings: "vrt2", "vert"; 
-      color:var(--pc-tx); user-select:none; display:flex; flex-direction:column;
-      align-items:center; justify-content:center; position:relative;
-      background:var(--pc-bg); margin:0;
+  <script>
+    import { parseWenyan, toChineseNum, layoutPages } from '../lib/ancient-book/engine';
+    import { spreadHTML } from '../lib/ancient-book/render';
+    import { calcLayout } from '../lib/ancient-book/layout';
+    import type { Token, PlacedCell } from '../lib/ancient-book/types';
+
+    let COLS = 10, ROWS = 22;
+    let tokens: Token[] = [];
+    let spreads: PlacedCell[][][] = [];
+    let MAX = 0, cur = 0;
+
+    // 控制目前的切換狀態
+    let currentMode: 'category' | 'tier' = 'category';
+    let globalData: any = null;
+    let activeMeta: any[] = [];
+    let volNames: string[] = [];
+
+    function updateModeData() {
+      const modeData = currentMode === 'category' ? globalData.catData : globalData.tierData;
+      tokens = parseWenyan(modeData.code, modeData.charItem);
+      activeMeta = modeData.meta;
+
+      const modeBtn = document.getElementById('tm');
+      if (modeBtn) {
+        modeBtn.textContent = currentMode === 'category' ? '分卷：類別' : '分卷：層級';
+      }
     }
-    .wr *{box-sizing:border-box;margin:0;padding:0}
-    .nz{position:absolute;inset:0;pointer-events:none;mix-blend-mode:multiply;opacity:.25;z-index:1}
-    
-    #sc{width:100%;height:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
-    .sw{width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
-    
-    .bx{display:flex;border:3.5px solid var(--pc-tx);padding:4px;margin:auto;position:relative;z-index:5}
-    .bx-in{display:flex;direction:rtl;border:1px solid var(--pc-tx)}
-    
-    .pg{display:flex;flex-direction:column;position:relative;flex-shrink:0}
-    .pg.r{padding:calc(var(--rh)*2.2) calc(var(--cw)*1.5) calc(var(--rh)*1.2) calc(var(--cw)*0.25)}
-    .pg.l{padding:calc(var(--rh)*2.2) calc(var(--cw)*0.25) calc(var(--rh)*1.2) calc(var(--cw)*1.5)}
-    
-    .sn{direction:ltr;width:var(--sw);border-left:1px solid var(--pc-tx);border-right:1px solid var(--pc-tx);display:flex;flex-direction:column;align-items:center;opacity:0.9}
-    .snl{width:2px;background:currentColor;}
-    .snt{flex:none;display:flex;flex-direction:column;align-items:center;gap:calc(var(--fs)*.3);writing-mode:vertical-rl;font-weight:600;letter-spacing:.15em;font-size:calc(var(--fs)*.7);color:var(--pc-tx);margin:calc(var(--rh)*.5) 0}
-    .sch{flex:none;writing-mode:vertical-rl;font-size:calc(var(--fs)*.5);color:rgba(44, 38, 34, 0.7);margin:calc(var(--rh)*.2) 0}
-    .snm{flex:none;writing-mode:vertical-rl;font-weight:600;font-size:calc(var(--fs)*.6);margin:calc(var(--rh)*.5) 0}
-    
-    .gd{flex:1;display:grid;position:relative;grid-template-columns:repeat(var(--cols),var(--cw));grid-template-rows:repeat(var(--rows),var(--rh));direction:rtl;align-content:center;justify-content:center}
-    
-    .pbr{position:absolute;inset:0;display:flex;direction:rtl;pointer-events:none;z-index:2}
-    .rc{flex:1;border-right:1px solid var(--pc-tx);opacity:.3}.rf{border-right:none}
-    
-    .c{position:relative;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:3;line-height:1;font-size:var(--fs);writing-mode:vertical-rl;text-orientation:upright;font-weight:500;}
-    
-    .c.hw{font-weight:900}.c.hw>span{color:var(--pc-cr)}
-    .c.clk{pointer-events:auto;cursor:pointer}.c.clk:hover{background:rgba(166,43,31,.08);z-index:10;transform:scale(1.05);transition:transform .1s}
-    .c.cm{font-size:calc(var(--fs)*.45);opacity:.85}
-    
-    .c.vl::after{content:'';position:absolute;top:0;bottom:0;right:15%;border-right:1.5px solid;opacity:.8;z-index:-1}
-    .c.bl::before{content:'';position:absolute;top:0;bottom:0;left:15%;border-left:3px double;opacity:.8;z-index:-1}
-    
-    /* ═══ 核心调整：利用负值让句读掉进两个字之间的缝隙，同时右侧略微咬字 ═══ */
-    .pd{
-      position:absolute;
-      right: 4%;      /* 右侧横向微咬字迹 */
-      bottom: -12%;   /* 向下越出字格边框，落入两个字垂直间的空白缝隙 */
-      width:calc(var(--fs)*0.45);
-      height:calc(var(--fs)*0.45);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      z-index: 5;
+
+    function updateVolNames() {
+      volNames = [];
+      for (let s = 0; s < spreads.length; s++) {
+        volNames[s] = '';
+        for (let p = 0; p < 2; p++) {
+          const pg = spreads[s][p] || [];
+          let hasMarker = false;
+          for (const c of pg) {
+            if (c.c === '⚐') { hasMarker = true; break; }
+          }
+          if (hasMarker) {
+            let name = '';
+            for (const c of pg) {
+              if (c.hw && c.c !== '⚐') name += c.c + (c.pn || '');
+            }
+            if (name) { volNames[s] = name; break; }
+          }
+        }
+      }
+      // 向前传播卷名
+      let lastName = '';
+      for (let s = 0; s < spreads.length; s++) {
+        if (volNames[s]) lastName = volNames[s];
+        else volNames[s] = lastName;
+      }
     }
-    .pd svg{width:100%;height:100%;overflow:visible;opacity:.9}
-    
-    .nv{
-      position:absolute;
-      bottom:1.5rem;
-      z-index:50;
-      display:flex;
-      background:var(--pc-bg);
-      border:3px solid var(--pc-tx);
-      padding:3px;
+
+    function boot() {
+      const data = (window as any).__AB;
+      if (!data) return;
+      globalData = data;
+
+      // 構建含有模式切換按鈕的現代古典選單
+      document.getElementById('root')!.innerHTML =
+        '<div class="wr" id="wr"><svg class="nz"><filter id="pf"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.04 0"/></filter><rect width="100%" height="100%" filter="url(#pf)"/></svg><div id="sc"></div>'+
+        '<nav class="nv"><div class="nv-in">'+
+          '<button id="tm">分卷：類別</button>'+
+          '<i class="nd"></i>'+
+          '<button id="np">下页</button>'+
+          '<i class="nd"></i><span id="ni">第 一 展</span><i class="nd"></i>'+
+          '<button id="bp" disabled>上页</button>'+
+        '</div></nav>'+
+
+        '<div class="ov" id="ov"><div class="dp"><button class="dc" id="dc">&times;</button><h2 id="dt"></h2><p class="dm" id="dm"></p><p class="dd" id="dd"></p><p class="dtg" id="dg"></p><a class="dl" id="dl" href="#" target="_blank" rel="noopener" hidden>訪問詞條鏈接 →</a></div></div></div>';
+
+      const scEl = document.getElementById('sc')!;
+      const prevBtn = document.getElementById('bp') as HTMLButtonElement;
+      const nextBtn = document.getElementById('np') as HTMLButtonElement;
+      const navInfo = document.getElementById('ni')!;
+      const modeBtn = document.getElementById('tm') as HTMLButtonElement;
+
+      function show(i: number) {
+        if (i < 0 || i > MAX) return;
+        scEl.innerHTML = spreadHTML(i, spreads, COLS, volNames[i] || '');
+        prevBtn.disabled = i === 0;
+        nextBtn.disabled = i >= MAX;
+        navInfo.textContent = '第 ' + toChineseNum(i + 1) + ' 展';
+        cur = i;
+      }
+
+      // 初始化載入
+      updateModeData();
+
+      let initialDone = false;
+      const wr = document.getElementById('wr')!;
+      const ro = new ResizeObserver((entries) => {
+        const e = entries[0];
+        const w = e ? e.contentRect.width : 0;
+        const h = e ? e.contentRect.height : 0;
+        if (w > 0 && h > 0 && !initialDone) {
+          initialDone = true;
+          const st = calcLayout(tokens, cur);
+          COLS = st.COLS; ROWS = st.ROWS; spreads = st.spreads; MAX = st.MAX;
+          updateVolNames();
+          show(st.cur);
+        }
+      });
+      ro.observe(wr);
+
+      let resizeTimer: ReturnType<typeof setTimeout>;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(() => {
+          const md2 = currentMode === 'category' ? globalData.catData : globalData.tierData;
+          tokens = parseWenyan(md2.code, md2.charItem);
+          const st2 = calcLayout(tokens, cur);
+          COLS = st2.COLS; ROWS = st2.ROWS; spreads = st2.spreads; MAX = st2.MAX;
+          updateVolNames();
+          show(st2.cur);
+        }, 200);
+      });
+
+      prevBtn.onclick = () => { if (cur > 0) show(cur - 1); };
+      nextBtn.onclick = () => { if (cur < MAX) show(cur + 1); };
+      modeBtn.onclick = () => {
+        currentMode = currentMode === 'category' ? 'tier' : 'category';
+        updateModeData();
+        tokens = parseWenyan(
+          currentMode === 'category' ? globalData.catData.code : globalData.tierData.code,
+          currentMode === 'category' ? globalData.catData.charItem : globalData.tierData.charItem
+        );
+        const st3 = calcLayout(tokens, 0);
+        COLS = st3.COLS; ROWS = st3.ROWS; spreads = st3.spreads; MAX = st3.MAX;
+        cur = 0;
+        updateVolNames();
+        show(0);
+      };
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') { e.preventDefault(); if (cur < MAX) show(cur + 1); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); if (cur > 0) show(cur - 1); }
+        if (e.key === 'Escape') document.getElementById('ov')!.classList.remove('s');
+      });
+
+      const overlay = document.getElementById('ov')!;
+      document.getElementById('wr')!.addEventListener('click', (e) => {
+        const c = (e.target as HTMLElement).closest('.c.clk') as HTMLElement | null;
+        if (!c) return;
+        const ii = parseInt(c.dataset.ii!);
+        if (isNaN(ii) || !activeMeta[ii]) return;
+        const it = activeMeta[ii];
+        document.getElementById('dt')!.textContent = it.title;
+        document.getElementById('dm')!.innerHTML = '<span style="color:' + it.color + '">' + it.cat + '</span>' + (it.tier ? ' · ' + it.tier.replace('Tier ', '層') : '');
+        const de = document.getElementById('dd')!;
+        de.textContent = it.desc || '（暫無描述）';
+        de.style.textAlign = it.desc ? 'justify' : 'center';
+        document.getElementById('dg')!.textContent = it.tags.length ? it.tags.join(' ❖ ') : '';
+        const dl = document.getElementById('dl') as HTMLAnchorElement;
+        if (it.link) { dl.href = it.link; dl.hidden = false; } else { dl.hidden = true; }
+        overlay.classList.add('s');
+      });
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.classList.remove('s'); });
+      document.getElementById('dc')!.addEventListener('click', () => { overlay.classList.remove('s'); });
     }
-    .nv-in{
-      display:flex;
-      align-items:center;
-      gap:1.5rem;
-      border:1px solid var(--pc-tx);
-      padding:0.4rem 1.2rem;
-    }
-    .nv button{background:none;border:none;color:var(--pc-tx);font-weight:600;letter-spacing:.15em;font-size:14px;cursor:pointer;font-family:inherit;transition:color .2s}
-    .nv button:disabled{opacity:.25;cursor:default}.nv button:not(:disabled):hover{color:var(--pc-cr);}
-    .nd{height:16px;width:1.5px;background:var(--pc-tx);opacity:.5;}
-    #ni{font-size:14px;font-weight:600;color:var(--pc-tx);letter-spacing:.15em;font-family:inherit}
-    
-    .ov{position:fixed;inset:0;z-index:200;background:rgba(28,24,22,.6);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .3s}
-    .ov.s{opacity:1;pointer-events:auto}
-    .dp{
-      background:var(--pc-bg);
-      max-width:500px;
-      width:90vw;
-      max-height:80vh;
-      overflow-y:auto;
-      padding:36px 40px;
-      border:3.5px solid var(--pc-tx);
-      outline:1px solid var(--pc-tx);
-      outline-offset:-6px;
-      box-shadow: 10px 10px 0 rgba(44, 38, 34, 0.2); 
-      font-family:inherit;
-      color:var(--pc-tx);
-      position:relative;
-    }
-    .dp h2{font-size:1.6rem;font-weight:900;margin-bottom:16px}.dm{font-size:.85rem;margin-bottom:20px;font-weight:600}
-    .dd{font-size:1rem;color:#4a3c31;line-height:1.8;white-space:pre-wrap;margin-bottom:24px;text-align:justify}
-    .dtg{font-size:.85rem;color:var(--pc-mu);padding-top:16px;border-top:1px dashed var(--pc-tx)}
-    .dl{display:inline-block;margin-top:12px;color:var(--pc-cr);text-decoration:none;font-size:.95rem;font-weight:600}.dl:hover{opacity:.7}
-    .dc{position:absolute;top:16px;right:22px;background:none;border:none;font-size:1.8rem;color:var(--pc-mu);cursor:pointer;line-height:1}.dc:hover{color:var(--pc-cr)}
-    
-    @media(max-width:768px){
-      .bx{padding:3px; border-width:2px} 
-      .nv{bottom:1rem;} 
-      .nv-in{gap:1rem;padding:.4rem 1rem;} 
-      .nv button,#ni{font-size:12px} 
-      .dp{padding:28px 24px}
-    }
-  </style>
+
+    if ((window as any).__AB) { boot(); }
+    else { document.addEventListener('ab-ready', boot, { once: true }); }
+  </script>
+
+  <style is:global set:html={rawCSS}></style>
 </BaseLayout>

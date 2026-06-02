@@ -26,7 +26,7 @@ const bulletins = bulletinFiles.map((f: string) => {
     if (k) fm[k.trim()] = v.join(':').trim();
   }
   return { title: fm.title, date: fm.date, author: fm.author, content: m[2].trim() };
-}).filter(Boolean);
+}).filter(Boolean) as { title:string; date:string; author:string; content:string }[];
 ---
 
 <BaseLayout>

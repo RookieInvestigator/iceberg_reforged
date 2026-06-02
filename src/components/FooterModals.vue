@@ -1,15 +1,22 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue';
 import { useI18n } from '../lib/useI18n';
 import AboutModal from './AboutModal.vue';
 import ContactModal from './ContactModal.vue';
 import BulletinModal from './BulletinModal.vue';
 
-const props = defineProps({
-  buildDate: { type: String, default: '' },
-  entryCount: { type: Number, default: 0 },
-  bulletins: { type: Array, default: () => [] },
-});
+interface Bulletin {
+  title: string;
+  date: string;
+  author: string;
+  content: string;
+}
+
+const props = defineProps<{
+  buildDate?: string;
+  entryCount?: number;
+  bulletins?: Bulletin[];
+}>();
 
 const { t } = useI18n();
 
