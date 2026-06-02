@@ -1,5 +1,7 @@
 /* ═══════════ 中文兔子洞冰山圖 · 古籍模式 CSS (終極純淨版) ═══════════ */
 
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700;900&display=swap');
+
 /* ─── 1. 基礎變數與全局設定 ─── */
 .wr {
   --cw: 24px;   /* 字格寬 */
@@ -61,14 +63,14 @@
 .rf { border-right: none; }
 
 /* ─── 5. 字格與正文排版 ─── */
-.c { position: relative; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 3; line-height: 1; font-size: var(--fs); writing-mode: vertical-rl; text-orientation: upright; font-weight: 500; }
+.c { position: relative; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 3; line-height: 1; font-size: var(--fs); writing-mode: vertical-rl; text-orientation: upright; font-weight: 400; }
 
 /* 互動效果 */
 .c.clk { pointer-events: auto; cursor: pointer; }
 .c.clk:hover { background: rgba(178, 45, 30, 0.06); z-index: 10; }
 
 /* 詞條主標題 (硃砂粗體) */
-.c.hw { font-weight: 800; }
+.c.hw { font-weight: 700; }
 .c.hw > span { color: var(--pc-cr); }
 
 /* 【核心修復】詞條附註 (單行小注，高權重覆蓋) */
@@ -76,7 +78,7 @@
   font-size: calc(var(--fs) * 0.65) !important;
   color: var(--pc-mu) !important;
   font-family: 'Kaiti', 'KaiTi_GB2312', '楷体', serif !important;
-  font-weight: 500 !important;
+  font-weight: 400 !important;
 }
 
 /* 正文雙行小字夾註 (一般標籤/描述用) */
@@ -106,7 +108,7 @@
 .pg-book, .pg-vol { grid-column: 1 / -1; grid-row: 1 / -1; display: flex; flex-direction: row-reverse; align-items: center; justify-content: center; z-index: 10; width: 100%; height: 100%; }
 
 .pg-book .b-title {
-  writing-mode: vertical-rl; font-size: calc(var(--fs) * 2.1); font-weight: 800; letter-spacing: 0.35em; margin: 0;
+  writing-mode: vertical-rl; font-size: calc(var(--fs) * 2.1); font-weight: 700; letter-spacing: 0.35em; margin: 0;
   color: var(--pc-tx); background: var(--pc-bg); text-align: center;
   padding: calc(var(--rh) * 2.5) calc(var(--cw) * 1.5);
   border: 3px solid var(--pc-tx);
@@ -115,7 +117,7 @@
 }
 
 .pg-vol .b-title {
-  writing-mode: vertical-rl; font-weight: 800; margin: 0; text-align: center; background: var(--pc-bg);
+  writing-mode: vertical-rl; font-weight: 700; margin: 0; text-align: center; background: var(--pc-bg);
   font-size: calc(var(--fs) * 1.55); letter-spacing: 0.25em; color: var(--pc-tx);
   border: 1.5px solid var(--pc-tx);
   padding: calc(var(--rh) * 1.6) calc(var(--cw) * 0.85);
@@ -230,7 +232,7 @@
   padding: 10px 32px;
   border: 1px solid var(--pc-tx);
   color: var(--pc-tx);
-  text-decoration: none; font-size: 0.95rem; font-weight: 600;
+  text-decoration: none; font-size: 0.95rem; font-weight: 700;
   letter-spacing: 0.15em; transition: all 0.3s;
 }
 .dl:hover {
@@ -252,5 +254,5 @@
   color: var(--pc-mu) !important;
   /* 增加 STKaiti 和 Kaiti TC 等蘋果/微軟通用字體 fallback */
   font-family: 'Kaiti TC', 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
 }
