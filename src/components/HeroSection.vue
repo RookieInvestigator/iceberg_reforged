@@ -2,9 +2,9 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useI18n } from '../lib/useI18n';
 
-const props = defineProps({ tiers: String, tierOrder: String, allItems: String });
+const props = defineProps({ heroTitles: String });
 const { t } = useI18n();
-const allItems = JSON.parse(props.allItems);
+const heroTitlesArr = JSON.parse(props.heroTitles);
 
 const EXIT_MS = 2000;
 const SLOT_COUNT = 20;
@@ -21,7 +21,7 @@ const slots = Array.from({ length: SLOT_COUNT }, (_, i) => ({
   leftPct: Math.random() < 0.5 ? 5 + Math.random() * 40 : 55 + Math.random() * 40,
   dur: 7 + Math.random() * 5, delay: -Math.random() * 12, fontPx: 18 + Math.random() * 8,
 }));
-function pickTitle() { return allItems[Math.floor(Math.random() * allItems.length)]?.title || ''; }
+function pickTitle() { return heroTitlesArr[Math.floor(Math.random() * heroTitlesArr.length)] || ''; }
 const titles = ref(slots.map(() => pickTitle()));
 
 function exit() {

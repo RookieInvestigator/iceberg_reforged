@@ -2,9 +2,10 @@
 import { ref, reactive, computed, watch, watchEffect, onMounted, onUnmounted, nextTick } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { activeCategories, activeTags, searchQuery, tagFilterMode, searchMode, hiddenCategories, hiddenTags, specialFilter } from '../lib/filterStore';
-import { floatMode, filterMode } from '../lib/settingsStore';
+import { floatMode, filterMode, detailMode } from '../lib/settingsStore';
 import { useI18n } from '../lib/useI18n';
 import ItemTooltip from './ItemTooltip.vue';
+import ItemModal from './ItemModal.vue';
 import MobileSheet from './MobileSheet.vue';
 
 import Fuse from 'fuse.js';
@@ -39,12 +40,14 @@ const searchResults = computed(() => {
 const tip = reactive({ show: false, anchor: null, desc: '', noDesc: false, category: '', color: '', tags: '' });
 const tipRef = ref(null);
 const sheetItem = ref(null);
+const modalItem = ref(null);
 const hoverTimer = ref(0);
 let currentItemEl = null;
 let activeItemEl = null;
 
 const fm = useStore(floatMode);
 const fltMode = useStore(filterMode);
+const dm = useStore(detailMode);
 const tagMode = useStore(tagFilterMode);
 const sMode = useStore(searchMode);
 const hiddenCats = useStore(hiddenCategories);
@@ -53,6 +56,79 @@ const spl = useStore(specialFilter);
 
 const maxModified = Math.max(...allItems.map(i => i.modifiedAt || 0));
 const newThreshold = maxModified - 30 * 86400;
+
+// Related-items map: pre-indexed, O(n × avgBucketSize)
+let _relMap = null;
+function getRelMap() {
+  if (_relMap) return _relMap;
+
+  // 预建索引
+  const catIdx = new Map();   // category → [itemId]
+  const tagIdx = new Map();   // tag → [itemId]
+  const bgIdx = new Map();    // bigram → [itemId]
+  for (const item of allItems) {
+    if (!catIdx.has(item.category)) catIdx.set(item.category, []);
+    catIdx.get(item.category).push(item.id);
+    for (const t of (item.tags || [])) {
+      if (!tagIdx.has(t)) tagIdx.set(t, []);
+      tagIdx.get(t).push(item.id);
+    }
+    for (let i = 0; i < item.title.length - 1; i++) {
+      const bg = item.title.slice(i, i + 2);
+      if (!bgIdx.has(bg)) bgIdx.set(bg, []);
+      bgIdx.get(bg).push(item.id);
+    }
+  }
+
+  _relMap = new Map();
+  for (const item of allItems) {
+    const scores = new Map();   // id → score
+    const bgN = new Map();      // id → bigram count
+
+    for (const id of (catIdx.get(item.category) || [])) { if (id !== item.id) scores.set(id, 3); }
+    for (const t of (item.tags || [])) {
+      for (const id of (tagIdx.get(t) || [])) { if (id !== item.id) scores.set(id, (scores.get(id) || 0) + 2); }
+    }
+    for (let i = 0; i < item.title.length - 1; i++) {
+      for (const id of (bgIdx.get(item.title.slice(i, i + 2)) || [])) {
+        if (id !== item.id) bgN.set(id, (bgN.get(id) || 0) + 1);
+      }
+    }
+    for (const [id, n] of bgN) { scores.set(id, (scores.get(id) || 0) + Math.min(n, 3)); }
+
+    const sorted = [...scores.entries()]
+      .filter(([, s]) => s >= 2)
+      .sort((a, b) => b[1] - a[1]);
+    _relMap.set(item.id, sorted.slice(0, 10).map(([id]) => id));
+  }
+  return _relMap;
+}
+function pickRelated(item) {
+  // 1. 数据中原有的相关词条
+  const explicit = (item.related || [])
+    .map(id => itemMap.get(id)).filter(Boolean)
+    .filter(r => r.id !== item.id);
+  const usedIds = new Set(explicit.map(r => r.id));
+
+  // 2. 相似度随机选 2 个推荐
+  const pool = (getRelMap().get(item.id) || []).filter(id => !usedIds.has(id));
+  const arr = [...pool];
+  for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; }
+  const recommended = arr.slice(0, 2).map(id => itemMap.get(id)).filter(Boolean);
+
+  return { explicit, recommended };
+}
+
+function setModalItem(raw) {
+  const { explicit, recommended } = pickRelated(raw);
+  modalItem.value = { title: raw.title, desc: raw.desc, category: raw.category, categoryColor: raw.categoryColor, tags: raw.tags || [], link: raw.link, related: explicit, recommended };
+}
+
+function onModalNav(item) {
+  const full = itemMap.get(item.id);
+  if (!full) return;
+  setModalItem(full);
+}
 
 
 function findItem(el) { return itemMap.get(el.dataset.id); }
@@ -91,6 +167,10 @@ function showRandom() {
   }
 
   const item = pool[Math.floor(Math.random() * pool.length)];
+  if (dm.value === 'modal') {
+    setModalItem(item);
+    return;
+  }
   const el = document.querySelector(`.iceberg-item[data-id="${item.id}"]`);
   if (!el) return;
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -166,6 +246,7 @@ function hideTooltip() {
 
 // Event delegation
 function onMouseOver(e) {
+  if (dm.value === 'modal') return;
   const el = e.target.closest('.iceberg-item');
   if (!el) { hideTooltip(); return; }
   if (el === currentItemEl) return;
@@ -177,6 +258,7 @@ function onMouseOver(e) {
 }
 
 function onMouseLeave(e) {
+  if (dm.value === 'modal') return;
   clearTimeout(hoverTimer.value);
   currentItemEl = null;
   const to = e.relatedTarget;
@@ -190,6 +272,10 @@ function onClick(e) {
   if (!el) return;
   const item = findItem(el);
   if (!item) return;
+  if (dm.value === 'modal') {
+    setModalItem(item);
+    return;
+  }
   if (window.innerWidth < 1024) {
     sheetItem.value = { title: item.title, desc: item.desc, category: item.category, color: item.categoryColor, tags: (item.tags || []).join(' | '), link: item.link };
   } else if (item.link) {
@@ -279,7 +365,12 @@ watchEffect(() => {
   });
 });
 
+watchEffect(() => {
+  document.documentElement.setAttribute('data-detail', dm.value);
+});
+
 onMounted(() => {
+  document.documentElement.setAttribute('data-detail', dm.value);
   const c = document.getElementById('items-container');
   if (c) {
     c.addEventListener('mouseover', onMouseOver);
@@ -313,5 +404,6 @@ onUnmounted(() => {
 
 <template>
   <ItemTooltip ref="tipRef" v-bind="tip" @enter="currentItemEl = null" @leave="hideTooltip" />
+  <ItemModal :item="modalItem" @close="modalItem = null" @navigate="onModalNav" />
   <MobileSheet :item="sheetItem" @close="sheetItem = null" />
 </template>

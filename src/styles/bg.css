@@ -1,26 +1,28 @@
 /* IcebergBackground — 纯 CSS 动画 */
 .bg-root{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:#000}
 .bg-wrap{position:absolute;inset:-5%;z-index:0;pointer-events:none;transform:scale(1.02)}
-.bg-sky{position:absolute;inset:0;background:linear-gradient(to bottom,#ff2a00 5%,#ff5900 7%,#e26715 10%,#7aaddd 22%,#4a80c0 27%,#2a5a8a 32%,#0a1a30 40%,#040c18 55%,#000 98%);animation:bg-fb 18s ease-in-out infinite;will-change:transform}
+.bg-sky{position:absolute;inset:0;background:linear-gradient(to bottom,#ff2a00 5%,#ff5900 7%,#e26715 10%,#7aaddd 22%,#4a80c0 27%,#2a5a8a 32%,#0a1a30 40%,#040c18 55%,#000 98%);animation:bg-fb 18s ease-in-out infinite}
 .bg-clouds{position:absolute;inset:0;pointer-events:none}
-.bg-clouds-slow{position:absolute;inset:0;display:flex;justify-content:center;color:#ffb899;animation:bg-dcs 35s ease-in-out infinite;will-change:transform}
-.bg-clouds-fast{position:absolute;inset:0;display:flex;justify-content:center;color:#ffddc2;animation:bg-dcf 22s ease-in-out infinite;will-change:transform}
-.bg-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 15% 8%,rgba(255,106,6,.5) 0%,rgba(255,140,50,.3) 30%,transparent 65%),radial-gradient(ellipse at 85% 40%,rgba(100,150,255,.25) 0%,transparent 60%),radial-gradient(circle at 25% 12%,rgba(255,200,150,.1) 0%,transparent 40%);animation:bg-dl1 18s ease-in-out infinite;will-change:transform,opacity}
-.bg-iceberg{position:absolute;inset:0;display:flex;justify-content:center;color:#8ebcf0;z-index:2;opacity:0.95;animation:bg-bi 14s ease-in-out infinite;will-change:transform}
+.bg-clouds-slow{position:absolute;inset:0;display:flex;justify-content:center;color:#ffb899;animation:bg-dcs 35s ease-in-out infinite}
+.bg-clouds-fast{position:absolute;inset:0;display:flex;justify-content:center;color:#ffddc2;animation:bg-dcf 22s ease-in-out infinite}
+.bg-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 15% 8%,rgba(255,106,6,.5) 0%,rgba(255,140,50,.3) 30%,transparent 65%),radial-gradient(ellipse at 85% 40%,rgba(100,150,255,.25) 0%,transparent 60%),radial-gradient(circle at 25% 12%,rgba(255,200,150,.1) 0%,transparent 40%);animation:bg-dl1 18s ease-in-out infinite}
+.bg-iceberg{position:absolute;inset:0;display:flex;justify-content:center;color:#8ebcf0;z-index:2;opacity:0.95;animation:bg-bi 14s ease-in-out infinite}
 .bg-iceberg svg{width:100%;height:100%}
 .bg-water-bg{position:absolute;inset:0;top:27.7%;z-index:1;pointer-events:none;opacity:0.3}
 .bg-water-wave-bg{position:absolute;left:0;right:0;top:-80px;height:160px;animation:bg-wf3 16s ease-in-out infinite}
-.bg-water-wave-bg svg{position:absolute;inset:0;width:200%;height:100%;animation:bg-wa-bg 35s linear infinite;will-change:transform;transform:translateZ(0)}
+.bg-water-wave-bg svg{position:absolute;inset:0;width:200%;height:100%;animation:bg-wa-bg 35s linear infinite;transform:translateZ(0)}
 .bg-water-body-bg{position:absolute;left:0;right:0;bottom:-200px;top:40px;background:#0C3866;animation:bg-wf3 16s ease-in-out infinite}
 
-.bg-water{position:absolute;inset:0;top:28%;z-index:5;pointer-events:none;opacity:0.45;will-change:transform}
-.bg-water-wave{position:absolute;left:0;right:0;top:-80px;height:160px;animation:bg-wf2 12s ease-in-out infinite;will-change:transform}
-.bg-water-wave svg{position:absolute;inset:0;width:200%;height:100%;animation:bg-wa 25s linear infinite;will-change:transform;transform:translateZ(0)}
+.bg-water{position:absolute;inset:0;top:28%;z-index:5;pointer-events:none;opacity:0.45}
+.bg-water-wave{position:absolute;left:0;right:0;top:-80px;height:160px;animation:bg-wf2 12s ease-in-out infinite}
+.bg-water-wave svg{position:absolute;inset:0;width:200%;height:100%;animation:bg-wa 25s linear infinite;transform:translateZ(0)}
 .bg-water-body{position:absolute;left:0;right:0;bottom:-200px;top:40px;background:#0a5a99;animation:bg-wf2 12s ease-in-out infinite}
 
 .bg-mask{position:absolute;inset:0;pointer-events:none;z-index:8;background:linear-gradient(to bottom,transparent 60%,rgba(0,0,0,.7) 75%,#000 100%);animation:bg-id 18s ease-in-out infinite}
 /* Scroll pause: freeze background animations during scroll */
 .bg-root.paused * { animation-play-state: paused !important }
+/* Manual static: default off, user opts in via settings */
+.bg-root.static * { animation-play-state: paused !important }
 .bg-top-glow{position:absolute;top:0;left:0;width:100%;pointer-events:none;z-index:20;height:80vh;background:radial-gradient(ellipse 80% 120% at 20% 3%,rgb(255,128,0) 0%,rgba(255,157,45,.4) 25%,rgba(255,179,0,.08) 55%,transparent 85%)}
 
 @keyframes bg-dcs{0%,100%{transform:translate(-1%,0);opacity:.5}50%{transform:translate(2%,.5%);opacity:.8}}

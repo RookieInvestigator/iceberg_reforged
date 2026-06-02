@@ -68,6 +68,13 @@ function replaceQuotes(s: string): string {
   return s;
 }
 
+// Tier 名称中文化
+function tierNameZh(tier: string): string {
+  const m = tier.match(/^Tier\s*(\d+)$/i);
+  if (!m) return tier;
+  return `层级 ${m[1]}`;
+}
+
 // 归一化：解析颜色、emoji 标签
 export function normalizeData(raw: any): IcebergData {
   const { categoryColors, tagMap, tiers, introText, defaultColor } = raw;
@@ -79,7 +86,7 @@ export function normalizeData(raw: any): IcebergData {
 
   const normalizedTiers: Record<string, IcebergItem[]> = {};
   for (const [tierName, items] of Object.entries(tiers)) {
-    normalizedTiers[tierName] = (items as any[]).map((item: any) => {
+    normalizedTiers[tierNameZh(tierName)] = (items as any[]).map((item: any) => {
       const categoryColor = categoryColors[item.category] || defaultColor || '#FFFFFF';
       const emojis = (item.tags || []).map((tagName: string) => nameToEmoji[tagName] || tagName).filter(Boolean);
 
@@ -96,6 +103,7 @@ export function normalizeData(raw: any): IcebergData {
   return {
     ...raw,
     introText: introText ? replaceQuotes(introText) : introText,
+    tierOrder: (raw.tierOrder || []).map(tierNameZh),
     tiers: normalizedTiers,
   };
 }

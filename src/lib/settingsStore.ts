@@ -16,6 +16,8 @@ export const immersiveMode = storedAtom('iceberg-immersive-mode', false);
 export const showRandomBtn = storedAtom('iceberg-show-random-btn', false);
 export const showLinkEmoji = storedAtom('iceberg-show-link-emoji', false);
 export const showDescEmoji = storedAtom('iceberg-show-desc-emoji', false);
+export const dynamicBg = storedAtom('iceberg-dynamic-bg', false);
+export const sortMode = storedAtom('iceberg-sort-mode', 'default');
 
 export const FONT_SIZE_MAP: Record<string, number> = { xs: 0.75, sm: 0.875, md: 1.0, lg: 1.125, xl: 1.25 };
 export const FONT_LABELS: Record<string, string> = { xs: '极小', sm: '小', md: '中', lg: '大', xl: '特大' };

@@ -28,24 +28,27 @@
 @layer components {
   /* ===== Iceberg item ===== */
   .iceberg-item {
-    position: relative; isolation: isolate;
+    position: relative;
     display: inline-flex; align-items: baseline;
     padding: 0.125rem 0.375rem; font-weight: 700;
     contain: layout style;
     text-shadow: 1px 1px 1px var(--shadow-color, rgba(0,0,0,.85)), 1px -1px 1px var(--shadow-color, rgba(0,0,0,.85)), -1px -1px 1px var(--shadow-color, rgba(0,0,0,.85)), -1px 1px 1px var(--shadow-color, rgba(0,0,0,.85)), 4px 3px 4px var(--shadow-color, rgba(0,0,0,.7));
-    transition: opacity 0.2s ease; cursor: pointer;
+    cursor: pointer;
   }
+  .iceberg-item.dimmed { opacity: 0.15; pointer-events: none; transition: opacity 0.2s ease; }
   .iceberg-item::before {
     content: ""; position: absolute; inset: 0;
     background: var(--item-color);
-    transform: scaleX(0); transform-origin: left;
-    transition: transform 0.25s ease; z-index: -1;
+    opacity: 0; z-index: -1;
+    transition: opacity 0.25s ease;
   }
-  .iceberg-item:hover, .iceberg-item.tooltip-active { z-index: 10; text-shadow: 3px 3px 6px transparent !important; }
-  .iceberg-item:hover::before, .iceberg-item.tooltip-active::before { transform: scaleX(1); }
-  .iceberg-item:hover .item-title, .iceberg-item.tooltip-active .item-title,
-  .iceberg-item:hover .item-tag, .iceberg-item.tooltip-active .item-tag { color: #000 !important; }
-  .iceberg-item.dimmed { opacity: 0.15; pointer-events: none; }
+  html:not([data-detail="modal"]) .iceberg-item:hover, .iceberg-item.tooltip-active { z-index: 10; text-shadow: none !important; }
+  html:not([data-detail="modal"]) .iceberg-item:hover::before, .iceberg-item.tooltip-active::before { opacity: 1; }
+  html:not([data-detail="modal"]) .iceberg-item:hover .item-title, .iceberg-item.tooltip-active .item-title,
+  html:not([data-detail="modal"]) .iceberg-item:hover .item-tag, .iceberg-item.tooltip-active .item-tag { color: #000 !important; }
+  /* 弹窗模式：弱 hover 暗示可点 */
+  html[data-detail="modal"] .iceberg-item { cursor: pointer; }
+  html[data-detail="modal"] .iceberg-item:hover { opacity: 0.8; }
 
 .item-tag { color: #fff }
 
@@ -92,11 +95,12 @@
     pointer-events: none;
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.4s ease, visibility 0.5s ease;
+    transition: opacity 0.4s ease, visibility 0s 0.4s;
   }
   .tooltip-box.show {
     opacity: 1;
     visibility: visible;
+    transition: opacity 0.4s ease, visibility 0s 0s;
     pointer-events: auto;
   }
   .tooltip-box::-webkit-scrollbar { width: 6px; }

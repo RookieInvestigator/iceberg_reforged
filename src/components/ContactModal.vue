@@ -16,10 +16,10 @@ const contacts = [
   <Teleport to="body">
     <Transition name="fade">
       <div v-if="true" class="modal-overlay" @click.self="$emit('close')">
-        <div class="modal-panel" style="width: 360px" @click.stop>
+        <div class="modal-panel no-scrollbar" style="width: 360px" @click.stop>
           <div class="flex items-center justify-between mb-5">
-            <h3 class="text-base font-bold text-white">{{ t('contactTitle') }}</h3>
-            <button @click="$emit('close')" class="text-white/30 hover:text-white/60 text-lg leading-none w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/5">&times;</button>
+            <h2 class="text-base font-bold text-white tracking-wide">{{ t('contactTitle') }}</h2>
+            <button @click="$emit('close')" class="text-white/25 hover:text-white/60 text-lg leading-none transition-colors">&times;</button>
           </div>
 
           <div class="space-y-4 text-sm text-white/55 leading-relaxed">

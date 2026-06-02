@@ -1,4 +1,4 @@
-<div id="iceberg-bg" class="bg-root">
+<div id="iceberg-bg" class="bg-root static">
   <div class="bg-wrap">
     <div class="bg-sky"></div>
     <div class="bg-clouds">
@@ -63,6 +63,9 @@
   if (!el) return;
   var h = Math.max(document.documentElement.scrollHeight, el.getBoundingClientRect().height);
   el.style.setProperty('--bg-hf', Math.max(h / 1000, 1));
+
+  // 读取动态背景设置，已启用则取消静止
+  try { var on = localStorage.getItem('iceberg-dynamic-bg'); if (on === 'true') el.classList.remove('static'); } catch(e) {}
 
   var tid;
   function pauseBg() {

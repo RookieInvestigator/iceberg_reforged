@@ -11,7 +11,7 @@ import { normalizeData } from '../lib/data';
 const fs = await import('node:fs');
 const raw = JSON.parse(fs.readFileSync('public/data/iceberg.json', 'utf-8'));
 const data = normalizeData(raw);
-const allItems = Object.values(data.tiers).flat();
+const allItems = Object.entries(data.tiers).flatMap(([tierName, items]) => items.map(item => ({ ...item, tier: tierName })));
 
 const path = await import('node:path');
 const bulletinsDir = path.resolve('src/data/bulletins');
@@ -42,8 +42,6 @@ const bulletins = bulletinFiles.map((f: string) => {
       <div class="max-w-[900px] mx-auto mb-16 pb-10 border-b border-[#333]">
         <TierNav client:only="vue" tierOrder={data.tierOrder} />
         <IcebergApp client:only="vue"
-          categories={JSON.stringify(Object.entries(data.categoryColors))}
-          tags={JSON.stringify(Object.entries(data.tagMap))}
           allItems={JSON.stringify(allItems)}
           categoryColors={JSON.stringify(data.categoryColors)}
           tagMap={JSON.stringify(data.tagMap)}

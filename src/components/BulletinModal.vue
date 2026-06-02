@@ -26,10 +26,10 @@ onUnmounted(() => {
   <Teleport to="body">
     <Transition name="fade">
       <div class="modal-overlay" @click.self="$emit('close')">
-        <div class="modal-panel" style="max-width:400px;max-height:70vh;overflow:hidden" @click.stop>
-          <div class="flex items-center justify-between mb-6">
-            <h2 class="text-lg font-bold text-white">{{ t('bulletinTitle') }}</h2>
-            <button @click="$emit('close')" class="text-white/30 hover:text-white/60 text-xl leading-none">&times;</button>
+        <div class="modal-panel no-scrollbar" style="max-width:400px;max-height:70vh;overflow:hidden" @click.stop>
+          <div class="flex items-center justify-between mb-5">
+            <h2 class="text-base font-bold text-white tracking-wide">{{ t('bulletinTitle') }}</h2>
+            <button @click="$emit('close')" class="text-white/25 hover:text-white/60 text-lg leading-none transition-colors">&times;</button>
           </div>
           <div v-if="bulletins.length === 0" class="text-sm text-white/30">暂无公告</div>
           <div class="bulletin-scroll" style="overflow-y:auto;max-height:calc(70vh - 80px)">

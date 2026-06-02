@@ -3,20 +3,19 @@
 import { computed, ref, onMounted, onUnmounted, watchEffect } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { activeCategories, activeTags, searchQuery, toggleCategory, toggleTag, tagFilterMode, searchMode, hiddenCategories, hiddenTags, specialFilter } from '../lib/filterStore';
-import { fontSize, FONT_SIZE_MAP, showLinkEmoji, showDescEmoji } from '../lib/settingsStore';
+import { fontSize, FONT_SIZE_MAP, showLinkEmoji, showDescEmoji, sortMode } from '../lib/settingsStore';
 import { useI18n } from '../lib/useI18n';
 import ItemInteractivity from './ItemInteractivity.vue';
 import FloatingButtons from './FloatingButtons.vue';
 
 const props = defineProps({
-  categories: String, tags: String, allItems: String,
-  categoryColors: String, tagMap: String, defaultColor: String,
+  allItems: String, categoryColors: String, tagMap: String, defaultColor: String,
 });
 
-const cats = JSON.parse(props.categories);
-const tagList = JSON.parse(props.tags);
 const colors = JSON.parse(props.categoryColors || '{}');
 const tMap = JSON.parse(props.tagMap || '{}');
+const cats = Object.entries(colors);
+const tagList = Object.entries(tMap);
 const defColor = props.defaultColor || '#FFFFFF';
 
 const activeCats = useStore(activeCategories);
@@ -48,10 +47,42 @@ watchEffect(() => {
 });
 const linkEmoji = useStore(showLinkEmoji);
 const descEmoji = useStore(showDescEmoji);
+const srt = useStore(sortMode);
 watchEffect(() => {
   document.documentElement.classList.toggle('show-link-emoji', linkEmoji.value);
   document.documentElement.classList.toggle('show-desc-emoji', descEmoji.value);
 });
+
+// Sort
+let _origOrder = null;
+function sortItems(mode) {
+  if (!_origOrder) {
+    _origOrder = new Map();
+    document.querySelectorAll('.iceberg-item').forEach((el, i) => _origOrder.set(el.dataset.id, i));
+  }
+  const tiers = document.querySelectorAll('.iceberg-tier');
+  tiers.forEach(t => {
+    const wrap = t.querySelector(':scope > div > .flex');
+    if (!wrap) return;
+    const items = [...wrap.querySelectorAll('.iceberg-item')];
+    if (mode === 'default') {
+      items.sort((a, b) => (_origOrder.get(a.dataset.id) || 0) - (_origOrder.get(b.dataset.id) || 0));
+    } else if (mode === 'title-asc' || mode === 'title-desc') {
+      items.sort((a, b) => {
+        const ta = a.querySelector('.item-title')?.textContent || '';
+        const tb = b.querySelector('.item-title')?.textContent || '';
+        return mode === 'title-asc' ? ta.localeCompare(tb, 'zh-CN') : tb.localeCompare(ta, 'zh-CN');
+      });
+    } else if (mode === 'category') {
+      items.sort((a, b) => {
+        const ca = a.dataset.category || ''; const cb = b.dataset.category || '';
+        return ca.localeCompare(cb, 'zh-CN');
+      });
+    }
+    items.forEach(el => wrap.appendChild(el));
+  });
+}
+watchEffect(() => { sortItems(srt.value); });
 
 // Active filters helpers
 const tagMode = useStore(tagFilterMode);
