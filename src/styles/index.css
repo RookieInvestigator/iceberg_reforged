@@ -65,7 +65,6 @@
   .iceberg-tier h2 { font-size: 0.7rem; margin-bottom: 1rem; letter-spacing: 0.3em; }
 
 
-  .modal-panel { max-width: 92vw !important; max-height: 80vh; padding: 24px 20px; }
   .hero-section h1 { font-size: 2.2rem !important; }
   .hero-section .hero-float-name { font-size: 14px !important; }
   #items-container { padding: 0 8px; }
@@ -210,18 +209,44 @@
   @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
   /* ===== Fade transitions for Vue <Transition> ===== */
-  .fade-enter-active { transition: opacity 0.5s ease-out; }
-  .fade-leave-active { transition: opacity 0.35s ease-in; }
+  .fade-enter-active { transition: opacity 0.2s ease-out; }
+  .fade-leave-active { transition: opacity 0.15s ease-in; }
   .fade-enter-from, .fade-leave-to { opacity: 0; }
   .fade-up-enter-active { transition: opacity 0.4s ease-out, transform 0.35s cubic-bezier(0.2,0,0,1); }
   .fade-up-leave-active { transition: opacity 0.3s ease-in, transform 0.3s ease-in; }
   .fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(10px); }
 
 
-  /* ===== Modal/Sheet ===== */
-  .modal-overlay { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); }
-  .modal-panel { background: var(--color-modal-bg, #1a1a1a); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 32px; max-width: 640px; width: 90vw; max-height: 80vh; overflow-y: auto; position: relative; }
 }
 
-.no-scrollbar::-webkit-scrollbar { display: none; }
-.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+/* ═══════════ Footer 全局按钮样式优化 ═══════════ */
+
+.ft-btn {
+  color: inherit; 
+  cursor: pointer; 
+  background: transparent; 
+  border: none;
+  font: inherit; 
+  /* 增加上下 padding 扩大手机端点击热区，并用负 margin 抵消视觉位移 */
+  padding: 4px 8px;
+  margin: -4px 0;
+  border-radius: 4px;
+  transition: color 0.2s, background-color 0.2s;
+  outline: none; /* 移除浏览器默认的丑陋蓝框 */
+}
+
+.ft-btn:hover { 
+  color: rgba(255, 255, 255, 0.6); 
+}
+
+/* 增加键盘操作时的焦点高亮 (Tab 键切换时生效) */
+.ft-btn:focus-visible {
+  color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.ft-sep { 
+  margin: 0 8px; /* 稍微缩紧间距更显精致 */
+  color: rgba(255, 255, 255, 0.1); 
+  user-select: none; /* 防止双击文字时误选竖线 */
+}

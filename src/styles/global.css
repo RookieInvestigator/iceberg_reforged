@@ -1,0 +1,6 @@
+@import "tailwindcss";
+@import "./themes/base.css";
+@import "./themes/dark.css";
+@import "./index.css";
+@import "./bg.css";
+@import "./modal.css";

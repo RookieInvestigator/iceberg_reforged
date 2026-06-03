@@ -1,23 +1,27 @@
 {
-  "name": "iceberg-astro",
+  "name": "iceberg-vue",
+  "private": true,
+  "version": "3.0.0",
   "type": "module",
-  "version": "1.0.0",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview"
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@astrojs/tailwind": "^6.0.0",
-    "@astrojs/vue": "^5.0.0",
-    "@nanostores/vue": "^1.0.0",
-    "astro": "^5.0.0",
+    "@nanostores/vue": "^1.1.0",
+    "@tailwindcss/vite": "^4.3.0",
     "fuse.js": "^7.3.0",
-    "nanostores": "^0.11.0",
-    "tailwindcss": "^3.4.0",
-    "vue": "^3.5.0"
+    "nanostores": "^0.11.3",
+    "tailwindcss": "^4.3.0",
+    "vite-plugin-compression": "^0.5.1",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1"
+    "@vitejs/plugin-vue": "^5.2.0",
+    "typescript": "~5.7.0",
+    "vite": "^6.2.0",
+    "vue-tsc": "^2.2.0"
   }
 }

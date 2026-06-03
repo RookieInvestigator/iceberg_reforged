@@ -1,0 +1,90 @@
+/* ═══════════ 彈窗通用樣式（優化版） ═══════════ */
+
+/* 遮罩層 */
+.modal-overlay {
+  position: fixed; 
+  inset: 0; 
+  z-index: 99999;
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px); /* 增加磨砂玻璃效果提升質感 */
+}
+
+/* 面板基底 */
+.modal-panel {
+  background: var(--color-modal-bg, #1a1a1a);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 0;
+  width: 90vw;
+  max-height: 80vh; 
+  position: relative;
+  display: flex;
+  flex-direction: column; /* 讓 Header, Body, Footer 縱向排列 */
+  overflow: hidden; /* 裁剪面板外邊角 */
+}
+
+/* 統一響應式寬度類別 */
+.modal-sm { max-width: 360px; }
+.modal-md { max-width: 420px; }
+.modal-lg { max-width: 520px; }
+
+/* Sticky 標題層 */
+.modal-header {
+  position: sticky; 
+  top: 0; 
+  z-index: 10;
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between;
+  padding: 24px 32px 16px;
+  background: var(--color-modal-bg, #1a1a1a);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+.modal-header h2 { font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: .05em; }
+.modal-header .modal-close {
+  color: rgba(255, 255, 255, .25); font-size: 1.2rem; line-height: 1;
+  background: none; border: none; cursor: pointer;
+  transition: color .15s; flex-shrink: 0;
+}
+.modal-header .modal-close:hover { color: rgba(255, 255, 255, .6); }
+
+/* 獨立滾動的內容區 */
+.modal-body { 
+  padding: 24px 32px 32px; 
+  overflow-y: auto;
+  flex: 1; /* 自動填滿剩餘高度 */
+}
+
+/* Sticky 底部信息提示層 */
+.modal-footer-hint {
+  position: sticky; 
+  bottom: 0; 
+  z-index: 10;
+  padding: 16px 32px 20px;
+  background: var(--color-modal-bg, #1a1a1a);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  text-align: center; 
+  font-size: .6rem; 
+  color: rgba(251, 191, 36, 0.6);
+}
+
+/* 隱藏滾動條 */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+
+/* ═══════════ 響應式斷點（修復雙重 Padding） ═══════════ */
+@media (max-width: 639px) {
+  .modal-panel { 
+    max-width: 92vw !important; 
+    max-height: 85vh; 
+    /* 移除此處原本的 padding: 24px 20px; 避免與內部疊加 */
+  }
+  /* 統一等比例縮小內部間距 */
+  .modal-header { padding: 20px 20px 12px; }
+  .modal-body { padding: 16px 20px 20px; }
+  .modal-footer-hint { padding: 12px 20px 16px; }
+}
