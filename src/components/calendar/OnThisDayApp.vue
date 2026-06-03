@@ -1,5 +1,8 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useStore } from '@nanostores/vue';
+import { detailMode } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import { url } from '../../lib/baseUrl';
 
@@ -7,6 +10,16 @@ const props = defineProps({ allEvents: String });
 const allEvents = JSON.parse(props.allEvents);
 
 const { t } = useI18n();
+const router = useRouter();
+const mode = useStore(detailMode);
+
+function goItem(itemId) {
+  if (mode.value === 'modal') {
+    router.push({ path: '/', query: { item: itemId } });
+  } else {
+    window.location.href = url('/#' + itemId);
+  }
+}
 
 const weekDays = computed(() => t('weekDays').split(','));
 
@@ -133,8 +146,8 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick));
         <div class="flex items-center gap-4 mt-2">
           <a v-if="event.link" :href="event.link" target="_blank" rel="noopener noreferrer"
              class="text-white/25 hover:text-white/50 text-xs transition-colors">{{ t('externalLink') }} &nearr;</a>
-          <a v-if="event.item" :href="url(`/#${event.item}`)"
-             class="text-white/25 hover:text-white/50 text-xs transition-colors">{{ t('relatedItem') }} &rarr;</a>
+          <a v-if="event.item" @click.prevent="goItem(event.item)" href="#"
+             class="text-white/25 hover:text-white/50 text-xs transition-colors cursor-pointer">{{ t('relatedItem') }} &rarr;</a>
         </div>
       </div>
     </div>

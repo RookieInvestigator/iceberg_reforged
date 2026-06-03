@@ -1,16 +1,56 @@
 <script setup>
 import BaseModal from '../modals/BaseModal.vue';
+import { onMounted, onUnmounted } from 'vue';
+import { useStore } from '@nanostores/vue';
+import { favorites } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 
 const props = defineProps({ item: Object });
 const emit = defineEmits(['close', 'navigate']);
 
 const { t } = useI18n();
+
+function onKey(e) {
+  if (e.key === 'ArrowLeft' && props.item?.prevId) emit('navigate', { id: props.item.prevId });
+  if (e.key === 'ArrowRight' && props.item?.nextId) emit('navigate', { id: props.item.nextId });
+  if (e.key === 'Escape') emit('close');
+}
+onMounted(() => document.addEventListener('keydown', onKey))
+onUnmounted(() => document.removeEventListener('keydown', onKey))
+
+const favs = useStore(favorites);
+
+function toggleFav(id) {
+  const cur = favorites.get();
+  favorites.set(cur.includes(id) ? cur.filter(i => i !== id) : [...cur, id]);
+}
 </script>
 
 <template>
-  <BaseModal v-if="item" :title="item.title" size="lg" @close="$emit('close')">
-    
+  <BaseModal v-if="item" :title="item.title" size="lg" titleClass="!text-[1.25rem]" @close="$emit('close')">
+
+    <template #header-actions>
+      <div class="flex items-center gap-2 mr-1 pr-4 border-r border-white/10">
+        
+        <button @click="toggleFav(item.id)"
+          class="flex items-center justify-center p-1.5 transition-colors cursor-pointer outline-none"
+          :class="favs.includes(item.id) ? 'text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.6)]' : 'text-white/30 hover:text-white/80'"
+          :title="favs.includes(item.id) ? '取消收藏' : '收藏'">
+          <svg width="17" height="17" viewBox="0 0 24 24" :fill="favs.includes(item.id) ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+        </button>
+
+        <template v-if="item.prevId || item.nextId">
+          <div class="w-px h-3.5 bg-white/10 mx-1"></div> <button v-if="item.prevId" @click="emit('navigate', { id: item.prevId })"
+            class="p-1 text-white/30 hover:text-white/90 text-sm leading-none transition-colors cursor-pointer" title="上一个">←</button>
+          <button v-if="item.nextId" @click="emit('navigate', { id: item.nextId })"
+            class="p-1 text-white/30 hover:text-white/90 text-sm leading-none transition-colors cursor-pointer" title="下一个">→</button>
+        </template>
+        
+      </div>
+    </template>
+
     <div class="flex flex-wrap items-center gap-3 mb-5">
       <span class="text-xs font-medium px-2 py-0.5 rounded border" :style="{ color: item.categoryColor, borderColor: item.categoryColor }">{{ item.category }}</span>
       <span v-for="tag in item.tags" :key="tag" class="text-[0.65rem] text-white/25">#{{ tag }}</span>

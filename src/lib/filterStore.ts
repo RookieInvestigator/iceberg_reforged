@@ -9,6 +9,7 @@ export const searchMode = atom('全文');
 export const hiddenCategories = atom<string[]>([]);
 export const hiddenTags = atom<string[]>([]);
 export const specialFilter = atom('all');
+export const favFilter = atom(false);
 
 export function toggleCategory(cat: string) {
   const current = activeCategories.get();

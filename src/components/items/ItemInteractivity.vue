@@ -1,7 +1,8 @@
 <script setup>
 import { ref, reactive, watch, watchEffect, onMounted, onUnmounted, nextTick, markRaw, inject } from 'vue';
 import { useStore } from '@nanostores/vue';
-import { activeCategories, activeTags, searchQuery, tagFilterMode, searchMode, hiddenCategories, hiddenTags, specialFilter } from '../../lib/filterStore';
+import { activeCategories, activeTags, searchQuery, tagFilterMode, searchMode, hiddenCategories, hiddenTags, specialFilter, favFilter } from '../../lib/filterStore';
+import { favorites } from '../../lib/settingsStore';
 import { floatMode, filterMode, detailMode } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import ItemTooltip from './ItemTooltip.vue';
@@ -46,6 +47,8 @@ const sMode = useStore(searchMode);
 const hiddenCats = useStore(hiddenCategories);
 const hiddenT = useStore(hiddenTags);
 const spl = useStore(specialFilter);
+const favF = useStore(favFilter);
+const fList = useStore(favorites);
   // 搜索走 Worker（异步，不阻塞主线程）
   watch([query, sMode], ([q, mode]) => {
     searchWorker.postMessage({ type: "search", query: q, mode })
@@ -118,13 +121,23 @@ function pickRelated(item) {
 
 function setModalItem(raw) {
   const { explicit, recommended } = pickRelated(raw);
-  modalItem.value = { title: raw.title, desc: raw.desc, category: raw.category, categoryColor: raw.categoryColor, tags: raw.tags || [], link: raw.link, related: explicit, recommended };
+  // 上/下一个词条（按当前 DOM 顺序）
+  const allIds = [...document.querySelectorAll('.iceberg-item')].map(el => el.dataset.id).filter(Boolean);
+  const idx = allIds.indexOf(raw.id);
+  const prevId = idx > 0 ? allIds[idx - 1] : null;
+  const nextId = idx < allIds.length - 1 ? allIds[idx + 1] : null;
+  modalItem.value = { id: raw.id, title: raw.title, desc: raw.desc, category: raw.category, categoryColor: raw.categoryColor, tags: raw.tags || [], link: raw.link, related: explicit, recommended, prevId, nextId };
 }
 
 function onModalNav(item) {
   const full = itemMap.get(item.id);
   if (!full) return;
-  setModalItem(full);
+  if (window.innerWidth < 1024) {
+    const { explicit, recommended } = pickRelated(full);
+    sheetItem.value = { id: full.id, title: full.title, desc: full.desc, category: full.category, color: full.categoryColor, tags: (full.tags || []).join(' | '), link: full.link, related: explicit, recommended };
+  } else {
+    setModalItem(full);
+  }
 }
 
 
@@ -274,7 +287,8 @@ function onClick(e) {
     return;
   }
   if (window.innerWidth < 1024) {
-    sheetItem.value = { title: item.title, desc: item.desc, category: item.category, color: item.categoryColor, tags: (item.tags || []).join(' | '), link: item.link };
+    const { explicit, recommended } = pickRelated(item);
+    sheetItem.value = { id: item.id, title: item.title, desc: item.desc, category: item.category, color: item.categoryColor, tags: (item.tags || []).join(' | '), link: item.link, related: explicit, recommended };
   } else if (item.link) {
     window.open(item.link, '_blank', 'noopener');
   }
@@ -284,7 +298,7 @@ function onClick(e) {
 watchEffect(() => {
   if (typeof document === 'undefined') return;
   const cats = activeCats.value, tags = activeT.value, results = searchResults.value;
-  void fltMode.value, void tagMode.value, void sMode.value, void hiddenCats.value, void hiddenT.value, void spl.value;
+  void fltMode.value, void tagMode.value, void sMode.value, void hiddenCats.value, void hiddenT.value, void spl.value, void favF.value, void fList.value;
   const tierEmptyMsg = t('tierEmpty');
   const noResultsMsg = t('noResults');
   requestAnimationFrame(() => {
@@ -299,6 +313,7 @@ watchEffect(() => {
       else if (sMode === 'hasDesc') { const item = itemMap.get(el.dataset.id); if (!item?.desc) match = false; }
       else if (sMode === 'isNew') { const item = itemMap.get(el.dataset.id); if (!item || (item.modifiedAt || 0) < newThreshold) match = false; }
       else if (sMode === 'noLinkNoDesc') { const item = itemMap.get(el.dataset.id); if (!item || item.link || item.desc) match = false; }
+      if (match && favF.value && !fList.value.includes(el.dataset.id)) match = false;
       const hCats = hiddenCats.value, hTags = hiddenT.value;
       if (hCats.length > 0 && hCats.includes(el.dataset.category)) { match = false; }
       if (match && hTags.length > 0) {
@@ -360,10 +375,20 @@ watchEffect(() => {
       bg.style.setProperty('--bg-hf', Math.max(h / 1000, 1));
     }
   });
+  document.addEventListener('open-item-modal', (e) => {
+    const id = e.detail;
+    const item = itemMap.get(id);
+    if (item) setModalItem(item);
+  });
 });
 
 watchEffect(() => {
   document.documentElement.setAttribute('data-detail', dm.value);
+  document.addEventListener('open-item-modal', (e) => {
+    const id = e.detail;
+    const item = itemMap.get(id);
+    if (item) setModalItem(item);
+  });
 });
 
 onMounted(() => {
@@ -393,6 +418,11 @@ onMounted(() => {
       }
     }, 600);
   }
+  document.addEventListener('open-item-modal', (e) => {
+    const id = e.detail;
+    const item = itemMap.get(id);
+    if (item) setModalItem(item);
+  });
 });
 onUnmounted(() => {
   searchWorker.terminate()
@@ -403,11 +433,16 @@ onUnmounted(() => {
     c.removeEventListener('mouseleave', onMouseLeave);
     c.removeEventListener('click', onClick);
   }
+  document.addEventListener('open-item-modal', (e) => {
+    const id = e.detail;
+    const item = itemMap.get(id);
+    if (item) setModalItem(item);
+  });
 });
 </script>
 
 <template>
   <ItemTooltip ref="tipRef" v-bind="tip" @enter="currentItemEl = null" @leave="hideTooltip" />
   <ItemModal :item="modalItem" @close="modalItem = null" @navigate="onModalNav" />
-  <MobileSheet :item="sheetItem" @close="sheetItem = null" />
+  <MobileSheet :item="sheetItem" @close="sheetItem = null" @navigate="onModalNav" />
 </template>

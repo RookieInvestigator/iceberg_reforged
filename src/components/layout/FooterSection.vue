@@ -45,12 +45,17 @@ const showBulletin = ref(false);
         <span class="ft-sep">|</span>
         <button class="ft-btn" @click="showContact = true">{{ t('contactLink') }}</button>
       </div>
-      
+
     </div>
+
+    <img
+      src="https://count.moeyy.cn/@icebergreforged?name=icebergreforged&theme=moebooru&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto"
+      alt=""
+      style="display:block;margin:0.75rem auto 0"
+    />
 
     <BulletinModal v-if="showBulletin" :bulletins="props.bulletins" @close="showBulletin = false" />
     <AboutModal v-if="showAbout" :buildDate="props.buildDate" :entryCount="props.entryCount" @close="showAbout = false" />
     <ContactModal v-if="showContact" @close="showContact = false" />
-    
   </footer>
 </template>

@@ -43,7 +43,7 @@
   background: var(--color-modal-bg, #1a1a1a);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
-.modal-header h2 { font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: .05em; }
+.modal-header h2 { font-size: 1rem; font-weight: 700; color: #fff; letter-spacing: .05em; overflow-wrap: break-word; }
 .modal-header .modal-close {
   color: rgba(255, 255, 255, .25); font-size: 1.2rem; line-height: 1;
   background: none; border: none; cursor: pointer;
@@ -68,7 +68,13 @@
   border-top: 1px solid rgba(255, 255, 255, 0.04);
   text-align: center; 
   font-size: .6rem; 
-  color: rgba(251, 191, 36, 0.6);
+  color: #ff6a06;
+}
+
+/* 设置内提示 */
+.setting-hint {
+  font-size: .6rem; line-height: 1.4;
+  color: #ff6a06; padding: 0 4px;
 }
 
 /* 隱藏滾動條 */

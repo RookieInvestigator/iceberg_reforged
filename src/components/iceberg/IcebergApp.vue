@@ -2,7 +2,7 @@
 // Single Vue island: FilterSidebar + ActiveFilters + Search + ItemInteractivity share one instance
 import { computed, ref, onMounted, onUnmounted, watchEffect, inject } from 'vue';
 import { useStore } from '@nanostores/vue';
-import { activeCategories, activeTags, searchQuery, toggleCategory, toggleTag, tagFilterMode, searchMode, hiddenCategories, hiddenTags, specialFilter } from '../../lib/filterStore';
+import { activeCategories, activeTags, searchQuery, toggleCategory, toggleTag, tagFilterMode, searchMode, hiddenCategories, hiddenTags, specialFilter, favFilter } from '../../lib/filterStore';
 import { fontSize, FONT_SIZE_MAP, showLinkEmoji, showDescEmoji, sortMode } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import ItemInteractivity from '../items/ItemInteractivity.vue';
@@ -86,6 +86,7 @@ const sMode = useStore(searchMode);
 const hiddenCats = useStore(hiddenCategories);
 const hiddenT = useStore(hiddenTags);
 const splFilter = useStore(specialFilter);
+const favF = useStore(favFilter);
 const hasActive = computed(() => query.value || activeCats.value.length > 0 || activeT.value.length > 0 || hiddenCats.value.length > 0 || hiddenT.value.length > 0);
 function hideCategory(cat) {
   const cur = hiddenCategories.get();
@@ -224,6 +225,11 @@ function onDrawerTouchEnd() {
             :class="['group flex items-center gap-2 px-3 py-1.5 text-[0.85rem] font-medium tracking-wide transition-colors duration-200 cursor-pointer select-none border-none',
               splFilter === 'noLinkNoDesc' ? 'bg-white/20 text-white hover:bg-white hover:text-black' : 'bg-transparent text-gray-500 hover:bg-white hover:text-black']">
             {{ t('needComplete') }}
+          </button>
+          <button @click="favFilter.set(!favF)"
+            :class="['group flex items-center gap-2 px-3 py-1.5 text-[0.85rem] font-medium tracking-wide transition-colors duration-200 cursor-pointer select-none border-none',
+              favF ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' : 'bg-transparent text-gray-500 hover:bg-white hover:text-black']">
+            {{ favF ? '★ 取消收藏' : '☆ 收藏' }}
           </button>
         </div>
       </div>

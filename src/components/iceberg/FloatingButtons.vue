@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { showRandomBtn, immersiveMode } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
@@ -7,6 +7,11 @@ import SettingsPanel from '../modals/SettingsPanel.vue';
 
 const props = defineProps({ sidebarOpen: Boolean });
 const emit = defineEmits(['random', 'toggleSidebar']);
+
+const fabBottom = computed(() => {
+  if (typeof window === 'undefined') return undefined;
+  return props.sidebarOpen && window.innerWidth < 1024 ? 'calc(70vh + 12px)' : undefined;
+});
 
 const { t } = useI18n();
 const showSettings = ref(false);
@@ -31,7 +36,7 @@ onUnmounted(() => window.removeEventListener('scroll', onScroll));
     :style="{
       right: '24px',
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-      bottom: props.sidebarOpen && window.innerWidth < 1024 ? 'calc(70vh + 12px)' : undefined,
+      bottom: fabBottom,
     }"
   >
     <button class="fab-btn" :aria-label="t('filter')" @mousedown.stop @click="toggleFilter">

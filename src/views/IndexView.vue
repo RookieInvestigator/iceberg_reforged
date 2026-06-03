@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { shallowRef, computed, onMounted, provide } from 'vue'
+import { useRoute } from 'vue-router'
 import { useStore } from '@nanostores/vue'
 import { bgMode } from '../lib/settingsStore'
 import raw from '../data/iceberg.json'
@@ -55,8 +56,15 @@ const bulletins = computed(() =>
 const bg = useStore(bgMode)
 const showBg = computed(() => bg.value !== 'black')
 
-// Content enter animation — check revisit
+// 从历史上的今天/?item=xxx 跳转：触发弹窗
+const route = useRoute()
 onMounted(() => {
+  const itemId = route.query.item as string
+  if (itemId) {
+    setTimeout(() => {
+      document.dispatchEvent(new CustomEvent('open-item-modal', { detail: itemId }))
+    }, 800)
+  }
   const content = document.getElementById('iceberg-content')
   if (!content) return
   try {
