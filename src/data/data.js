@@ -1,4 +1,4 @@
-{
+window.ICEBERG_DATA = {
   "generatedAt": 1780932482,
   "introText": "「与君幽明道别，何意相照也？」\n\n这是一个集体创作项目。不收录侵害个人隐私、过重政治色彩、过度血腥或色情的内容。对于上面列出的个人账号、商家或是线下组织，都请不要直接联系骚扰或者攻击对方。 \n\n参与创作者（按首字母排序）：Akilulf、C、C7H14S、Convalla、Cyberotonin、纯狐、超越論的ナ唯我独尊、冬寂網路、斗斗、渡し守、EdwardC、二十三霜秋、FMRMTN、forr、绯衣暮雪、辅酱出击、非梦剧场、狗蛤、高岭爱花花、Hagiwara、海市、黒船躑躅、决老师、橘往右往、结束子qwq、苦苣、lindigo、lithauch、Lord Kremlin、栗子、玏玏、聆之、Musca、夢中的聲音、门罗、陌と対馬、脑叶0811、paiz503、Prismriver、弃逐夜雪、戚斯叹、Rusell、Sakumokou、sjsj_yee、水狮提督衙门、T95T95T、Thyj_w、桃浪之二、迢迢牛奶路、WhiterHJ、wingzero、五技鼠_绝弦、未确认幻想物体、夏梁、亞洲銅、原子能蝴蝶、叶辰渊、药厂人家、筑沢幽、致陌生人_",
   "categoryColors": {
@@ -16614,4 +16614,4 @@
     "Tier 8"
   ],
   "defaultColor": "#FFFFFF"
-}
+};
