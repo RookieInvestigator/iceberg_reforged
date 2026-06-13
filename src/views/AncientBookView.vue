@@ -23,12 +23,12 @@ function toCN(n: number): string {
   return d[t] + '十' + (o ? d[o] : '')
 }
 
-const catNames: Record<string, string> = {
-  '都市传说・事件・超自然现象': '廣知', '鬼宅・异常地点': '凶宅', '历史・疑案・假说': '史微',
-  '未确认生物': '物異', '民俗・宗教・灵性': '禮殊', '神话・志怪・传奇': '諾皋記',
-  '网络怪谈': '齊諧', '真实犯罪・事故': '凶志', '阴谋论・边缘理论': '陰符',
-  '边缘科学': '廣格物', '预言・谶纬': '讖緯', '骗局・营销・谣言': '局詐',
-  '城市神秘物件': '器奇', '电视节目・放送・广播信号': '鏡聽', '自然现象': '天咫', '艺术与创作物': '藝文',
+const VOL_NAMES = ['廣知', '凶宅', '史微', '物異', '禮殊', '諾皋記', '齊諧', '凶志', '陰符', '廣格物', '讖緯', '局詐', '器奇', '鏡聽', '天咫', '藝文']
+const catKeys = Object.keys(raw.categoryColors || {})
+// 按 categoryColors 的顺序映射卷名，不依赖具体 category 名字
+function volName(cat: string): string {
+  const i = catKeys.indexOf(cat)
+  return i >= 0 && i < VOL_NAMES.length ? VOL_NAMES[i] : cat
 }
 
 interface Meta { id: string; title: string; cat: string; color: string; tags: string[]; desc: string; link: string; tier: string }
@@ -54,8 +54,8 @@ function generateData(mode: 'category' | 'tier') {
       const items = allRaw.filter(it => it.category === cat).sort((a, b) => tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier))
       if (items.length === 0) continue
       volNum++
-      const catName = catNames[cat] || cat
-      pushAll('⚐【' + catName + toCN(volNum) + '】', -1)
+      const cn = volName(cat)
+      pushAll('⚐【' + cn + toCN(volNum) + '】', -1)
       pushAll('\f', -1)
       for (const it of items) {
         const mi = meta.length
