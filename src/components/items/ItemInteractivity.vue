@@ -255,8 +255,17 @@ function hideTooltip() {
 }
 
 // Event delegation
+let scrollBusy = false;
+let scrollTimer = 0;
+window.addEventListener('scroll', () => {
+  scrollBusy = true;
+  hideTooltip();
+  clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => { scrollBusy = false; }, 300);
+}, { passive: true });
+
 function onMouseOver(e) {
-  if (dm.value === 'modal') return;
+  if (scrollBusy || dm.value === 'modal') return;
   const el = e.target.closest('.iceberg-item');
   if (!el) { hideTooltip(); return; }
   if (el === currentItemEl) return;

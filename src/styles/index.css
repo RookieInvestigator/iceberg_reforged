@@ -26,6 +26,8 @@
 }
 
 @layer components {
+  /* ===== Font size via CSS variable ===== */
+  #items-container { font-size: var(--item-font-size, 1rem); }
   /* ===== Iceberg item ===== */
   .iceberg-item {
     position: relative;
@@ -39,11 +41,11 @@
   .iceberg-item::before {
     content: ""; position: absolute; inset: 0;
     background: var(--item-color);
-    opacity: 0; z-index: -1;
-    transition: opacity 0.25s ease;
+    transform: scaleX(0); transform-origin: left; z-index: -1;
+    transition: transform 0.25s cubic-bezier(0.2,0,0,1);
   }
   html:not([data-detail="modal"]) .iceberg-item:hover, .iceberg-item.tooltip-active { z-index: 10; text-shadow: none !important; }
-  html:not([data-detail="modal"]) .iceberg-item:hover::before, .iceberg-item.tooltip-active::before { opacity: 1; }
+  html:not([data-detail="modal"]) .iceberg-item:hover::before, .iceberg-item.tooltip-active::before { transform: scaleX(1); }
   html:not([data-detail="modal"]) .iceberg-item:hover .item-title, .iceberg-item.tooltip-active .item-title,
   html:not([data-detail="modal"]) .iceberg-item:hover .item-tag, .iceberg-item.tooltip-active .item-tag { color: #000 !important; }
   /* 弹窗模式：弱 hover 暗示可点 */

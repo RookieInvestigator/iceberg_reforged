@@ -48,10 +48,20 @@ function generateData(mode: 'category' | 'tier') {
   if (raw.introText) { pushAll('【序】\n' + raw.introText + '\n\n', -1) }
   pushAll('\f', -1)
 
+  // 單次遍歷分組，避免 O(N×M) 的重複 filter
+  const byCat: Record<string, ItemExt[]> = {};
+  const byTier: Record<string, ItemExt[]> = {};
+  for (const it of allRaw) {
+    if (!byCat[it.category]) byCat[it.category] = [];
+    byCat[it.category].push(it);
+    if (!byTier[it.tier]) byTier[it.tier] = [];
+    byTier[it.tier].push(it);
+  }
+
   if (mode === 'category') {
     let volNum = 0
     for (const cat of Object.keys(raw.categoryColors || {})) {
-      const items = allRaw.filter(it => it.category === cat).sort((a, b) => tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier))
+      const items = (byCat[cat] || []).sort((a, b) => tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier))
       if (items.length === 0) continue
       volNum++
       const cn = volName(cat)
@@ -71,7 +81,7 @@ function generateData(mode: 'category' | 'tier') {
     const tierNames = ['甲志', '乙志', '丙志', '丁志', '戊志', '己志', '庚志', '辛志']
     let volNum = 0
     for (const tn of tierOrder) {
-      const items = allRaw.filter(it => it.tier === tn).sort((a, b) => Object.keys(raw.categoryColors || {}).indexOf(a.category) - Object.keys(raw.categoryColors || {}).indexOf(b.category))
+      const items = (byTier[tn] || []).sort((a, b) => Object.keys(raw.categoryColors || {}).indexOf(a.category) - Object.keys(raw.categoryColors || {}).indexOf(b.category))
       if (items.length === 0) continue
       const tName = volNum < tierNames.length ? tierNames[volNum] : '極'
       volNum++
@@ -103,6 +113,7 @@ let currentMode: 'category' | 'tier' = 'category'
 let globalData: any = null
 let activeMeta: any[] = []
 let volNames: string[] = []
+let roTimer = 0
 
 function updateModeData() {
   const modeData = currentMode === 'category' ? catData : tierData
@@ -146,18 +157,6 @@ function show(i: number) {
   cur = i
 }
 
-let resizeTimer: ReturnType<typeof setTimeout>
-function handleResize() {
-  clearTimeout(resizeTimer)
-  resizeTimer = setTimeout(() => {
-    const md2 = currentMode === 'category' ? catData : tierData
-    tokens = parseWenyan(md2.code, md2.charItem)
-    const st2 = calcLayout(tokens, cur)
-    COLS = st2.COLS; ROWS = st2.ROWS; spreads = st2.spreads; MAX = st2.MAX
-    updateVolNames(); show(st2.cur)
-  }, 200)
-}
-
 function boot() {
   const root = document.getElementById('root')
   if (!root) return
@@ -179,19 +178,20 @@ function boot() {
   let initialDone = false
   const wr = document.getElementById('wr')!
   const ro = new ResizeObserver((entries) => {
+    clearTimeout(roTimer)
     const e = entries[0]
     const w = e ? e.contentRect.width : 0
     const h = e ? e.contentRect.height : 0
     if (w > 0 && h > 0 && !initialDone) {
       initialDone = true
-      const st = calcLayout(tokens, cur)
-      COLS = st.COLS; ROWS = st.ROWS; spreads = st.spreads; MAX = st.MAX
-      updateVolNames(); show(st.cur)
+      roTimer = setTimeout(() => {
+        const st = calcLayout(tokens, cur)
+        COLS = st.COLS; ROWS = st.ROWS; spreads = st.spreads; MAX = st.MAX
+        updateVolNames(); show(st.cur)
+      }, 150)
     }
   })
   ro.observe(wr)
-
-  window.addEventListener('resize', handleResize)
 
   document.getElementById('bp')!.onclick = () => { if (cur > 0) show(cur - 1) }
   document.getElementById('np')!.onclick = () => { if (cur < MAX) show(cur + 1) }
@@ -234,7 +234,7 @@ function boot() {
 }
 
 onMounted(() => { boot() })
-onUnmounted(() => { window.removeEventListener('resize', handleResize) })
+onUnmounted(() => { clearTimeout(roTimer) })
 </script>
 
 <template>

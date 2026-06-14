@@ -38,47 +38,60 @@ onUnmounted(() => document.removeEventListener('mousedown', onDocClick));
 const FONT_SCALE = { xs: '0.75rem', sm: '0.875rem', md: '1rem', lg: '1.125rem', xl: '1.25rem' };
 const fs = useStore(fontSize);
 watchEffect(() => {
-  const c = document.getElementById('items-container');
-  if (c) c.style.fontSize = FONT_SCALE[fs.value] || '1rem';
+  document.documentElement.style.setProperty('--item-font-size', FONT_SCALE[fs.value] || '1rem');
 });
 const linkEmoji = useStore(showLinkEmoji);
 const descEmoji = useStore(showDescEmoji);
 const srt = useStore(sortMode);
 watchEffect(() => {
-  document.documentElement.classList.toggle('show-link-emoji', linkEmoji.value);
-  document.documentElement.classList.toggle('show-desc-emoji', descEmoji.value);
+  document.getElementById('items-container')?.classList.toggle('show-link-emoji', linkEmoji.value);
+  document.getElementById('items-container')?.classList.toggle('show-desc-emoji', descEmoji.value);
 });
 
-// Sort
+// Sort: uses DocumentFragment for batch DOM insertion
 let _origOrder = null;
+let _sortPending = 0;
 function sortItems(mode) {
   if (!_origOrder) {
     _origOrder = new Map();
-    document.querySelectorAll('.iceberg-item').forEach((el, i) => _origOrder.set(el.dataset.id, i));
+    document.querySelectorAll('.iceberg-item').forEach((el, i) => {
+      _origOrder.set(el.dataset.id, i);
+    });
   }
-  const tiers = document.querySelectorAll('.iceberg-tier');
-  tiers.forEach(t => {
-    const wrap = t.querySelector(':scope > div > .flex');
-    if (!wrap) return;
-    const items = [...wrap.querySelectorAll('.iceberg-item')];
-    if (mode === 'default') {
-      items.sort((a, b) => (_origOrder.get(a.dataset.id) || 0) - (_origOrder.get(b.dataset.id) || 0));
-    } else if (mode === 'title-asc' || mode === 'title-desc') {
-      items.sort((a, b) => {
-        const ta = a.querySelector('.item-title')?.textContent || '';
-        const tb = b.querySelector('.item-title')?.textContent || '';
-        return mode === 'title-asc' ? ta.localeCompare(tb, 'zh-CN') : tb.localeCompare(ta, 'zh-CN');
-      });
-    } else if (mode === 'category') {
-      items.sort((a, b) => {
-        const ca = a.dataset.category || ''; const cb = b.dataset.category || '';
-        return ca.localeCompare(cb, 'zh-CN');
-      });
-    }
-    items.forEach(el => wrap.appendChild(el));
-  });
+  clearTimeout(_sortPending);
+  _sortPending = setTimeout(() => {
+    const tiers = document.querySelectorAll('.iceberg-tier');
+    tiers.forEach(t => {
+      const wrap = t.querySelector(':scope > div > .flex');
+      if (!wrap) return;
+      const items = [...wrap.querySelectorAll('.iceberg-item')];
+      if (mode === 'default') {
+        items.sort((a, b) => (_origOrder.get(a.dataset.id) || 0) - (_origOrder.get(b.dataset.id) || 0));
+      } else if (mode === 'title-asc' || mode === 'title-desc') {
+        items.sort((a, b) => {
+          const ta = (a.querySelector('.item-title') && a.querySelector('.item-title').textContent) || '';
+          const tb = (b.querySelector('.item-title') && b.querySelector('.item-title').textContent) || '';
+          return mode === 'title-asc' ? ta.localeCompare(tb, 'zh-CN') : tb.localeCompare(ta, 'zh-CN');
+        });
+      } else if (mode === 'category') {
+        items.sort((a, b) => {
+          const ca = a.dataset.category || ''; const cb = b.dataset.category || '';
+          return ca.localeCompare(cb, 'zh-CN');
+        });
+      }
+      const frag = document.createDocumentFragment();
+      items.forEach(el => frag.appendChild(el));
+      wrap.appendChild(frag);
+    });
+    _sortPending = 0;
+  }, 0);
 }
-watchEffect(() => { sortItems(srt.value); });
+let _sortMounted = false;
+watchEffect(() => {
+  if (!_sortMounted && srt.value === 'default') { _sortMounted = true; return; }
+  _sortMounted = true;
+  sortItems(srt.value);
+});
 
 // Active filters helpers
 const tagMode = useStore(tagFilterMode);
@@ -105,15 +118,22 @@ function onSearchInput(val) {
   debounce = setTimeout(() => searchQuery.set(val), 150);
 }
 
-// Mobile drawer drag-to-dismiss
+// Mobile drawer drag-to-dismiss (rAF throttled)
 let dragStartY = 0;
 let dragPanY = 0;
-function onDrawerTouchStart(e) { dragStartY = e.touches[0].clientY; dragPanY = 0; }
+let dragTick = false;
+function onDrawerTouchStart(e) { dragStartY = e.touches[0].clientY; dragPanY = 0; dragTick = false; }
 function onDrawerTouchMove(e) {
   dragPanY = e.touches[0].clientY - dragStartY;
-  if (dragPanY > 10 && sidebarRef.value) {
-    sidebarRef.value.style.transform = `translateY(${dragPanY}px)`;
-    sidebarRef.value.style.transition = 'none';
+  if (dragPanY > 10 && !dragTick) {
+    dragTick = true;
+    requestAnimationFrame(() => {
+      if (sidebarRef.value) {
+        sidebarRef.value.style.transform = `translateY(${dragPanY}px)`;
+        sidebarRef.value.style.transition = 'none';
+      }
+      dragTick = false;
+    });
   }
 }
 function onDrawerTouchEnd() {

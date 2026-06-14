@@ -96,6 +96,8 @@ function goDate(d) {
 }
 
 function goToday() { goDate(new Date()); }
+function goPrevDay() { const d = new Date(currentDate.value); d.setDate(d.getDate() - 1); goDate(d); }
+function goNextDay() { const d = new Date(currentDate.value); d.setDate(d.getDate() + 1); goDate(d); }
 function prevMonth() { 
   if (calendarMonth.value === 0) { calendarYear.value--; calendarMonth.value = 11; } 
   else { calendarMonth.value--; }
@@ -115,23 +117,30 @@ onMounted(() => {
 </script>
 
 <template>
-  <!-- 核心外围容器：极暗底色，现代无衬线字体，严格一屏限制 -->
-  <div class="h-screen w-full overflow-hidden bg-[#09090b] text-zinc-50 font-sans flex flex-col md:flex-row selection:bg-white selection:text-black">
+  <div class="h-screen w-full overflow-hidden bg-[#0c0c0f] text-zinc-50 font-sans flex flex-col md:flex-row selection:bg-white selection:text-black">
 
     <!-- ================= 左侧：极简控制台 ================= -->
-    <aside class="w-full md:w-[360px] lg:w-[400px] shrink-0 border-r border-white/[0.06] flex flex-col z-20 bg-[#09090b]">
+    <aside class="w-full md:w-[360px] lg:w-[400px] shrink-0 border-r border-white/[0.06] flex flex-col z-20 bg-[#0c0c0f]">
       
       <!-- 极简 Header -->
-      <div class="h-16 flex items-center px-8 text-xs font-medium text-zinc-400 tracking-widest uppercase">
-        {{ t('onThisDay') }}
+      <div class="h-16 flex items-center justify-between px-8">
+        <span class="text-xs font-medium text-zinc-400 tracking-widest uppercase">{{ t('onThisDay') }}</span>
+        <router-link to="/" class="text-xs text-zinc-500 hover:text-zinc-300 transition-colors tracking-wider">&larr; {{ t('backToIceberg') }}</router-link>
       </div>
 
-      <!-- Hero Date 显示区 -->
+      <!-- Hero Date 显示区 + 快速切换 -->
       <div class="px-8 pt-6 pb-10">
-        <h1 class="text-6xl md:text-7xl font-semibold tracking-tighter text-white">
-          {{ getMonthName(currentDate) }} {{ pad(currentDate.getDate()) }}
-        </h1>
-
+        <div class="flex items-center gap-3">
+          <button @click="goPrevDay" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/8 text-zinc-500 hover:text-white transition-colors" :aria-label="t('prevDay')">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <h1 class="text-6xl md:text-7xl font-semibold tracking-tighter text-white">
+            {{ getMonthName(currentDate) }} {{ pad(currentDate.getDate()) }}
+          </h1>
+          <button @click="goNextDay" class="w-9 h-9 flex items-center justify-center rounded-full hover:bg-white/8 text-zinc-500 hover:text-white transition-colors" :aria-label="t('nextDay')">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
       </div>
 
       <!-- 日历面板 -->
@@ -186,13 +195,13 @@ onMounted(() => {
     </aside>
 
     <!-- ================= 右侧：内容流动区 ================= -->
-    <main class="flex-1 min-h-0 relative z-10 bg-[#09090b]">
+    <main class="flex-1 min-h-0 relative z-10 bg-[#0c0c0f]">
       
       <!-- 隐藏原生滚动条，保留干净视窗 -->
       <div ref="contentScrollRef" class="h-full w-full overflow-y-auto hide-scrollbar scroll-smooth">
         
         <!-- 空状态：极致克制 -->
-        <div v-if="groupedEvents.length === 0" class="h-full flex items-center justify-center">
+        <div v-if="groupedEvents.length === 0" class="min-h-[40vh] flex items-center justify-center">
           <div class="text-center">
             <svg class="w-12 h-12 text-zinc-800 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -202,41 +211,35 @@ onMounted(() => {
         </div>
 
         <!-- 事件流 -->
-        <div v-else class="max-w-4xl mx-auto pb-32">
-          <div v-for="(group, gIdx) in groupedEvents" :key="group.year" class="relative group/era">
-            
-            <!-- Sticky 毛玻璃年份头 -->
-            <div class="sticky top-0 z-20 pt-10 pb-4 px-8 md:px-16 backdrop-blur-xl bg-[#09090b]/80 border-b border-white/[0.04]">
-              <h2 class="text-3xl font-bold tracking-tight text-white flex items-center gap-4">
-                {{ group.year }}
-                <div class="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
-              </h2>
-            </div>
+        <div v-else class="max-w-4xl mx-auto pb-32 px-8 md:px-16">
+          <div v-for="(group, gIdx) in groupedEvents" :key="group.year" class="relative">
 
-            <!-- 具体事件列表 -->
-            <div class="px-8 md:px-16 pt-8 space-y-12">
-              <article v-for="(event, i) in group.items" :key="i" class="group/item">
-                
-                <h3 class="text-xl md:text-2xl font-medium leading-snug mb-3 text-zinc-100 group-hover/item:text-white transition-colors">
-                  {{ event.title }}
-                </h3>
-                
-                <p v-if="event.desc" class="text-sm md:text-base leading-relaxed text-zinc-400 mb-5 max-w-3xl">
-                  {{ event.desc }}
-                </p>
+            <div class="pt-10 space-y-10">
+              <article v-for="(event, i) in group.items" :key="i" class="group/item flex items-baseline gap-5">
 
-                <!-- 科技感极其低调的操作链接 -->
-                <div class="flex flex-wrap items-center gap-5 mt-2">
-                  <a v-if="event.link" :href="event.link" target="_blank" rel="noopener"
-                    class="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-white uppercase tracking-wider transition-colors">
-                    <span>{{ t('source') }}</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
-                  </a>
-                  <a v-if="event.item" @click.prevent="goItem(event.item)" href="#"
-                    class="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-white uppercase tracking-wider transition-colors">
-                    <span>{{ t('explore') }}</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-                  </a>
+                <span class="shrink-0 w-16 text-right text-sm font-mono text-zinc-500 tracking-tight">{{ group.year }}</span>
+
+                <div class="min-w-0">
+                  <h3 class="text-xl md:text-2xl font-medium leading-snug text-zinc-100 group-hover/item:text-white transition-colors">
+                    {{ event.title }}
+                  </h3>
+
+                  <p v-if="event.desc" class="text-sm md:text-base leading-relaxed text-zinc-400 mt-2 max-w-3xl">
+                    {{ event.desc }}
+                  </p>
+
+                  <div class="flex flex-wrap items-center gap-5 mt-3">
+                    <a v-if="event.link" :href="event.link" target="_blank" rel="noopener"
+                      class="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-white uppercase tracking-wider transition-colors">
+                      <span>{{ t('source') }}</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
+                    </a>
+                    <a v-if="event.item" @click.prevent="goItem(event.item)" href="#"
+                      class="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-white uppercase tracking-wider transition-colors">
+                      <span>{{ t('explore') }}</span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </a>
+                  </div>
                 </div>
               </article>
             </div>

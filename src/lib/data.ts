@@ -22,42 +22,37 @@ export interface IcebergData {
   defaultColor: string;
 }
 
-// 中文排版规范化
+// 中文排版规范化（合并正则减少扫描遍数）
+const DASH_RE = /[‐‑‒–—―]|--+/g;
+const ELLIPSIS_RE = /\.{3,}|…\.{0,}/g;
+const SIMPLE_MAP: Record<string, string> = { '·': '·', '・': '·', '~': '～', '˜': '～' };
+const SIMPLE_RE = /[·・~˜]/g;
+// 合并：中文后跟英文标点 → 中文标点
+const CN_PUNCT: Record<string, string> = { ',': '，', '.': '。', '!': '！', '?': '？', ';': '；', ':': '：' };
+const CN_PUNCT_RE = /(\p{Script=Han})([,\.!\?;:])/gu;
+
 function replaceQuotes(s: string): string {
   if (!s) return s;
 
-  // 引号 → 直角引号「」『』
-  s = s.replace(/"([^"]*)"/g, '「$1」');
-  s = s.replace(/“([^”]*)”/g, '「$1」');
-  s = s.replace(/'([^']*)'/g, '『$1』');
-  s = s.replace(/‘([^’]*)’/g, '『$1』');
+  // 引号 → 直角引号「」『』（合并为两步）
+  s = s.replace(/[""]([^""]*)[""]/g, '「$1」');
+  s = s.replace(/['']([^'']*)['']/g, '『$1』');
 
-  // 书名号 << >> → 《》
+  // 书名号
   s = s.replace(/<<\s*(.+?)\s*>>/g, '《$1》');
   s = s.replace(/<([^>]*?)>/g, '〈$1〉');
 
   // 破折号/连字符 → —
-  s = s.replace(/[‐‑‒–—―]/g, '—');
-  s = s.replace(/--+/g, '—');
+  s = s.replace(DASH_RE, '—');
 
   // 省略号 → ……
-  s = s.replace(/\.{3,}|…\.{0,}/g, '……');
+  s = s.replace(ELLIPSIS_RE, '……');
 
-  // 间隔号统一
-  s = s.replace(/[·・]/g, '·');
+  // 间隔号/波浪号统一（单次扫描）
+  s = s.replace(SIMPLE_RE, m => SIMPLE_MAP[m]);
 
-  // 波浪号 → ～
-  s = s.replace(/[~˜]/g, '～');
-
-  // 中文后英文标点 → 中文标点
-  const CJK = /([^\x00-\x7f])/g;
-  s = s.replace(CJK, '$1'); // no-op, used for following replacements
-  s = s.replace(/(\p{Script=Han}),/gu, '$1，');
-  s = s.replace(/(\p{Script=Han})\./gu, '$1。');
-  s = s.replace(/(\p{Script=Han})!/gu, '$1！');
-  s = s.replace(/(\p{Script=Han})\?/gu, '$1？');
-  s = s.replace(/(\p{Script=Han});/gu, '$1；');
-  s = s.replace(/(\p{Script=Han}):/gu, '$1：');
+  // 中文后英文标点 → 中文标点（单次扫描替代 6 次）
+  s = s.replace(CN_PUNCT_RE, (_, han, punct) => han + (CN_PUNCT[punct] || punct));
 
   // 半角括号含中文 → 全角
   s = s.replace(/\(([^)]*[一-鿿][^)]*)\)/g, '（$1）');

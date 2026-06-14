@@ -11,16 +11,11 @@ defineProps<{
 defineEmits(['close']);
 
 // 统一管理背景滚动锁
-let prevBody = '', prevHtml = '';
 onMounted(() => {
-  prevBody = document.body.style.overflow;
-  prevHtml = document.documentElement.style.overflow;
   document.body.style.overflow = 'hidden';
-  document.documentElement.style.overflow = 'hidden';
 })
 onUnmounted(() => {
-  document.body.style.overflow = prevBody;
-  document.documentElement.style.overflow = prevHtml;
+  document.body.style.overflow = '';
 })
 </script>
 

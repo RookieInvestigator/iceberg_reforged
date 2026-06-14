@@ -32,7 +32,7 @@ onMounted(() => {
   } else {
     document.addEventListener('hero-ready', () => {
       hasHero = true
-      setTimeout(hideShield, 400)
+      setTimeout(hideShield, 800)
       document.addEventListener('hero-exit', () => {
         showShield()
         setTimeout(hideShield, 800)
@@ -83,7 +83,7 @@ onMounted(() => {
   position: fixed; inset: 0; z-index: 9999;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: #0a0e14; gap: 22px;
-  transition: opacity 0.5s ease-out;
+  transition: opacity 1s ease-out;
 }
 .app-shield.hidden { opacity: 0; pointer-events: none; }
 .shield-icon {

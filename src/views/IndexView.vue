@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { shallowRef, computed, onMounted, provide } from 'vue'
+import { shallowRef, ref, computed, onMounted, provide, watch } from 'vue'
+import OnThisDayModal from '../components/calendar/OnThisDayModal.vue'
 import { useRoute } from 'vue-router'
 import { useStore } from '@nanostores/vue'
 import { bgMode } from '../lib/settingsStore'
@@ -55,16 +56,21 @@ const bulletins = computed(() =>
 // 背景模式
 const bg = useStore(bgMode)
 const showBg = computed(() => bg.value !== 'black')
+const showOnThisDay = ref(false)
+provide('openOnThisDay', () => { showOnThisDay.value = true })
 
 // 从历史上的今天/?item=xxx 跳转：触发弹窗
 const route = useRoute()
-onMounted(() => {
-  const itemId = route.query.item as string
+// 监听 ?item=xxx 触发词条弹窗（支持从其他地方跳转过来）
+watch(() => route.query.item, (itemId) => {
   if (itemId) {
     setTimeout(() => {
       document.dispatchEvent(new CustomEvent('open-item-modal', { detail: itemId }))
-    }, 800)
+    }, 300)
   }
+}, { immediate: true })
+
+onMounted(() => {
   const content = document.getElementById('iceberg-content')
   if (!content) return
   try {
@@ -121,6 +127,9 @@ onMounted(() => {
 
       <FooterSection :buildDate="buildDate" :entryCount="allItems.length" :bulletins="bulletins" />
     </div>
+
+    <OnThisDayModal v-if="showOnThisDay" @close="showOnThisDay = false" />
+    <OnThisDayModal v-if="showOnThisDay" @close="showOnThisDay = false" />
   </div>
 </template>
 
