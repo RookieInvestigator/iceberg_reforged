@@ -7,8 +7,13 @@ onMounted(() => {
   const h = Math.max(document.documentElement.scrollHeight, el.getBoundingClientRect().height)
   el.style.setProperty('--bg-hf', Math.max(h / 1000, 1).toString())
 
-  // 读取动态背景设置
-  try { const on = localStorage.getItem('iceberg-dynamic-bg'); if (on === 'true') el.classList.remove('static') } catch {}
+  // 读取 bgMode：static 暂停动画，dynamic 启用漂浮（storedAtom 存的是 JSON，需解析）
+  try {
+    const raw = localStorage.getItem('iceberg-bg-mode')
+    const mode = raw ? JSON.parse(raw) : 'static'
+    if (mode === 'dynamic') el.classList.remove('static')
+    if (mode === 'black') el.style.display = 'none'
+  } catch {}
 
   let tid: ReturnType<typeof setTimeout>
   function pauseBg() {

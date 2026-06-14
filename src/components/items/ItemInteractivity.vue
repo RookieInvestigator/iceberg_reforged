@@ -305,6 +305,7 @@ watchEffect(() => {
     const c = document.getElementById('items-container');
     if (!c) return;
     const items = c.querySelectorAll('.iceberg-item');
+    const tierVis = new Map(); // tierEl → visible count, single pass
     for (let i = 0; i < items.length; i++) {
       const el = items[i];
       let match = true;
@@ -334,40 +335,30 @@ watchEffect(() => {
         el.style.display = '';
         el.classList.toggle('dimmed', !match);
       }
-    }
-    let totalVisible = 0;
-    const tiers = c.querySelectorAll('.iceberg-tier');
-    tiers.forEach((tier) => {
-      let visible = 0;
-      tier.querySelectorAll('.iceberg-item').forEach((el) => {
-        if (el.style.display !== 'none' && !el.classList.contains('dimmed')) visible++;
-      });
-      totalVisible += visible;
-      let msg = tier.querySelector('.tier-empty');
-      if (visible === 0) {
-        if (!msg) {
-          msg = document.createElement('div');
-          msg.className = 'tier-empty text-center text-white/15 text-sm py-8 italic';
-          msg.textContent = tierEmptyMsg;
-          tier.appendChild(msg);
-        }
-      } else if (msg) {
-        msg.remove();
+      // 统计可见：hide 模式看 display，dim 模式看 match
+      const visible = fltMode.value === 'hide' ? match : (!el.classList.contains('dimmed'));
+      if (visible) {
+        const tier = el.closest('.iceberg-tier');
+        if (tier) tierVis.set(tier, (tierVis.get(tier) || 0) + 1);
       }
+    }
+    // Single pass: update tier-empty messages and global visibility
+    let total = 0;
+    c.querySelectorAll('.iceberg-tier').forEach(tier => {
+      const v = tierVis.get(tier) || 0;
+      total += v;
+      let msg = tier.querySelector('.tier-empty');
+      if (v === 0) {
+        if (!msg) { msg = document.createElement('div'); msg.className = 'tier-empty text-center text-white/15 text-sm py-8 italic'; msg.textContent = tierEmptyMsg; tier.appendChild(msg); }
+      } else if (msg) { msg.remove(); }
     });
     let globalMsg = document.getElementById('items-empty');
-    if (totalVisible === 0) {
-      if (!globalMsg) {
-        globalMsg = document.createElement('div');
-        globalMsg.id = 'items-empty';
-        globalMsg.className = 'text-center text-white/20 text-lg py-40 italic';
-        globalMsg.textContent = noResultsMsg;
-        c.appendChild(globalMsg);
-      }
-      tiers.forEach(t => { t.style.display = 'none'; });
+    if (total === 0) {
+      if (!globalMsg) { globalMsg = document.createElement('div'); globalMsg.id = 'items-empty'; globalMsg.className = 'text-center text-white/20 text-lg py-40 italic'; globalMsg.textContent = noResultsMsg; c.appendChild(globalMsg); }
+      c.querySelectorAll('.iceberg-tier').forEach(t => { t.style.display = 'none'; });
     } else {
       if (globalMsg) globalMsg.remove();
-      tiers.forEach(t => { t.style.display = ''; });
+      c.querySelectorAll('.iceberg-tier').forEach(t => { t.style.display = ''; });
     }
     const bg = document.getElementById('iceberg-bg');
     if (bg) {
@@ -375,30 +366,24 @@ watchEffect(() => {
       bg.style.setProperty('--bg-hf', Math.max(h / 1000, 1));
     }
   });
-  document.addEventListener('open-item-modal', (e) => {
-    const id = e.detail;
-    const item = itemMap.get(id);
-    if (item) setModalItem(item);
-  });
 });
 
 watchEffect(() => {
   document.documentElement.setAttribute('data-detail', dm.value);
-  document.addEventListener('open-item-modal', (e) => {
-    const id = e.detail;
-    const item = itemMap.get(id);
-    if (item) setModalItem(item);
-  });
 });
+
+const openModalHandler = (e) => {
+  const id = e.detail;
+  const item = itemMap.get(id);
+  if (item) setModalItem(item);
+};
 
 onMounted(() => {
   document.documentElement.setAttribute('data-detail', dm.value);
-  // 预热相关词条索引
-  const warmup = () => { getRelMap() }
-  if ('requestIdleCallback' in window) requestIdleCallback(warmup)
-  else setTimeout(warmup, 500)
-  // 发送数据到搜索 Worker
-  searchWorker.postMessage({ type: 'init', items: allItems })
+  document.addEventListener('open-item-modal', openModalHandler);
+  // 发送数据到搜索 Worker（仅发送搜索需要的字段，减少结构化克隆开销）
+  const searchItems = allItems.map(it => ({ id: it.id, title: it.title, desc: it.desc }))
+  searchWorker.postMessage({ type: 'init', items: searchItems })
   const c = document.getElementById('items-container');
   if (c) {
     c.addEventListener('mouseover', onMouseOver);
@@ -418,12 +403,8 @@ onMounted(() => {
       }
     }, 600);
   }
-  document.addEventListener('open-item-modal', (e) => {
-    const id = e.detail;
-    const item = itemMap.get(id);
-    if (item) setModalItem(item);
-  });
 });
+
 onUnmounted(() => {
   searchWorker.terminate()
   clearTimeout(hoverTimer.value);
@@ -433,11 +414,7 @@ onUnmounted(() => {
     c.removeEventListener('mouseleave', onMouseLeave);
     c.removeEventListener('click', onClick);
   }
-  document.addEventListener('open-item-modal', (e) => {
-    const id = e.detail;
-    const item = itemMap.get(id);
-    if (item) setModalItem(item);
-  });
+  document.removeEventListener('open-item-modal', openModalHandler);
 });
 </script>
 

@@ -7,8 +7,5 @@ const allEvents = JSON.stringify(parseCSV(csvRaw))
 </script>
 
 <template>
-  <div class="relative w-full min-h-screen bg-black flex flex-col items-center">
-    <OnThisDayApp :allEvents="allEvents" />
-  </div>
+  <OnThisDayApp :allEvents="allEvents" />
 </template>
-

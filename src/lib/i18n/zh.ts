@@ -84,4 +84,9 @@ export default {
 	recommendedItem: '推荐词条',
 	bulletinLink: '公告板',
 	bulletinTitle: '公告板',
+	chronicle: '编年史',
+	recordsFound: '组',
+	noRecordsToday: '今日暂无记录',
+	source: '来源',
+	explore: '查看词条',
 };

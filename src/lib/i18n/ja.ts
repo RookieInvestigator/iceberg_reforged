@@ -1,4 +1,4 @@
-export default {
+﻿export default {
 	search: '検索',
 	categories: 'カテゴリ',
 	tags: 'タグ',
@@ -86,4 +86,9 @@ export default {
 	bulletinTitle: 'お知らせ',
 
 
+	chronicle: '編年史',
+	recordsFound: '件の記録',
+	noRecordsToday: '本日の記録なし',
+	source: 'ソース',
+	explore: '探索',
 };

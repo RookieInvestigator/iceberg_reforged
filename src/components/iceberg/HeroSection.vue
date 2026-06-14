@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, inject } from 'vue';
 import { useI18n } from '../../lib/useI18n';
+import { url } from '../../lib/baseUrl';
 
 const { t } = useI18n();
 const heroTitlesArr = inject('heroTitles', []);
@@ -95,7 +96,7 @@ onUnmounted(() => {
         </div>
       </div>
     </div>
-    <div class="hero-icon" aria-hidden="true"><img src="/assets/iceberg.svg" alt="" width="40" height="40" /></div>
+    <div class="hero-icon" aria-hidden="true"><img :src="url('/assets/iceberg.svg')" alt="" width="40" height="40" /></div>
     <div class="hero-arrow" aria-hidden="true">
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
     </div>

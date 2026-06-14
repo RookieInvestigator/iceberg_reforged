@@ -84,4 +84,9 @@ export default {
 	recommendedItem: 'You may also like',
 	bulletinLink: 'Notice',
 	bulletinTitle: 'Bulletin Board',
+	chronicle: 'Chronicle',
+	recordsFound: 'years',
+	noRecordsToday: 'No events today',
+	source: 'Source',
+	explore: 'Explore',
 };

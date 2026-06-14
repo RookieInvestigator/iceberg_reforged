@@ -1,13 +1,19 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from '@nanostores/vue';
 import { detailMode } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import { url } from '../../lib/baseUrl';
 
-const props = defineProps({ allEvents: String });
-const allEvents = JSON.parse(props.allEvents);
+const props = defineProps({ 
+  allEvents: { type: String, default: '[]' } 
+});
+
+const allEvents = (() => {
+  try { return JSON.parse(props.allEvents); } 
+  catch (e) { return []; }
+})();
 
 const { t } = useI18n();
 const router = useRouter();
@@ -21,34 +27,41 @@ function goItem(itemId) {
   }
 }
 
-const weekDays = computed(() => t('weekDays').split(','));
+const getMonthName = (date) => new Intl.DateTimeFormat('en-US', { month: 'short' }).format(date);
+const weekDays = computed(() => t('weekDays') ? t('weekDays').split(',') : ['S', 'M', 'T', 'W', 'T', 'F', 'S']);
 
 function toMMDD(d) {
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${m}-${day}`;
+  return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-
-function formatDate(d) {
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-  return t('dateFmt').replace('{m}', String(m)).replace('{d}', String(day));
-}
-
-function formatMonthYear(y, m) {
-  return t('monthYearFmt').replace('{y}', String(y)).replace('{m}', String(m + 1));
-}
+function pad(n) { return String(n).padStart(2, '0'); }
 
 const today = new Date();
 const currentDate = ref(today);
-const events = computed(() => {
-  const mmdd = toMMDD(currentDate.value);
-  return allEvents.filter(e => e.date === mmdd);
-});
-
-const showCalendar = ref(false);
 const calendarYear = ref(today.getFullYear());
 const calendarMonth = ref(today.getMonth());
+
+const groupedEvents = computed(() => {
+  const mmdd = toMMDD(currentDate.value);
+  const filtered = allEvents.filter(e => e.date === mmdd);
+  
+  const groups = {};
+  filtered.forEach(event => {
+    const y = event.year || 'Unknown';
+    if (!groups[y]) groups[y] = [];
+    groups[y].push(event);
+  });
+
+  return Object.keys(groups)
+    .sort((a, b) => {
+      if (a === 'Unknown') return 1;
+      if (b === 'Unknown') return -1;
+      return parseInt(b) - parseInt(a);
+    })
+    .map(year => ({
+      year: year,
+      items: groups[year]
+    }));
+});
 
 function getMonthDays(y, m) { return new Date(y, m + 1, 0).getDate(); }
 function getFirstDay(y, m) { return new Date(y, m, 1).getDay(); }
@@ -59,105 +72,199 @@ const calendarDays = computed(() => {
   const fd = getFirstDay(calendarYear.value, calendarMonth.value);
   for (let i = 0; i < fd; i++) days.push(null);
   for (let d = 1; d <= dim; d++) days.push(d);
+  
+  const totalCells = 42;
+  const currentLength = days.length;
+  for(let i = 0; i < totalCells - currentLength; i++) {
+    days.push(null);
+  }
   return days;
 });
 
-function goDate(d) { currentDate.value = d; showCalendar.value = false; }
-function goToday() { currentDate.value = new Date(); showCalendar.value = false; }
-function goPrev() { const d = new Date(currentDate.value); d.setDate(d.getDate() - 1); currentDate.value = d; }
-function goNext() { const d = new Date(currentDate.value); d.setDate(d.getDate() + 1); currentDate.value = d; }
-function openCalendar() { calendarYear.value = currentDate.value.getFullYear(); calendarMonth.value = currentDate.value.getMonth(); showCalendar.value = !showCalendar.value; }
-function prevMonth() { if (calendarMonth.value === 0) { calendarYear.value--; calendarMonth.value = 11; } else calendarMonth.value--; }
-function nextMonth() { if (calendarMonth.value === 11) { calendarYear.value++; calendarMonth.value = 0; } }
-function hasEvents(mmdd) { return allEvents.some(e => e.date === mmdd); }
-function isToday(mmdd) { return toMMDD(new Date()) === mmdd; }
-function isSelected(mmdd) { return toMMDD(currentDate.value) === mmdd; }
+const contentScrollRef = ref(null);
 
-function onDocClick(e) {
-  const cal = document.querySelector('.calendar-popover');
-  if (cal && !cal.contains(e.target)) showCalendar.value = false;
+function goDate(d) { 
+  currentDate.value = d; 
+  calendarYear.value = d.getFullYear();
+  calendarMonth.value = d.getMonth();
+  
+  nextTick(() => {
+    if (contentScrollRef.value) {
+      contentScrollRef.value.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  });
 }
 
-onMounted(() => { document.addEventListener('mousedown', onDocClick); document.dispatchEvent(new CustomEvent('vue-ready')); });
-onUnmounted(() => document.removeEventListener('mousedown', onDocClick));
+function goToday() { goDate(new Date()); }
+function prevMonth() { 
+  if (calendarMonth.value === 0) { calendarYear.value--; calendarMonth.value = 11; } 
+  else { calendarMonth.value--; }
+}
+function nextMonth() { 
+  if (calendarMonth.value === 11) { calendarYear.value++; calendarMonth.value = 0; } 
+  else { calendarMonth.value++; }
+}
+
+function hasEvents(mmdd) { return allEvents.some(e => e.date === mmdd); }
+function isSelected(mmdd) { return toMMDD(currentDate.value) === mmdd; }
+function isTodayGrid(mmdd) { return toMMDD(today) === mmdd; }
+
+onMounted(() => {
+  document.dispatchEvent(new CustomEvent('vue-ready'));
+});
 </script>
 
 <template>
-  <div class="w-full max-w-[600px] px-4 pt-12 pb-16">
-    <!-- Date navigation -->
-    <div class="flex items-center justify-center gap-4 mb-8 select-none">
-      <button @click="goPrev" class="text-white/40 hover:text-white/80 transition-colors text-xl leading-none px-2 py-1" :aria-label="t('prevDay')">
-        &larr;
-      </button>
-      <button @click="openCalendar" class="text-white/90 hover:text-white text-lg font-medium tracking-wider transition-colors">
-        {{ formatDate(currentDate) }}
-      </button>
-      <button @click="goNext" class="text-white/40 hover:text-white/80 transition-colors text-xl leading-none px-2 py-1" :aria-label="t('nextDay')">
-        &rarr;
-      </button>
-    </div>
+  <!-- 核心外围容器：极暗底色，现代无衬线字体，严格一屏限制 -->
+  <div class="h-screen w-full overflow-hidden bg-[#09090b] text-zinc-50 font-sans flex flex-col md:flex-row selection:bg-white selection:text-black">
 
-    <!-- Title -->
-    <h1 class="text-2xl font-bold tracking-widest text-center mb-10 text-white/85">{{ t('onThisDay') }}</h1>
+    <!-- ================= 左侧：极简控制台 ================= -->
+    <aside class="w-full md:w-[360px] lg:w-[400px] shrink-0 border-r border-white/[0.06] flex flex-col z-20 bg-[#09090b]">
+      
+      <!-- 极简 Header -->
+      <div class="h-16 flex items-center px-8 text-xs font-medium text-zinc-400 tracking-widest uppercase">
+        {{ t('onThisDay') }}
+      </div>
 
-    <!-- Calendar popover -->
-    <Teleport to="body">
-      <div v-if="showCalendar" class="calendar-popover fixed z-50 bg-[#1a1a1a] border border-white/10 rounded-lg p-4 shadow-2xl"
-           style="top: 120px; left: 50%; transform: translateX(-50%)">
-        <div class="flex items-center justify-between mb-3">
-          <button @click="prevMonth" class="text-white/50 hover:text-white/80 px-1">&larr;</button>
-          <span class="text-sm text-white/70">{{ formatMonthYear(calendarYear, calendarMonth) }}</span>
-          <button @click="nextMonth" class="text-white/50 hover:text-white/80 px-1">&rarr;</button>
+      <!-- Hero Date 显示区 -->
+      <div class="px-8 pt-6 pb-10">
+        <h1 class="text-6xl md:text-7xl font-semibold tracking-tighter text-white">
+          {{ getMonthName(currentDate) }} {{ pad(currentDate.getDate()) }}
+        </h1>
+
+      </div>
+
+      <!-- 日历面板 -->
+      <div class="px-8 pb-8 flex flex-col">
+        
+        <!-- 月份控制器 -->
+        <div class="flex justify-between items-center mb-6">
+          <span class="text-sm font-medium tracking-wide text-zinc-300">
+            {{ getMonthName(new Date(calendarYear, calendarMonth)) }} {{ calendarYear }}
+          </span>
+          <div class="flex items-center gap-1">
+            <button @click="prevMonth" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            </button>
+            <button @click="goToday" class="px-3 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-xs font-medium text-zinc-400 hover:text-white transition-colors">
+              {{ t('today') }}
+            </button>
+            <button @click="nextMonth" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+            </button>
+          </div>
         </div>
-        <div class="grid grid-cols-7 gap-1 text-center mb-1">
-          <div v-for="d in weekDays" :key="d" class="text-[0.65rem] text-white/30 py-1">{{ d }}</div>
+
+        <!-- 极简网格表头 -->
+        <div class="grid grid-cols-7 text-center mb-2">
+          <div v-for="d in weekDays" :key="d" class="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">{{ d }}</div>
         </div>
-        <div class="grid grid-cols-7 gap-1 text-center">
+        
+        <!-- 日历网格 -->
+        <div class="grid grid-cols-7 text-center gap-1">
           <template v-for="(d, i) in calendarDays" :key="i">
-            <div v-if="d === null" />
+            <div v-if="d === null" class="aspect-square"></div>
             <button
               v-else
               @click="goDate(new Date(calendarYear, calendarMonth, d))"
-              class="text-sm py-1 rounded transition-colors"
+              class="aspect-square flex flex-col items-center justify-center relative rounded-full text-sm font-medium transition-all duration-200"
               :class="{
-                'bg-white/15 text-white': isSelected(`${String(calendarMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`),
-                'text-white/80 font-bold': !isSelected(`${String(calendarMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`) && isToday(`${String(calendarMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`),
-                'text-white/50 hover:text-white/80 hover:bg-white/5': !isSelected(`${String(calendarMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`) && !isToday(`${String(calendarMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`),
+                'bg-white text-black shadow-lg shadow-white/10': isSelected(`${pad(calendarMonth + 1)}-${pad(d)}`),
+                'text-zinc-300 hover:bg-white/10': !isSelected(`${pad(calendarMonth + 1)}-${pad(d)}`),
+                'ring-1 ring-white/20 text-white': !isSelected(`${pad(calendarMonth + 1)}-${pad(d)}`) && isTodayGrid(`${pad(calendarMonth + 1)}-${pad(d)}`)
               }"
             >
-              {{ d }}
-              <span v-if="hasEvents(`${String(calendarMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`)"
-                    class="block mx-auto w-1 h-1 rounded-full bg-white/25 mt-0.5" />
+              <span>{{ d }}</span>
+              
+              <!-- 微小的事件指示点 -->
+              <span v-if="hasEvents(`${pad(calendarMonth + 1)}-${pad(d)}`) && !isSelected(`${pad(calendarMonth + 1)}-${pad(d)}`)"
+                    class="absolute bottom-1.5 w-1 h-1 rounded-full bg-zinc-600" />
             </button>
           </template>
         </div>
-        <button @click="goToday" class="mt-3 text-xs text-white/40 hover:text-white/70 transition-colors block mx-auto">{{ t('today') }}</button>
       </div>
-    </Teleport>
+    </aside>
 
-    <!-- Event list -->
-    <div v-if="events.length > 0" class="flex flex-col gap-8">
-      <div v-for="(event, i) in events" :key="i">
-        <div class="text-white/80 leading-relaxed">
-          <span v-if="event.year" class="text-white/40 text-sm font-light mr-2">{{ event.year }}</span>
-          <span class="text-white/85 font-medium">{{ event.title }}</span>
+    <!-- ================= 右侧：内容流动区 ================= -->
+    <main class="flex-1 min-h-0 relative z-10 bg-[#09090b]">
+      
+      <!-- 隐藏原生滚动条，保留干净视窗 -->
+      <div ref="contentScrollRef" class="h-full w-full overflow-y-auto hide-scrollbar scroll-smooth">
+        
+        <!-- 空状态：极致克制 -->
+        <div v-if="groupedEvents.length === 0" class="h-full flex items-center justify-center">
+          <div class="text-center">
+            <svg class="w-12 h-12 text-zinc-800 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-sm text-zinc-500 font-medium">{{ t('noEvents') }}</p>
+          </div>
         </div>
-        <p v-if="event.desc" class="mt-1.5 text-white/45 text-sm leading-relaxed">{{ event.desc }}</p>
-        <div class="flex items-center gap-4 mt-2">
-          <a v-if="event.link" :href="event.link" target="_blank" rel="noopener noreferrer"
-             class="text-white/25 hover:text-white/50 text-xs transition-colors">{{ t('externalLink') }} &nearr;</a>
-          <a v-if="event.item" @click.prevent="goItem(event.item)" href="#"
-             class="text-white/25 hover:text-white/50 text-xs transition-colors cursor-pointer">{{ t('relatedItem') }} &rarr;</a>
+
+        <!-- 事件流 -->
+        <div v-else class="max-w-4xl mx-auto pb-32">
+          <div v-for="(group, gIdx) in groupedEvents" :key="group.year" class="relative group/era">
+            
+            <!-- Sticky 毛玻璃年份头 -->
+            <div class="sticky top-0 z-20 pt-10 pb-4 px-8 md:px-16 backdrop-blur-xl bg-[#09090b]/80 border-b border-white/[0.04]">
+              <h2 class="text-3xl font-bold tracking-tight text-white flex items-center gap-4">
+                {{ group.year }}
+                <div class="h-px flex-1 bg-gradient-to-r from-white/10 to-transparent"></div>
+              </h2>
+            </div>
+
+            <!-- 具体事件列表 -->
+            <div class="px-8 md:px-16 pt-8 space-y-12">
+              <article v-for="(event, i) in group.items" :key="i" class="group/item">
+                
+                <h3 class="text-xl md:text-2xl font-medium leading-snug mb-3 text-zinc-100 group-hover/item:text-white transition-colors">
+                  {{ event.title }}
+                </h3>
+                
+                <p v-if="event.desc" class="text-sm md:text-base leading-relaxed text-zinc-400 mb-5 max-w-3xl">
+                  {{ event.desc }}
+                </p>
+
+                <!-- 科技感极其低调的操作链接 -->
+                <div class="flex flex-wrap items-center gap-5 mt-2">
+                  <a v-if="event.link" :href="event.link" target="_blank" rel="noopener"
+                    class="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-white uppercase tracking-wider transition-colors">
+                    <span>{{ t('source') }}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
+                  </a>
+                  <a v-if="event.item" @click.prevent="goItem(event.item)" href="#"
+                    class="flex items-center gap-1.5 text-xs font-semibold text-zinc-500 hover:text-white uppercase tracking-wider transition-colors">
+                    <span>{{ t('explore') }}</span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </a>
+                </div>
+              </article>
+            </div>
+
+          </div>
         </div>
+
       </div>
-    </div>
+    </main>
 
-    <!-- Empty -->
-    <p v-else class="text-center text-white/25 text-sm">{{ t('noEvents') }}</p>
-
-    <!-- Back -->
-    <div class="mt-16 pt-8 border-t border-white/10 text-center">
-      <router-link to="/" class="text-white/25 hover:text-white/50 text-sm transition-colors">&larr; {{ t('backToIceberg') }}</router-link>
-    </div>
   </div>
 </template>
+
+<style>
+/* 引入现代无衬线字体 Inter */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* 全局应用 Inter 字体 */
+.font-sans {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* 隐藏右侧内容的滚动条，保持画面干净无干扰 */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+</style>

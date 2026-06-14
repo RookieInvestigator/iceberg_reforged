@@ -209,13 +209,17 @@
   @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
   /* ===== Fade transitions for Vue <Transition> ===== */
-  .fade-enter-active { transition: opacity 0.2s ease-out; }
+  .fade-enter-active { transition: opacity 0.25s ease-out; }
   .fade-leave-active { transition: opacity 0.15s ease-in; }
   .fade-enter-from, .fade-leave-to { opacity: 0; }
-  .fade-up-enter-active { transition: opacity 0.4s ease-out, transform 0.35s cubic-bezier(0.2,0,0,1); }
-  .fade-up-leave-active { transition: opacity 0.3s ease-in, transform 0.3s ease-in; }
-  .fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(10px); }
+  .fade-enter-active .modal-panel { animation: modal-in 0.35s cubic-bezier(0.16,1,0.3,1); }
+  .fade-leave-active .modal-panel { animation: modal-out 0.15s ease-in; }
+  @keyframes modal-in { from { opacity:0;transform:scale(0.94) translateY(12px) } to { opacity:1;transform:scale(1) translateY(0) } }
+  @keyframes modal-out { from { opacity:1;transform:scale(1) translateY(0) } to { opacity:0;transform:scale(0.97) translateY(6px) } }
 
+  .fade-up-enter-active { transition: opacity 0.35s ease-out, transform 0.4s cubic-bezier(0.16,1,0.3,1); }
+  .fade-up-leave-active { transition: opacity 0.2s ease-in, transform 0.2s ease-in; }
+  .fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(24px) scale(0.96); }
 
 }
 

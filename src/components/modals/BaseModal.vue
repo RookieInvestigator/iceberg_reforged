@@ -26,7 +26,7 @@ onUnmounted(() => {
 
 <template>
   <Teleport to="body">
-    <Transition name="fade">
+    <Transition name="fade-up" appear>
       <div class="modal-overlay" @click.self="$emit('close')">
         <div :class="['modal-panel no-scrollbar', `modal-${size}`]" @click.stop>
           
@@ -54,3 +54,11 @@ onUnmounted(() => {
     </Transition>
   </Teleport>
 </template>
+
+<style>
+/* 弹窗过渡动画 */
+.fade-up-enter-active { transition: opacity 0.1s ease-out; }
+.fade-up-leave-active { transition: opacity 0.06s ease-in; }
+.fade-up-enter-from,
+.fade-up-leave-to { opacity: 0; }
+</style>
