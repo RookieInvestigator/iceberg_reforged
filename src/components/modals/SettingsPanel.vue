@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useStore } from '@nanostores/vue';
 import BaseModal from './BaseModal.vue';
-import { fontSize, floatMode, filterMode, showRandomBtn, bgMode, sortMode, detailMode } from '../../lib/settingsStore';
+import { fontSize, floatMode, filterMode, showRandomBtn, bgMode, sortMode, detailMode, showReadMark, showNewMark, applySimpleMode, applyStandardMode } from '../../lib/settingsStore';
 import { lang as langAtom } from '../../lib/i18nStore';
 import { useI18n } from '../../lib/useI18n';
 
@@ -14,6 +14,8 @@ const fm = useStore(floatMode);
 const flm = useStore(filterMode);
 const dm = useStore(detailMode);
 const sr = useStore(showRandomBtn);
+const srd = useStore(showReadMark);
+const snw = useStore(showNewMark);
 const dbg = useStore(bgMode);
 const lang = useStore(langAtom);
 const srt = useStore(sortMode);
@@ -54,7 +56,12 @@ function clearData() {
 <template>
   <BaseModal :title="t('settings')" size="md" :showFooter="true" @close="$emit('close')">
     <div class="space-y-4">
-      
+
+      <div class="flex gap-2">
+        <button @click="applySimpleMode()" class="flex-1 py-2 rounded-md text-xs font-medium border border-white/10 text-white/40 hover:text-white hover:bg-white/5 transition-colors">{{ t('simpleMode') }}</button>
+        <button @click="applyStandardMode()" class="flex-1 py-2 rounded-md text-xs font-medium border border-white/10 text-white/40 hover:text-white hover:bg-white/5 transition-colors">{{ t('standardMode') }}</button>
+      </div>
+
       <div>
         <div class="mb-1.5 text-[0.55rem] font-bold text-white/25 uppercase tracking-[0.2em]">{{ t('fontSize') }}</div>
         <div class="flex gap-1">
@@ -116,6 +123,16 @@ function clearData() {
             :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', fm !== 'none' ? 'bg-white/10 text-white' : 'text-white/35 hover:text-white/60 hover:bg-white/5']">
             {{ t('floatMode') }}
             <span :class="fm !== 'none' ? 'text-white' : 'text-white/20'">{{ fm !== 'none' ? '●' : '○' }}</span>
+          </button>
+          <button @click="showNewMark.set(!snw)"
+            :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', snw ? 'bg-white/10 text-white' : 'text-white/35 hover:text-white/60 hover:bg-white/5']">
+            {{ t('highlightNew') }}
+            <span :class="snw ? 'text-white' : 'text-white/20'">{{ snw ? '●' : '○' }}</span>
+          </button>
+          <button @click="showReadMark.set(!srd)"
+            :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', srd ? 'bg-white/10 text-white' : 'text-white/35 hover:text-white/60 hover:bg-white/5']">
+            {{ t('dimRead') }}
+            <span :class="srd ? 'text-white' : 'text-white/20'">{{ srd ? '●' : '○' }}</span>
           </button>
         </div>
       </div>

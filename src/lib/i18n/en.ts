@@ -74,6 +74,7 @@ export default {
 	aboutBuildDate: 'Build Date',
 	aboutEntries: 'Entries',
 	aboutCommunity: 'Community Project · Non-Commercial',
+	aboutVibeCoding: 'Built with Vibe Coding, primarily using DeepSeek V4P & Gemini 3.1P',
 	contactLink: 'Contact',
 	contactTitle: 'Contact Us',
 	contactIntro: 'Submissions, suggestions, corrections, and collaborations are welcome. Reach us at:',
@@ -89,4 +90,8 @@ export default {
 	noRecordsToday: 'No events today',
 	source: 'Source',
 	explore: 'Explore',
+	highlightNew: 'Highlight Recent',
+	dimRead: 'Dim Read',
+	simpleMode: 'Simple Mode',
+	standardMode: 'Standard Mode',
 };

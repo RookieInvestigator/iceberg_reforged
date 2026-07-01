@@ -1,6 +1,6 @@
 <script setup>
 import BaseModal from '../modals/BaseModal.vue';
-import { onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { favorites } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
@@ -19,15 +19,22 @@ onMounted(() => document.addEventListener('keydown', onKey))
 onUnmounted(() => document.removeEventListener('keydown', onKey))
 
 const favs = useStore(favorites);
+const copied = ref(false);
 
 function toggleFav(id) {
   const cur = favorites.get();
   favorites.set(cur.includes(id) ? cur.filter(i => i !== id) : [...cur, id]);
 }
+async function copyShareLink(id) {
+  const url = `${window.location.origin}${window.location.pathname}#${id}`
+  await navigator.clipboard.writeText(url)
+  copied.value = true
+  setTimeout(() => { copied.value = false }, 1500)
+}
 </script>
 
 <template>
-  <BaseModal v-if="item" :title="item.title" size="lg" titleClass="!text-[1.25rem]" @close="$emit('close')">
+  <BaseModal v-if="item" :title="copied ? '已复制链接' : item.title" :titleClick="() => copyShareLink(item.id)" size="lg" titleClass="!text-[1.25rem]" @close="$emit('close')">
 
     <template #header-actions>
       <div class="flex items-center gap-2 mr-1 pr-4 border-r border-white/10">
@@ -78,12 +85,14 @@ function toggleFav(id) {
       </div>
     </div>
 
-    <a v-if="item.link" :href="item.link" target="_blank" rel="noopener"
-      class="inline-flex items-center gap-1.5 mt-6 py-2 px-5 border border-white/25 rounded-lg text-xs font-medium text-white/55 hover:bg-white/10 hover:text-white/85 hover:border-white/40 transition-colors">
-      <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3M11 2h3v3M8 8l6-6" /></svg>
-      {{ t('openLink') }}
-    </a>
-    <p v-else class="mt-6 text-xs text-white/15 italic">{{ t('noLink') }}</p>
+    <div class="flex items-center gap-3 mt-6">
+      <a v-if="item.link" :href="item.link" target="_blank" rel="noopener"
+        class="inline-flex items-center gap-1.5 py-2 px-5 border border-white/25 rounded-lg text-xs font-medium text-white/55 hover:bg-white/10 hover:text-white/85 hover:border-white/40 transition-colors">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3M11 2h3v3M8 8l6-6" /></svg>
+        {{ t('openLink') }}
+      </a>
+      <p v-if="!item.link" class="text-xs text-white/15 italic my-0">{{ t('noLink') }}</p>
+    </div>
 
   </BaseModal>
 </template>

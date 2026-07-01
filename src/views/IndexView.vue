@@ -3,7 +3,7 @@ import { shallowRef, ref, computed, onMounted, provide, watch } from 'vue'
 import OnThisDayModal from '../components/calendar/OnThisDayModal.vue'
 import { useRoute } from 'vue-router'
 import { useStore } from '@nanostores/vue'
-import { bgMode } from '../lib/settingsStore'
+import { bgMode, noItemShadow } from '../lib/settingsStore'
 import raw from '../data/iceberg.json'
 import { normalizeData } from '../lib/data'
 import IcebergBg from '../components/layout/IcebergBg.vue'
@@ -59,6 +59,10 @@ const showBg = computed(() => bg.value !== 'black')
 const showOnThisDay = ref(false)
 provide('openOnThisDay', () => { showOnThisDay.value = true })
 
+// 声明式过滤：null=全部显示，Set<string>=仅这些ID可见（替代命令式DOM操作）
+const filterVisible = shallowRef(null as Set<string> | null)
+provide('filterVisible', filterVisible)
+
 // 从历史上的今天/?item=xxx 跳转：触发弹窗
 const route = useRoute()
 // 监听 ?item=xxx 触发词条弹窗（支持从其他地方跳转过来）
@@ -108,6 +112,7 @@ onMounted(() => {
                 v-for="item in data.tiers[tierName]"
                 :key="item.id"
                 v-memo="[item.id, item.categoryColor]"
+                v-show="!filterVisible || filterVisible.has(item.id)"
                 class="iceberg-item inline-flex items-center font-bold cursor-crosshair py-0.5 px-1.5 max-sm:text-[1.05rem]"
                 :data-id="item.id"
                 :data-category="item.category"

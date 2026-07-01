@@ -74,6 +74,7 @@
 	aboutBuildDate: 'ビルド日',
 	aboutEntries: '項目数',
 	aboutCommunity: 'コミュニティプロジェクト · 非商用',
+	aboutVibeCoding: 'Vibe Coding で構築、主に DeepSeek V4P と Gemini 3.1P を使用',
 	contactLink: 'お問い合わせ',
 	contactTitle: 'お問い合わせ',
 	contactIntro: '投稿、提案、修正、コラボレーションを歓迎します。以下の方法でご連絡ください：',
@@ -91,4 +92,8 @@
 	noRecordsToday: '本日の記録なし',
 	source: 'ソース',
 	explore: '探索',
+	highlightNew: '最新を強調',
+	dimRead: '既読を淡く',
+	simpleMode: 'シンプル',
+	standardMode: 'スタンダード',
 };

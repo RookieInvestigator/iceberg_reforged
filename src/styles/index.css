@@ -38,19 +38,23 @@
     cursor: pointer;
   }
   .iceberg-item.dimmed { opacity: 0.15; pointer-events: none; transition: opacity 0.2s ease; }
+  .iceberg-item.recently-updated { background: #feca57; border-radius: 999px; color: #1a1a1a; padding: 0.1rem 0.4rem; }
+  .iceberg-item.read { opacity: 0.35; transition: opacity 0.3s ease; }
   .iceberg-item::before {
     content: ""; position: absolute; inset: 0;
     background: var(--item-color);
     transform: scaleX(0); transform-origin: left; z-index: -1;
     transition: transform 0.25s cubic-bezier(0.2,0,0,1);
   }
-  html:not([data-detail="modal"]) .iceberg-item:hover, .iceberg-item.tooltip-active { z-index: 10; text-shadow: none !important; }
-  html:not([data-detail="modal"]) .iceberg-item:hover::before, .iceberg-item.tooltip-active::before { transform: scaleX(1); }
-  html:not([data-detail="modal"]) .iceberg-item:hover .item-title, .iceberg-item.tooltip-active .item-title,
-  html:not([data-detail="modal"]) .iceberg-item:hover .item-tag, .iceberg-item.tooltip-active .item-tag { color: #000 !important; }
-  /* 弹窗模式：弱 hover 暗示可点 */
-  html[data-detail="modal"] .iceberg-item { cursor: pointer; }
-  html[data-detail="modal"] .iceberg-item:hover { opacity: 0.8; }
+  /* 桌面端 hover 记号笔效果 */
+  @media (min-width: 1024px) {
+    html:not([data-detail="modal"]) .iceberg-item:hover, .iceberg-item.tooltip-active { z-index: 10; text-shadow: none !important; }
+    html:not([data-detail="modal"]) .iceberg-item:hover::before, .iceberg-item.tooltip-active::before { transform: scaleX(1); }
+    html:not([data-detail="modal"]) .iceberg-item:hover .item-title, .iceberg-item.tooltip-active .item-title,
+    html:not([data-detail="modal"]) .iceberg-item:hover .item-tag, .iceberg-item.tooltip-active .item-tag { color: #000 !important; }
+    html[data-detail="modal"] .iceberg-item { cursor: pointer; }
+    html[data-detail="modal"] .iceberg-item:hover { opacity: 0.8; }
+  }
 
 .item-tag { color: #fff }
 
@@ -210,6 +214,30 @@
   @keyframes fade-in-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
+  /* ===== Mobile bottom sheet (与侧栏抽屉统一视觉) ===== */
+  .sheet-overlay {
+    position: fixed; inset: 0; z-index: 99998;
+    background: rgba(0,0,0,0.5);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  .sheet-overlay.show { opacity: 1; pointer-events: auto; }
+  .sheet-panel {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 99999;
+    background: #111;
+    border-radius: 16px 16px 0 0;
+    padding: 0 20px 28px;
+    max-height: 80vh; overflow-y: auto;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.2,0,0,1);
+  }
+  .sheet-panel.show { transform: translateY(0); }
+  .sheet-handle {
+    width: 36px; height: 4px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 2px; margin: 0 auto;
+  }
+
   /* ===== Fade transitions for Vue <Transition> ===== */
   .fade-enter-active { transition: opacity 0.25s ease-out; }
   .fade-leave-active { transition: opacity 0.15s ease-in; }
@@ -222,6 +250,12 @@
   .fade-up-enter-active { transition: opacity 0.35s ease-out, transform 0.4s cubic-bezier(0.16,1,0.3,1); }
   .fade-up-leave-active { transition: opacity 0.2s ease-in, transform 0.2s ease-in; }
   .fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(24px) scale(0.96); }
+
+  /* SPA 页面切换过渡 */
+  .page-fade-enter-active { transition: opacity 0.2s ease-out, transform 0.25s ease-out; }
+  .page-fade-leave-active { transition: opacity 0.15s ease-in; }
+  .page-fade-enter-from { opacity: 0; transform: translateY(12px); }
+  .page-fade-leave-to { opacity: 0; }
 
 }
 

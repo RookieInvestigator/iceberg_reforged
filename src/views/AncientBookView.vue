@@ -165,7 +165,7 @@ function boot() {
   root.innerHTML =
     '<div class="wr" id="wr"><svg class="nz"><filter id="pf"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.04 0"/></filter><rect width="100%" height="100%" filter="url(#pf)"/></svg><div id="sc"></div>' +
     '<nav class="nv"><div class="nv-in">' +
-      '<button id="tm">分卷：類別</button>' +
+      '<a href="/iceberg_reforged/" class="bk">&larr; 返回</a><i class="nd"></i><button id="tm">分卷：類別</button>' +
       '<i class="nd"></i>' +
       '<button id="np">下页</button>' +
       '<i class="nd"></i><span id="ni">第 一 展</span><i class="nd"></i>' +

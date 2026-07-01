@@ -17,17 +17,13 @@ const openOnThisDay = inject('openOnThisDay', null);
   <div class="text-center pt-10 pb-6 max-sm:pt-8 max-sm:pb-4" style="padding: 0 var(--header-padding-x)">
     <div class="mb-14 max-sm:mb-8 flex flex-col items-center">
       <div class="mb-4 text-sm font-light uppercase tracking-[0.8em] mr-[-0.8em] text-white/50 max-sm:text-xs max-sm:tracking-[0.5em]">
-        Chinese Oddities Iceberg
+        Chinese Oddities Iceberg · Reforged
       </div>
       <div class="relative inline-flex items-start">
-        <h1 class="text-[3.8rem] font-black tracking-widest text-white leading-none max-sm:text-[2.2rem] max-sm:tracking-wide">
+        <h1 class="text-[3.8rem] font-black tracking-widest text-white leading-none max-md:text-[2.4rem] max-sm:text-[1.8rem] max-sm:tracking-wide">
           {{ t('siteTitle') }}
         </h1>
-        <span class="absolute -right-14 top-0 sm:-right-16 sm:text-[1.1rem] font-thin text-white/90 tracking-widest select-none max-sm:text-[0.7rem] max-sm:-top-1 max-sm:-right-8">
-          {{ t('edition') }}
-        </span>
       </div>
-
       <p class="mt-8 max-sm:mt-6 text-[0.85rem] max-sm:text-[0.75rem] font-light text-white/50 tracking-widest max-sm:tracking-wide uppercase">
         {{ buildDate }} <span class="mx-3 opacity-30">|</span> {{ entryCount }} {{ t('entries') }}
       </p>

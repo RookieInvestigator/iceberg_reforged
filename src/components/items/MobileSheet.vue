@@ -21,7 +21,7 @@ function toggleFav(id) {
   <Teleport to="body">
     <div class="sheet-overlay" :class="{ show: open }" @click="$emit('close')" />
     <div class="sheet-panel" :class="{ show: open }">
-      <div class="flex justify-center py-3"><div class="sheet-handle"></div></div>
+      <div class="flex justify-center pt-3 pb-2"><div class="sheet-handle"></div></div>
       <template v-if="item">
         <div class="flex items-center gap-2 mb-4">
           <div class="text-[1.3rem] font-black text-white leading-snug flex-1">{{ item.title }}</div>
@@ -40,7 +40,7 @@ function toggleFav(id) {
         <div v-if="item.related && item.related.length > 0" class="mt-4 pt-3 border-t" style="border-color:var(--color-surface-border,#333)">
           <div class="text-[0.7rem] font-bold text-white/20 uppercase tracking-[0.15em] mb-2">{{ t('relatedItem') }}</div>
           <div class="flex flex-wrap gap-1.5">
-            <button v-for="r in item.related" :key="r.id" @click="emit('navigate', r); $emit('close')"
+            <button v-for="r in item.related" :key="r.id" @click="emit('navigate', r)"
               class="text-xs text-white/35 hover:text-white/70 px-2 py-1 rounded-md hover:bg-white/5 transition-colors border border-transparent hover:border-white/10">
               {{ r.title }}
             </button>
@@ -49,7 +49,7 @@ function toggleFav(id) {
         <div v-if="item.recommended && item.recommended.length > 0" class="mt-3 pt-3 border-t" style="border-color:var(--color-surface-border,#333)">
           <div class="text-[0.7rem] font-bold text-white/20 uppercase tracking-[0.15em] mb-2">{{ t('recommendedItem') }}</div>
           <div class="flex flex-wrap gap-1.5">
-            <button v-for="r in item.recommended" :key="r.id" @click="emit('navigate', r); $emit('close')"
+            <button v-for="r in item.recommended" :key="r.id" @click="emit('navigate', r)"
               class="text-xs text-white/35 hover:text-white/70 px-2 py-1 rounded-md hover:bg-white/5 transition-colors border border-transparent hover:border-white/10">
               {{ r.title }}
             </button>
@@ -57,7 +57,7 @@ function toggleFav(id) {
         </div>
 
         <a v-if="item.link" :href="item.link" target="_blank" rel="noopener"
-          class="block w-full mt-6 py-3.5 bg-white text-black text-center rounded-xl font-bold text-[1rem] shadow-md active:scale-[0.98] transition-transform cursor-pointer no-underline">
+          class="inline-block mt-5 px-5 py-2 rounded-full text-sm text-white/60 hover:text-white/90 border border-white/15 hover:border-white/30 transition-all no-underline">
           {{ t('openLink') }}
         </a>
       </template>

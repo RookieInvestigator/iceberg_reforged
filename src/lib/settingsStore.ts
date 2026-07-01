@@ -9,16 +9,29 @@ export function storedAtom<T>(key: string, fallback: T) {
 }
 
 export const fontSize = storedAtom('iceberg-font-size', 'md');
-export const floatMode = storedAtom('iceberg-float-mode', 'none');
-export const detailMode = storedAtom('iceberg-detail-mode', 'tooltip');
-export const filterMode = storedAtom('iceberg-filter-mode', 'dim');
-export const immersiveMode = storedAtom('iceberg-immersive-mode', false);
-export const showRandomBtn = storedAtom('iceberg-show-random-btn', false);
+export const floatMode = storedAtom('iceberg-float-mode', 'static');
+export const detailMode = storedAtom('iceberg-detail-mode', 'modal');
+export const filterMode = storedAtom('iceberg-filter-mode', 'hide');
+export const immersiveMode = storedAtom('iceberg-immersive-mode', true);
+export const showRandomBtn = storedAtom('iceberg-show-random-btn', true);
 export const showLinkEmoji = storedAtom('iceberg-show-link-emoji', false);
 export const showDescEmoji = storedAtom('iceberg-show-desc-emoji', false);
 export const sortMode = storedAtom('iceberg-sort-mode', 'default');
-export const bgMode = storedAtom('iceberg-bg-mode', 'static'); // 'black' | 'static' | 'dynamic'
+export const bgMode = storedAtom('iceberg-bg-mode', 'static');
 export const favorites = storedAtom('iceberg-favorites', [] as string[]);
+export const readItems = storedAtom('iceberg-read-items', [] as string[]);
+export const showReadMark = storedAtom('iceberg-show-read-mark', true);
+export const showNewMark = storedAtom('iceberg-show-new-mark', true);
+export const noItemShadow = storedAtom('iceberg-no-item-shadow', false);
+
+export function applySimpleMode() {
+  detailMode.set('tooltip'); filterMode.set('dim'); immersiveMode.set(false);
+  bgMode.set('black'); showReadMark.set(false); showNewMark.set(false); showRandomBtn.set(false); floatMode.set('none'); noItemShadow.set(true);
+}
+export function applyStandardMode() {
+  detailMode.set('modal'); filterMode.set('hide'); immersiveMode.set(true);
+  showRandomBtn.set(true); showReadMark.set(true); bgMode.set('static'); floatMode.set('static'); noItemShadow.set(false);
+}
 
 export const FONT_SIZE_MAP: Record<string, number> = { xs: 0.75, sm: 0.875, md: 1.0, lg: 1.125, xl: 1.25 };
 export const FONT_LABELS: Record<string, string> = { xs: '极小', sm: '小', md: '中', lg: '大', xl: '特大' };

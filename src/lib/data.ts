@@ -34,9 +34,9 @@ const CN_PUNCT_RE = /(\p{Script=Han})([,\.!\?;:])/gu;
 function replaceQuotes(s: string): string {
   if (!s) return s;
 
-  // 引号 → 直角引号「」『』（合并为两步）
-  s = s.replace(/[""]([^""]*)[""]/g, '「$1」');
-  s = s.replace(/['']([^'']*)['']/g, '『$1』');
+  // 引号 → 直角引号「」『』（匹配 ASCII 直引号 + Unicode 弯引号）
+  s = s.replace(/["“”]([^"“”]*)["“”]/g, '「$1」');
+  s = s.replace(/['‘’]([^'‘’]*)['‘’]/g, '『$1』');
 
   // 书名号
   s = s.replace(/<<\s*(.+?)\s*>>/g, '《$1》');
@@ -59,6 +59,9 @@ function replaceQuotes(s: string): string {
 
   // 中文间多余空格去除
   s = s.replace(/(\p{Script=Han})\s+(\p{Script=Han})/gu, '$1$2');
+
+  // 间隔号 · 前后加空格（放最后，避免被中文去空格步骤删除）
+  s = s.replace(/(\S)·(\S)/g, '$1 · $2');
 
   return s;
 }

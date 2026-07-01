@@ -14,15 +14,12 @@ const { t } = useI18n();
   <div class="text-center pt-10 pb-6" style="padding: 0 var(--header-padding-x)">
     <div class="mb-14 flex flex-col items-center">
       <div class="mb-4 text-sm font-light uppercase tracking-[0.8em] mr-[-0.8em] text-white/50">
-        Chinese Oddities Iceberg
+        Chinese Oddities Iceberg · Reforged
       </div>
       <div class="relative inline-flex items-start">
         <h1 class="text-[3.8rem] font-black tracking-widest text-white leading-none max-sm:text-[2.4rem]">
           {{ t('siteTitle') }}
         </h1>
-        <span class="absolute -right-14 top-0 sm:-right-16 sm:text-[1.1rem] font-thin text-white/90 tracking-widest select-none max-sm:-top-2 max-sm:-right-10">
-          {{ t('edition') }}
-        </span>
       </div>
       <p class="mt-8 text-[0.85rem] font-light text-white/50 tracking-widest uppercase">
         {{ props.buildDate }} <span class="mx-3 opacity-30">|</span> {{ props.entryCount }} {{ t('entries') }}

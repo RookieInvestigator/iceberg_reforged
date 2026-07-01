@@ -2,7 +2,7 @@
 import { ref, reactive, watch, watchEffect, onMounted, onUnmounted, nextTick, markRaw, inject } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { activeCategories, activeTags, searchQuery, tagFilterMode, searchMode, hiddenCategories, hiddenTags, specialFilter, favFilter } from '../../lib/filterStore';
-import { favorites } from '../../lib/settingsStore';
+import { favorites, readItems, showReadMark, showNewMark } from '../../lib/settingsStore';
 import { floatMode, filterMode, detailMode } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import ItemTooltip from './ItemTooltip.vue';
@@ -11,6 +11,7 @@ import MobileSheet from './MobileSheet.vue';
 
 const renderItemsRef = inject('renderItems')
 const descMap = inject('descMap', new Map())
+const filterVisible = inject('filterVisible', null)
 const allItemsRaw = renderItemsRef?.value || []
 const allItems = allItemsRaw.map(i => markRaw({ ...i, desc: descMap.get(i.id) || '' }))
 const itemMap = new Map(allItems.map(i => [i.id, i]));
@@ -49,13 +50,16 @@ const hiddenT = useStore(hiddenTags);
 const spl = useStore(specialFilter);
 const favF = useStore(favFilter);
 const fList = useStore(favorites);
+const rList = useStore(readItems);
+const sNew = useStore(showNewMark);
+const sRead = useStore(showReadMark);
   // 搜索走 Worker（异步，不阻塞主线程）
   watch([query, sMode], ([q, mode]) => {
     searchWorker.postMessage({ type: "search", query: q, mode })
   })
 
-const maxModified = Math.max(...allItems.map(i => i.modifiedAt || 0));
-const newThreshold = maxModified - 30 * 86400;
+const latestModified = Math.max(...allItems.map(i => i.modifiedAt || 0));
+const itemModAt = new Map(allItems.map(i => [i.id, i.modifiedAt || 0]));
 
 // Related-items map: pre-indexed, O(n × avgBucketSize)
 let _relMap = null;
@@ -120,8 +124,16 @@ function pickRelated(item) {
 }
 
 function setModalItem(raw) {
+  // 标记已读
+  const cur = readItems.get();
+  if (!cur.includes(raw.id)) { readItems.set([...cur, raw.id]); }
+
   const { explicit, recommended } = pickRelated(raw);
-  // 上/下一个词条（按当前 DOM 顺序）
+  // 手机端走底部抽屉
+  if (window.innerWidth < 1024) {
+    sheetItem.value = { id: raw.id, title: raw.title, desc: raw.desc, category: raw.category, color: raw.categoryColor, tags: (raw.tags || []).join(' | '), link: raw.link, related: explicit, recommended };
+    return;
+  }
   const allIds = [...document.querySelectorAll('.iceberg-item')].map(el => el.dataset.id).filter(Boolean);
   const idx = allIds.indexOf(raw.id);
   const prevId = idx > 0 ? allIds[idx - 1] : null;
@@ -205,8 +217,9 @@ function showTooltip(el, item) {
   if (cx < vw * 0.25) align = 'left';
   else if (cx > vw * 0.75) align = 'right';
 
-  if (activeItemEl && activeItemEl !== el) activeItemEl.classList.remove('tooltip-active');
+  if (activeItemEl && activeItemEl !== el) { activeItemEl.classList.remove('tooltip-active'); if (activeItemEl.dataset.wasRead) activeItemEl.classList.add('read'); }
   activeItemEl = el;
+  if (el.classList.contains('read')) { el.dataset.wasRead = '1'; el.classList.remove('read'); }
   el.classList.add('tooltip-active');
   setItemClasses(el, align, false);
 
@@ -248,6 +261,7 @@ function hideTooltip() {
   currentItemEl = null;
   if (activeItemEl) {
     activeItemEl.classList.remove('tooltip-active', 'tooltip-left', 'tooltip-right', 'tooltip-below');
+    if (activeItemEl.dataset.wasRead) { activeItemEl.classList.add('read'); delete activeItemEl.dataset.wasRead; }
     activeItemEl = null;
   }
   tip.show = false;
@@ -265,7 +279,7 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 
 function onMouseOver(e) {
-  if (scrollBusy || dm.value === 'modal') return;
+  if (scrollBusy || dm.value === 'modal' || window.innerWidth < 1024) return;
   const el = e.target.closest('.iceberg-item');
   if (!el) { hideTooltip(); return; }
   if (el === currentItemEl) return;
@@ -291,14 +305,17 @@ function onClick(e) {
   if (!el) return;
   const item = findItem(el);
   if (!item) return;
+  // 手机端统一用底部抽屉
+  if (window.innerWidth < 1024) {
+    const { explicit, recommended } = pickRelated(item);
+    sheetItem.value = { id: item.id, title: item.title, desc: item.desc, category: item.category, color: item.categoryColor, tags: (item.tags || []).join(' | '), link: item.link, related: explicit, recommended };
+    return;
+  }
   if (dm.value === 'modal') {
     setModalItem(item);
     return;
   }
-  if (window.innerWidth < 1024) {
-    const { explicit, recommended } = pickRelated(item);
-    sheetItem.value = { id: item.id, title: item.title, desc: item.desc, category: item.category, color: item.categoryColor, tags: (item.tags || []).join(' | '), link: item.link, related: explicit, recommended };
-  } else if (item.link) {
+  if (item.link) {
     window.open(item.link, '_blank', 'noopener');
   }
 }
@@ -307,55 +324,74 @@ function onClick(e) {
 watchEffect(() => {
   if (typeof document === 'undefined') return;
   const cats = activeCats.value, tags = activeT.value, results = searchResults.value;
-  void fltMode.value, void tagMode.value, void sMode.value, void hiddenCats.value, void hiddenT.value, void spl.value, void favF.value, void fList.value;
+  void fltMode.value, void tagMode.value, void sMode.value, void hiddenCats.value, void hiddenT.value, void spl.value, void favF.value, void fList.value, void rList.value, void sNew.value, void sRead.value;
   const tierEmptyMsg = t('tierEmpty');
   const noResultsMsg = t('noResults');
   requestAnimationFrame(() => {
     const c = document.getElementById('items-container');
     if (!c) return;
-    const items = c.querySelectorAll('.iceberg-item');
-    const tierVis = new Map(); // tierEl → visible count, single pass
-    for (let i = 0; i < items.length; i++) {
-      const el = items[i];
+    // 纯 JS 数组匹配（替代 DOM querySelectorAll 循环）
+    const matched = new Set();
+    for (const item of allItems) {
       let match = true;
       const sMode = spl.value;
-      if (sMode === 'hasLink') { const item = itemMap.get(el.dataset.id); if (!item?.link) match = false; }
-      else if (sMode === 'hasDesc') { const item = itemMap.get(el.dataset.id); if (!item?.desc) match = false; }
-      else if (sMode === 'isNew') { const item = itemMap.get(el.dataset.id); if (!item || (item.modifiedAt || 0) < newThreshold) match = false; }
-      else if (sMode === 'noLinkNoDesc') { const item = itemMap.get(el.dataset.id); if (!item || item.link || item.desc) match = false; }
-      if (match && favF.value && !fList.value.includes(el.dataset.id)) match = false;
+      if (sMode === 'hasLink') { if (!item.link) match = false; }
+      else if (sMode === 'hasDesc') { if (!item.desc) match = false; }
+      else if (sMode === 'isNew') { if ((item.modifiedAt || 0) < latestModified) match = false; }
+      else if (sMode === 'noLinkNoDesc') { if (item.link || item.desc) match = false; }
+      if (match && favF.value && !fList.value.includes(item.id)) match = false;
       const hCats = hiddenCats.value, hTags = hiddenT.value;
-      if (hCats.length > 0 && hCats.includes(el.dataset.category)) { match = false; }
+      if (hCats.length > 0 && hCats.includes(item.category)) match = false;
       if (match && hTags.length > 0) {
-        const eTags2 = (el.dataset.tagEmojis || '').split(',');
-        if (hTags.some(t => eTags2.includes(t))) match = false;
+        if (hTags.some(t => (item.emojis || []).includes(t))) match = false;
       }
-      if (match && cats.length > 0) match = cats.includes(el.dataset.category);
+      if (match && cats.length > 0) match = cats.includes(item.category);
       if (match && tags.length > 0) {
-        const eTags = (el.dataset.tagEmojis || '').split(',');
         match = tagMode.value === 'AND'
-          ? tags.every(t => eTags.includes(t))
-          : tags.some(t => eTags.includes(t));
+          ? tags.every(t => (item.emojis || []).includes(t))
+          : tags.some(t => (item.emojis || []).includes(t));
       }
-      if (match && results) match = results.includes(el.dataset.id);
-      if (fltMode.value === 'hide') {
-        el.style.display = match ? '' : 'none';
-      } else {
-        el.style.display = '';
-        el.classList.toggle('dimmed', !match);
-      }
-      // 统计可见：hide 模式看 display，dim 模式看 match
-      const visible = fltMode.value === 'hide' ? match : (!el.classList.contains('dimmed'));
-      if (visible) {
-        const tier = el.closest('.iceberg-tier');
-        if (tier) tierVis.set(tier, (tierVis.get(tier) || 0) + 1);
-      }
+      if (match && results) match = results.includes(item.id);
+      if (match) matched.add(item.id);
     }
-    // Single pass: update tier-empty messages and global visibility
-    let total = 0;
+    // 声明式更新：一次性设置 Set，由 v-show 批量处理 DOM
+    if (filterVisible) {
+      if (fltMode.value === 'hide') {
+        filterVisible.value = matched;
+      } else {
+        filterVisible.value = null;
+        c.querySelectorAll('.iceberg-item').forEach(el => {
+          el.classList.toggle('dimmed', !matched.has(el.dataset.id));
+        });
+      }
+    } else {
+      c.querySelectorAll('.iceberg-item').forEach(el => {
+        const id = el.dataset.id;
+        if (fltMode.value === 'hide') {
+          el.style.display = matched.has(id) ? '' : 'none';
+        } else {
+          el.style.display = '';
+          el.classList.toggle('dimmed', !matched.has(id));
+        }
+      });
+    }
+    // 标记样式（所有模式统一应用）
+    const rs = rList.value; const sn = sNew.value; const sr = sRead.value;
+    c.querySelectorAll('.iceberg-item').forEach(el => {
+      const id = el.dataset.id;
+      el.classList.toggle('recently-updated', sn && id ? ((itemModAt.get(id) || 0) === latestModified) : false);
+      el.classList.toggle('read', sr && id ? rs.includes(id) : false);
+    });
+    // 统计可见 + tier-empty（基于 tier 数据，无需 DOM 查询）
+    let total = matched.size;
+    const tierVis = new Map();
+    for (const item of allItems) {
+      if (!matched.has(item.id) || !item.tier) continue;
+      tierVis.set(item.tier, (tierVis.get(item.tier) || 0) + 1);
+    }
     c.querySelectorAll('.iceberg-tier').forEach(tier => {
-      const v = tierVis.get(tier) || 0;
-      total += v;
+      const tn = tier.dataset.tier;
+      const v = tierVis.get(tn) || 0;
       let msg = tier.querySelector('.tier-empty');
       if (v === 0) {
         if (!msg) { msg = document.createElement('div'); msg.className = 'tier-empty text-center text-white/15 text-sm py-8 italic'; msg.textContent = tierEmptyMsg; tier.appendChild(msg); }
@@ -399,16 +435,21 @@ onMounted(() => {
     c.addEventListener('mouseleave', onMouseLeave);
     c.addEventListener('click', onClick);
   }
-  // Hash navigation from on-this-day
+  // Hash navigation — 弹窗模式直接打开 Modal，tooltip 模式滚动定位
   const hash = window.location.hash.slice(1);
   if (hash && /^[a-f0-9]{8}$/.test(hash)) {
     setTimeout(() => {
-      const el = document.querySelector(`.iceberg-item[data-id="${hash}"]`);
-      if (el) {
-        el.scrollIntoView({ block: 'center' });
-        el.classList.add('tooltip-active');
-        const item = findItem(el);
-        if (item) setTimeout(() => showTooltip(el, item), 400);
+      const item = itemMap.get(hash);
+      if (!item) return;
+      if (dm.value === 'modal') {
+        setModalItem(item);
+      } else {
+        const el = document.querySelector(`.iceberg-item[data-id="${hash}"]`);
+        if (el) {
+          el.scrollIntoView({ block: 'center' });
+          el.classList.add('tooltip-active');
+          setTimeout(() => showTooltip(el, item), 400);
+        }
       }
     }, 600);
   }

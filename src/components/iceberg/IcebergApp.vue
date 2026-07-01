@@ -31,8 +31,15 @@ function onDocClick(e) {
     sidebarOpen.value = false;
   }
 }
-onMounted(() => { document.addEventListener('mousedown', onDocClick); document.dispatchEvent(new CustomEvent('vue-ready')); });
-onUnmounted(() => document.removeEventListener('mousedown', onDocClick));
+const searchInputRef = ref(null)
+function onGlobalKey(e) {
+  if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+    e.preventDefault()
+    searchInputRef.value?.focus()
+  }
+}
+onMounted(() => { document.addEventListener('mousedown', onDocClick); document.addEventListener('keydown', onGlobalKey); document.dispatchEvent(new CustomEvent('vue-ready')); });
+onUnmounted(() => { document.removeEventListener('mousedown', onDocClick); document.removeEventListener('keydown', onGlobalKey); });
 
 // Font size
 const FONT_SCALE = { xs: '0.75rem', sm: '0.875rem', md: '1rem', lg: '1.125rem', xl: '1.25rem' };
@@ -177,6 +184,7 @@ function onDrawerTouchEnd() {
           </div>
         </div>
         <input
+          ref="searchInputRef"
           type="text" :value="query" @input="(e) => onSearchInput(e.target.value)"
           :placeholder="t('search')"
           autocomplete="off"

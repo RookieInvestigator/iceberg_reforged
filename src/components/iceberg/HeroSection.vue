@@ -152,10 +152,9 @@ onUnmounted(() => {
         <img :src="url('/assets/typede.svg')" alt="中文兔子洞冰山图" class="hero-logo" />
         <div class="hero-deck">
           <span class="hero-deck-line"></span>
-          <span class="hero-deck-text">Chinese Oddities Iceberg</span>
+          <span class="hero-deck-text">Chinese Oddities Iceberg · Reforged</span>
           <span class="hero-deck-line"></span>
         </div>
-        <p class="hero-edition">{{ t('edition') }}</p>
       </div>
 
       <div class="hero-cue">
@@ -258,7 +257,6 @@ onUnmounted(() => {
 .hero-spotlight {
   position: fixed; inset: 0; z-index: 6; pointer-events: none;
   background: radial-gradient(circle 320px at var(--sx, -999px) var(--sy, -999px), transparent 0%, transparent 45%, rgba(0,0,0,0.75) 100%);
-  contain: layout style paint;
   transition: opacity 0.5s ease;
 }
 .hero-out .hero-spotlight { opacity: 0; }
@@ -266,13 +264,13 @@ onUnmounted(() => {
 /* ── 内容样式 ── */
 .hero-masthead { text-align: center; padding: 0 2rem; }
 .hero-logo {
-  display: block; width: min(80vw, 540px); height: auto; margin: 0 auto 3rem;
+  display: block; width: min(80vw, 540px); height: auto; margin: 0 auto 1.25rem;
   animation: hero-reveal 1.2s cubic-bezier(0.16,1,0.3,1) both;
   filter: drop-shadow(0 0 20px rgba(0,0,0,0.5));
 }
 .hero-deck {
   display: flex; align-items: center; justify-content: center; gap: 1.25rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.4rem;
   animation: hero-reveal 1s 0.2s cubic-bezier(0.16,1,0.3,1) both;
 }
 .hero-deck-line { display: block; width: 3rem; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent); }

@@ -129,6 +129,8 @@
 .nv button { background: none; border: none; color: var(--pc-tx); font-weight: 700; letter-spacing: 0.15em; font-size: 13px; cursor: pointer; font-family: inherit; transition: color 0.15s ease; }
 .nv button:disabled { opacity: 0.25; cursor: default; }
 .nv button:not(:disabled):hover { color: var(--pc-cr); }
+.bk { color: var(--pc-tx); font-size: 13px; font-weight: 700; letter-spacing: 0.15em; text-decoration: none; transition: color 0.15s; }
+.bk:hover { color: var(--pc-cr); }
 .nd { height: 14px; width: 1px; background: var(--pc-tx); opacity: 0.4; }
 #ni { font-size: 13px; font-weight: 700; color: var(--pc-tx); letter-spacing: 0.15em; font-family: inherit; }
 

@@ -74,6 +74,7 @@ export default {
 	aboutBuildDate: '构建时间',
 	aboutEntries: '词条数',
 	aboutCommunity: '社区共建项目 · 非商业',
+	aboutVibeCoding: '本网站由 Vibe Coding 得来，主要模型为 DeepSeek V4P 与 Gemini 3.1P',
 	contactLink: '联系我们',
 	contactTitle: '联系我们',
 	contactIntro: '欢迎投稿、建议、纠错或合作。请通过以下方式联系我们：',
@@ -89,4 +90,8 @@ export default {
 	noRecordsToday: '今日暂无记录',
 	source: '来源',
 	explore: '查看词条',
+	highlightNew: '高亮最近更新',
+	dimRead: '弱化已读',
+	simpleMode: '简易模式',
+	standardMode: '标准模式',
 };

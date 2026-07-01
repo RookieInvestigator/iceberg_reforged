@@ -18,10 +18,6 @@ const { t } = useI18n();
 
       <div class="border-t border-white/5 pt-4 space-y-2 text-xs text-white/30">
         <div class="flex justify-between">
-          <span>{{ t('aboutVersion') }}</span>
-          <span class="text-white/50">{{ t('edition') }}</span>
-        </div>
-        <div class="flex justify-between">
           <span>{{ t('aboutBuildDate') }}</span>
           <span class="text-white/50">{{ props.buildDate }}</span>
         </div>
@@ -34,6 +30,7 @@ const { t } = useI18n();
       <div class="border-t border-white/5 pt-4 text-xs text-white/25 text-center space-y-1">
         <p>{{ t('aboutCommunity') }}</p>
         <p>Chinese Oddities Iceberg · Community Curated</p>
+        <p class="mt-1" style="color: rgba(255,255,255,0.12)">{{ t('aboutVibeCoding') }}</p>
       </div>
     </div>
   </BaseModal>
