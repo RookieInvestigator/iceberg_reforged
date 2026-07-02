@@ -4,20 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 import compression from 'vite-plugin-compression'
 
 export default defineConfig({
-  plugins: [
-    vue(),
-    tailwindcss(),
-    compression(),
-    {
-      name: 'copy-404',
-      closeBundle() {
-        const fs = require('fs')
-        const path = require('path')
-        const dist = path.resolve(__dirname, 'dist')
-        fs.copyFileSync(path.join(dist, 'index.html'), path.join(dist, '404.html'))
-      },
-    },
-  ],
+  plugins: [vue(), tailwindcss(), compression()],
   base: '/iceberg_reforged/',
   resolve: {
     alias: { '@': '/src' },
