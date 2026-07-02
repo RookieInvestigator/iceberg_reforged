@@ -77,7 +77,7 @@ export default {
 	aboutVibeCoding: 'Built with Vibe Coding, primarily using DeepSeek V4P & Gemini 3.1P',
 	contactLink: 'Contact',
 	contactTitle: 'Contact Us',
-	contactIntro: 'Submissions, suggestions, corrections, and collaborations are welcome. Reach us at:',
+	contactIntro: 'This is a community project with no official website or social media accounts. You can reach us at:',
 	contactEmail: 'Email',
 	contactBilibili: 'Bilibili',
 	contactGitHub: 'GitHub',

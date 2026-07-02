@@ -14,16 +14,18 @@ defineEmits(['close']);
 // 统一管理背景滚动锁
 onMounted(() => {
   document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
 })
 onUnmounted(() => {
   document.body.style.overflow = '';
+  document.documentElement.style.overflow = '';
 })
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="fade-up" appear>
-      <div class="modal-overlay" @click.self="$emit('close')">
+      <div class="modal-overlay" @click.self="$emit('close')" @touchmove.self.prevent>
         <div :class="['modal-panel no-scrollbar', `modal-${size}`]" @click.stop>
           
           <div class="modal-header">

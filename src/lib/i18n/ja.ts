@@ -77,7 +77,7 @@
 	aboutVibeCoding: 'Vibe Coding で構築、主に DeepSeek V4P と Gemini 3.1P を使用',
 	contactLink: 'お問い合わせ',
 	contactTitle: 'お問い合わせ',
-	contactIntro: '投稿、提案、修正、コラボレーションを歓迎します。以下の方法でご連絡ください：',
+	contactIntro: 'これはコミュニティ共同プロジェクトであり、公式サイトやSNSアカウントはありません。以下の方法で連絡できます：',
 	contactEmail: 'メール',
 	contactBilibili: 'Bilibili',
 	contactGitHub: 'GitHub',

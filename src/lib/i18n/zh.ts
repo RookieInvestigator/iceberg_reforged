@@ -77,7 +77,7 @@ export default {
 	aboutVibeCoding: '本网站由 Vibe Coding 得来，主要模型为 DeepSeek V4P 与 Gemini 3.1P',
 	contactLink: '联系我们',
 	contactTitle: '联系我们',
-	contactIntro: '欢迎投稿、建议、纠错或合作。请通过以下方式联系我们：',
+	contactIntro: '这是一个社区共创项目，没有官方网站或社交媒体账号。你可以通过以下方式与我们进行交流：',
 	contactEmail: '邮箱',
 	contactBilibili: 'B站',
 	contactGitHub: 'GitHub',
