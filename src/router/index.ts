@@ -9,5 +9,6 @@ export default createRouter({
     { path: '/ancient-book', component: () => import('../views/AncientBookView.vue') },
     { path: '/artbook',      component: () => import('../views/DarkArtbookView.vue') },
     { path: '/3d',           component: () => import('../views/Iceberg3DView.vue') },
+    { path: '/:pathMatch(.*)*', component: () => import('../views/NotFoundView.vue') },
   ],
 })
