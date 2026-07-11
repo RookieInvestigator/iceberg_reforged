@@ -5,11 +5,13 @@ import AppShell from './components/layout/AppShell.vue'
 <template>
   <AppShell>
     <router-view v-slot="{ Component, route }">
-      <transition name="page-fade" mode="out-in">
-        <keep-alive>
-          <component :is="Component" :key="route.path" />
-        </keep-alive>
-      </transition>
+      <div style="min-height: 100vh">
+        <transition name="page-fade" mode="out-in">
+          <keep-alive>
+            <component :is="Component" :key="route.path" />
+          </keep-alive>
+        </transition>
+      </div>
     </router-view>
   </AppShell>
 </template>

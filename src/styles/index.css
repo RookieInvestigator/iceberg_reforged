@@ -13,16 +13,18 @@
     color: var(--color-text-primary);
     min-height: 100vh;
     overflow-x: hidden;
+    overflow-y: hidden;
   }
   a { color: inherit; text-decoration: none; }
   html {
-    overflow-y: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-  }
-  html::-webkit-scrollbar { display: none; }
-  html.native-scrollbar { scrollbar-width: auto; }
-  html.native-scrollbar::-webkit-scrollbar { display: block; }
+    overflow-y: scroll;
+          }
+  html::-webkit-scrollbar { width: 0; }
+  html::-webkit-scrollbar-track { background: transparent; }
+	  html::-webkit-scrollbar-thumb { background: transparent; }
+	  html.native-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+	  html.native-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); border-radius: 4px; }
+	  html.native-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.35); }
 }
 
 @layer components {
@@ -252,9 +254,9 @@
   .fade-up-enter-from, .fade-up-leave-to { opacity: 0; transform: translateY(24px) scale(0.96); }
 
   /* SPA 页面切换过渡 */
-  .page-fade-enter-active { transition: opacity 0.2s ease-out, transform 0.25s ease-out; }
-  .page-fade-leave-active { transition: opacity 0.15s ease-in; }
-  .page-fade-enter-from { opacity: 0; transform: translateY(12px); }
+  .page-fade-enter-active { transition: opacity 0.18s ease-out; }
+  .page-fade-leave-active { transition: opacity 0.12s ease-in; }
+  .page-fade-enter-from { opacity: 0; }
   .page-fade-leave-to { opacity: 0; }
 
 }
@@ -262,11 +264,11 @@
 /* ═══════════ Footer 全局按钮样式优化 ═══════════ */
 
 .ft-btn {
-  color: inherit; 
-  cursor: pointer; 
-  background: transparent; 
+  color: inherit;
+  cursor: pointer;
+  background: transparent;
   border: none;
-  font: inherit; 
+  font: inherit;
   /* 增加上下 padding 扩大手机端点击热区，并用负 margin 抵消视觉位移 */
   padding: 4px 8px;
   margin: -4px 0;
@@ -275,8 +277,8 @@
   outline: none; /* 移除浏览器默认的丑陋蓝框 */
 }
 
-.ft-btn:hover { 
-  color: rgba(255, 255, 255, 0.6); 
+.ft-btn:hover {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 /* 增加键盘操作时的焦点高亮 (Tab 键切换时生效) */
@@ -285,8 +287,8 @@
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-.ft-sep { 
+.ft-sep {
   margin: 0 8px; /* 稍微缩紧间距更显精致 */
-  color: rgba(255, 255, 255, 0.1); 
+  color: rgba(255, 255, 255, 0.1);
   user-select: none; /* 防止双击文字时误选竖线 */
 }

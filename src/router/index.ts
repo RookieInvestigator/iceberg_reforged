@@ -4,6 +4,10 @@ export default createRouter({
   history: createWebHistory('/iceberg_reforged/'),
   routes: [
     { path: '/',             component: () => import('../views/IndexView.vue') },
+    { path: '/home',         component: () => import('../views/HomeView.vue') },
+    { path: '/handbook',     component: () => import('../views/HandbookView.vue') },
+    { path: '/features',     component: () => import('../views/FeaturesView.vue') },
+    { path: '/features/:slug', component: () => import('../views/FeatureDetailView.vue') },
     { path: '/minimal',      redirect: '/' },
     { path: '/on-this-day',  component: () => import('../views/OnThisDayView.vue') },
     { path: '/ancient-book', component: () => import('../views/AncientBookView.vue') },
