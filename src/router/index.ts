@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory('/iceberg_reforged/'),
   routes: [
     { path: '/',             component: () => import('../views/IndexView.vue') },
@@ -16,3 +16,10 @@ export default createRouter({
     { path: '/:pathMatch(.*)*', component: () => import('../views/NotFoundView.vue') },
   ],
 })
+
+// 开发专用路由：副表编辑器，构建时 tree-shake 掉
+if (import.meta.env.DEV) {
+  router.addRoute({ path: '/appendix-edit', component: () => import('../views/AppendixEditView.vue') })
+}
+
+export default router

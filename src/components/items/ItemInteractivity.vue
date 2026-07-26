@@ -11,6 +11,7 @@ import MobileSheet from './MobileSheet.vue';
 
 const renderItemsRef = inject('renderItems')
 const descMap = inject('descMap', new Map())
+const relatedMap = inject('relatedMap', new Map())
 const filterVisible = inject('filterVisible', null)
 const allItemsRaw = renderItemsRef?.value || []
 const allItems = allItemsRaw.map(i => markRaw({ ...i, desc: descMap.get(i.id) || '' }))
@@ -108,8 +109,9 @@ function getRelMap() {
   return _relMap;
 }
 function pickRelated(item) {
-  // 1. 数据中原有的相关词条
-  const explicit = (item.related || [])
+  // 1. 副表手动精选优先，否则回退自动解析
+  const explicitIds = relatedMap.get(item.id) || (item.related?.length ? item.related : [])
+  const explicit = explicitIds
     .map(id => itemMap.get(id)).filter(Boolean)
     .filter(r => r.id !== item.id);
   const usedIds = new Set(explicit.map(r => r.id));

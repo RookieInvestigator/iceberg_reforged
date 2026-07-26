@@ -5,7 +5,9 @@ import { useRoute } from 'vue-router'
 import { useStore } from '@nanostores/vue'
 import { bgMode, noItemShadow } from '../lib/settingsStore'
 import raw from '../data/iceberg.json'
+import relatedRaw from '../data/appendix/related.csv?raw'
 import { normalizeData } from '../lib/data'
+import { parseCSV } from '../lib/csv'
 import IcebergBg from '../components/layout/IcebergBg.vue'
 import FooterSection from '../components/layout/FooterSection.vue'
 import HeroSection from '../components/iceberg/HeroSection.vue'
@@ -27,6 +29,19 @@ const renderItems = allItemsRaw.map(i => {
 const renderItemsRef = shallowRef(renderItems)
 const descMap = new Map(allItemsRaw.map(i => [i.id, (i as any).desc || '']))
 
+// 副表加载：关联词条 (source_id → target_id[], 含反向索引)
+const relatedMap = new Map<string, string[]>()
+for (const row of parseCSV(relatedRaw)) {
+  const src = (row.source_id || '').trim()
+  const tgt = (row.target_id || '').trim()
+  if (!src || !tgt) continue
+  if (!relatedMap.has(src)) relatedMap.set(src, [])
+  relatedMap.get(src)!.push(tgt)
+  // 反向：target 也获得 source
+  if (!relatedMap.has(tgt)) relatedMap.set(tgt, [])
+  relatedMap.get(tgt)!.push(src)
+}
+
 // 全局注入：子组件不需要 JSON.parse props
 provide('tierOrder', data.tierOrder)
 provide('categoryColors', data.categoryColors)
@@ -35,6 +50,7 @@ provide('defaultColor', data.defaultColor)
 provide('renderItems', renderItemsRef)
 provide('descMap', descMap)
 provide('heroTitles', allItemsRaw.map((i: any) => i.title))
+provide('relatedMap', relatedMap)
 
 const buildDate = new Date(data.generatedAt * 1000).toLocaleDateString('zh-CN')
 
