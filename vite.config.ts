@@ -41,7 +41,7 @@ export default defineConfig({
       },
     },
   ],
-  base: process.env.CF_PAGES ? '/' : '/iceberg_reforged/',
+  base: process.env.CF_PAGES_BRANCH ? '/' : '/iceberg_reforged/',
   resolve: {
     alias: { '@': '/src' },
   },
