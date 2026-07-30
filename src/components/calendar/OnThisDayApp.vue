@@ -6,14 +6,13 @@ import { detailMode } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import { url } from '../../lib/baseUrl';
 
-const props = defineProps({ 
-  allEvents: { type: String, default: '[]' } 
+const props = defineProps({
+  allEvents: { type: Array, default: () => [] }
 });
 
-const allEvents = (() => {
-  try { return JSON.parse(props.allEvents); } 
-  catch (e) { return []; }
-})();
+const allEvents = props.allEvents;
+
+const eventDateSet = new Set(allEvents.map(e => e.date));
 
 const { t } = useI18n();
 const router = useRouter();
@@ -107,7 +106,7 @@ function nextMonth() {
   else { calendarMonth.value++; }
 }
 
-function hasEvents(mmdd) { return allEvents.some(e => e.date === mmdd); }
+function hasEvents(mmdd) { return eventDateSet.has(mmdd); }
 function isSelected(mmdd) { return toMMDD(currentDate.value) === mmdd; }
 function isTodayGrid(mmdd) { return toMMDD(today) === mmdd; }
 
@@ -152,13 +151,13 @@ onMounted(() => {
             {{ getMonthName(new Date(calendarYear, calendarMonth)) }} {{ calendarYear }}
           </span>
           <div class="flex items-center gap-1">
-            <button @click="prevMonth" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors">
+            <button @click="prevMonth" aria-label="上个月" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
             </button>
             <button @click="goToday" class="px-3 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-xs font-medium text-zinc-400 hover:text-white transition-colors">
               {{ t('today') }}
             </button>
-            <button @click="nextMonth" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors">
+            <button @click="nextMonth" aria-label="下个月" class="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors">
               <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
             </button>
           </div>

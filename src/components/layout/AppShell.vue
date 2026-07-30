@@ -63,6 +63,11 @@ onMounted(() => {
   window.addEventListener('pageshow', () => {
     setTimeout(() => { if (!shield.classList.contains('hidden')) hideShield() }, 800)
   })
+
+  // Dispatch vue-ready for all routes (ensures shield hides on non-IcebergApp pages)
+  setTimeout(() => {
+    document.dispatchEvent(new CustomEvent('vue-ready'))
+  }, 100)
 })
 </script>
 

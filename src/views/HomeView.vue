@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import csvRaw from '../data/on-this-day.csv?raw'
 import { parseCSV } from '../lib/csv'
+import raw from '../data/iceberg.json'
+import { normalizeData } from '../lib/data'
 
 const router = useRouter()
 
@@ -12,6 +14,11 @@ const sections = [
   { path: '/ancient-book', label: '古籍', sub: '线装书' },
   { path: '/3d',           label: '3D',   sub: '立体冰山' },
 ]
+
+const data = normalizeData(raw)
+const entryCount = computed(() => Object.values(data.tiers).flat().length)
+const tierCount = computed(() => data.tierOrder.length)
+const categoryCount = computed(() => Object.keys(data.categoryColors).length)
 
 const allEvents = parseCSV(csvRaw)
 const today = new Date()
@@ -36,7 +43,7 @@ function goItem(itemId: string) {
       <div class="iceberg-inner">
         <span>▲</span>
         <h2>冰山图</h2>
-        <p>1388 个词条 · 9 个层级 · 15 种分类</p>
+        <p>{{ entryCount }} 个词条 · {{ tierCount }} 个层级 · {{ categoryCount }} 种分类</p>
       </div>
     </button>
 
@@ -55,7 +62,7 @@ function goItem(itemId: string) {
         <router-link to="/on-this-day">历史上的今天</router-link>
       </div>
       <p class="otd-year">{{ todayEvent.year }}</p>
-      <h3 :class="{ link: todayEvent.item }" @click="goItem(todayEvent.item)">{{ todayEvent.title }}</h3>
+      <h3 :class="{ link: todayEvent.item }" tabindex="0" role="button" @click="goItem(todayEvent.item)" @keydown.enter="goItem(todayEvent.item)" @keydown.space.prevent="goItem(todayEvent.item)">{{ todayEvent.title }}</h3>
       <p class="otd-desc">{{ todayEvent.desc }}</p>
     </article>
 

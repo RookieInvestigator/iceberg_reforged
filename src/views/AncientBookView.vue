@@ -114,6 +114,8 @@ let globalData: any = null
 let activeMeta: any[] = []
 let volNames: string[] = []
 let roTimer = 0
+let _onKey: ((e: KeyboardEvent) => void) | null = null
+let _ro: ResizeObserver | null = null
 
 function updateModeData() {
   const modeData = currentMode === 'category' ? catData : tierData
@@ -165,7 +167,7 @@ function boot() {
   root.innerHTML =
     '<div class="wr" id="wr"><svg class="nz"><filter id="pf"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/><feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 0.04 0"/></filter><rect width="100%" height="100%" filter="url(#pf)"/></svg><div id="sc"></div>' +
     '<nav class="nv"><div class="nv-in">' +
-      '<a href="/iceberg_reforged/" class="bk">&larr; 返回</a><i class="nd"></i><button id="tm">分卷：類別</button>' +
+      '<a href="' + import.meta.env.BASE_URL + '" class="bk">&larr; 返回</a><i class="nd"></i><button id="tm">分卷：類別</button>' +
       '<i class="nd"></i>' +
       '<button id="np">下页</button>' +
       '<i class="nd"></i><span id="ni">第 一 展</span><i class="nd"></i>' +
@@ -191,6 +193,7 @@ function boot() {
       }, 150)
     }
   })
+  _ro = ro
   ro.observe(wr)
 
   document.getElementById('bp')!.onclick = () => { if (cur > 0) show(cur - 1) }
@@ -210,6 +213,7 @@ function boot() {
     if (e.key === 'ArrowRight') { e.preventDefault(); if (cur > 0) show(cur - 1) }
     if (e.key === 'Escape') document.getElementById('ov')!.classList.remove('s')
   }
+  _onKey = onKey
   document.addEventListener('keydown', onKey)
 
   const overlay = document.getElementById('ov')!
@@ -234,7 +238,11 @@ function boot() {
 }
 
 onMounted(() => { boot() })
-onUnmounted(() => { clearTimeout(roTimer) })
+onUnmounted(() => {
+  clearTimeout(roTimer)
+  if (_onKey) document.removeEventListener('keydown', _onKey)
+  if (_ro) _ro.disconnect()
+})
 </script>
 
 <template>

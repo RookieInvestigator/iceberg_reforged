@@ -59,7 +59,8 @@ const sRead = useStore(showReadMark);
     searchWorker.postMessage({ type: "search", query: q, mode })
   })
 
-const latestModified = Math.max(...allItems.map(i => i.modifiedAt || 0));
+const THIRTY_DAYS_SEC = 30 * 24 * 60 * 60;
+const newCutoff = Date.now() / 1000 - THIRTY_DAYS_SEC;
 const itemModAt = new Map(allItems.map(i => [i.id, i.modifiedAt || 0]));
 
 // Related-items map: pre-indexed, O(n × avgBucketSize)
@@ -273,12 +274,13 @@ function hideTooltip() {
 // Event delegation
 let scrollBusy = false;
 let scrollTimer = 0;
-window.addEventListener('scroll', () => {
+function onWindowScroll() {
   scrollBusy = true;
   hideTooltip();
   clearTimeout(scrollTimer);
   scrollTimer = setTimeout(() => { scrollBusy = false; }, 300);
-}, { passive: true });
+}
+window.addEventListener('scroll', onWindowScroll, { passive: true });
 
 function onMouseOver(e) {
   if (scrollBusy || dm.value === 'modal' || window.innerWidth < 1024) return;
@@ -339,7 +341,7 @@ watchEffect(() => {
       const sMode = spl.value;
       if (sMode === 'hasLink') { if (!item.link) match = false; }
       else if (sMode === 'hasDesc') { if (!item.desc) match = false; }
-      else if (sMode === 'isNew') { if ((item.modifiedAt || 0) < latestModified) match = false; }
+      else if (sMode === 'isNew') { if ((item.modifiedAt || 0) < newCutoff) match = false; }
       else if (sMode === 'noLinkNoDesc') { if (item.link || item.desc) match = false; }
       if (match && favF.value && !fList.value.includes(item.id)) match = false;
       const hCats = hiddenCats.value, hTags = hiddenT.value;
@@ -381,7 +383,7 @@ watchEffect(() => {
     const rs = rList.value; const sn = sNew.value; const sr = sRead.value;
     c.querySelectorAll('.iceberg-item').forEach(el => {
       const id = el.dataset.id;
-      el.classList.toggle('recently-updated', sn && id ? ((itemModAt.get(id) || 0) === latestModified) : false);
+      el.classList.toggle('recently-updated', sn && id ? ((itemModAt.get(id) || 0) >= newCutoff) : false);
       el.classList.toggle('read', sr && id ? rs.includes(id) : false);
     });
     // 统计可见 + tier-empty（基于 tier 数据，无需 DOM 查询）
@@ -429,7 +431,7 @@ onMounted(() => {
   document.documentElement.setAttribute('data-detail', dm.value);
   document.addEventListener('open-item-modal', openModalHandler);
   // 发送数据到搜索 Worker（仅发送搜索需要的字段，减少结构化克隆开销）
-  const searchItems = allItems.map(it => ({ id: it.id, title: it.title, desc: it.desc }))
+  const searchItems = allItems.map(it => ({ id: it.id, title: it.title, desc: it.desc, category: it.category, tags: it.tags }))
   searchWorker.postMessage({ type: 'init', items: searchItems })
   const c = document.getElementById('items-container');
   if (c) {
@@ -458,6 +460,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  window.removeEventListener('scroll', onWindowScroll)
   searchWorker.terminate()
   clearTimeout(hoverTimer.value);
   const c = document.getElementById('items-container');

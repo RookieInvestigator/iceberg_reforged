@@ -10,13 +10,13 @@ const allItems = Object.values(data.tiers).flat()
 
 function parseSections(md: string) {
   const result: Record<string, Record<string, string>> = {}
-  const parts = md.split('\n## ')
+  const parts = md.split(/\r?\n## /)
   for (const part of parts) {
     const nl = part.indexOf('\n')
     const sectionName = (nl === -1 ? part : part.slice(0, nl)).trim()
     const body = nl === -1 ? '' : part.slice(nl + 1)
     const subs: Record<string, string> = {}
-    const blocks = body.split(/\n### /)
+    const blocks = body.split(/\r?\n### /)
     for (const block of blocks) {
       const sn = block.indexOf('\n')
       if (sn === -1) continue

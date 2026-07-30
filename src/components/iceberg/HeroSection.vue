@@ -16,6 +16,8 @@ const removed = ref((() => {
   catch { return false; }
 })());
 let exited = false;
+let exitTimeout = 0;
+let preloadTimeout = 0;
 
 function buildTicker(count) {
   return Array.from({ length: count }, () =>
@@ -41,7 +43,7 @@ function exit() {
   try { sessionStorage.setItem('iceberg_hero_done', '1'); } catch {}
   document.dispatchEvent(new CustomEvent('hero-exit'));
   
-  setTimeout(() => {
+  exitTimeout = setTimeout(() => {
     removed.value = true;
     const root = document.scrollingElement || document.documentElement;
     root.style.overflow = '';
@@ -106,7 +108,7 @@ onMounted(() => {
   };
   preload.onload = fireReady;
   preload.onerror = fireReady;
-  setTimeout(fireReady, 2000);
+  preloadTimeout = setTimeout(fireReady, 2000);
 
   heroRef.value?.addEventListener('wheel', onWheel, { passive: false });
   heroRef.value?.addEventListener('touchstart', onTStart, { passive: true });
@@ -119,6 +121,12 @@ onMounted(() => {
 
 onUnmounted(() => {
   cancelAnimationFrame(rAF.current);
+  clearTimeout(exitTimeout);
+  clearTimeout(preloadTimeout);
+  // Restore scroll in case component unmounts without exiting
+  const root = document.scrollingElement || document.documentElement;
+  root.style.overflow = '';
+  document.body.style.overflow = '';
   heroRef.value?.removeEventListener('wheel', onWheel);
   heroRef.value?.removeEventListener('touchstart', onTStart);
   heroRef.value?.removeEventListener('touchmove', onTMove);
@@ -173,7 +181,8 @@ onUnmounted(() => {
 .hero {
   position: fixed; inset: 0; z-index: 9999;
   background-color: #0d0a08;
-  overflow: hidden; cursor: none;
+  overflow: hidden;
+  @media (pointer: fine) { cursor: none; }
   opacity: 0;
   transition: opacity 0.6s ease;
 }

@@ -47,6 +47,7 @@ let isDragging = false
 // ── 资源追踪 (onUnmounted 统一 dispose) ──
 const trackedGeos: THREE.BufferGeometry[] = []
 const trackedMats: THREE.Material[] = []
+const trackedMeshes: THREE.InstancedMesh[] = []  // GPU instance buffer 清理
 
 // ── 实例化映射表与发光代理 ──
 const hitboxMeshes: THREE.InstancedMesh[] = []
@@ -57,7 +58,8 @@ let hoverProxy: THREE.Mesh
 let focusProxy: THREE.Mesh
 
 let raycaster: THREE.Raycaster
-let mouse = new THREE.Vector2()
+const mouse = new THREE.Vector2()
+const _dragVec = new THREE.Vector2()   // 复用，避免 pointermove 每次 new
 let particles: THREE.Points
 let focusRing: THREE.Mesh
 let focusTargetMesh: { mesh: THREE.InstancedMesh; id: number; brightColor: number } | null = null
@@ -219,6 +221,8 @@ function initRingsAndEntries() {
       return mesh
     })
     const hiddenHitMesh = new THREE.InstancedMesh(hitGeo, hitMat, count)
+    visibleMeshes.forEach(m => trackedMeshes.push(m))
+    trackedMeshes.push(hiddenHitMesh)
 
     const scales: number[] = []; const colors: number[] = []; const brightColors: number[] = []; const geoCounts = [0, 0, 0]
 
@@ -505,7 +509,7 @@ function onPointerDown(e: PointerEvent) {
 function onPointerMove(e: PointerEvent) {
   if (!containerRef.value) return
 
-  if (pointerDownPos.distanceTo(new THREE.Vector2(e.clientX, e.clientY)) > 5) {
+  if (pointerDownPos.distanceTo(_dragVec.set(e.clientX, e.clientY)) > 5) {
     isDragging = true
   }
 
@@ -705,11 +709,18 @@ function onResize() {
 
 onUnmounted(() => {
   cancelAnimationFrame(animationId)
+  // 杀死所有 GSAP 动画（tweenObj + ringPosObj + ringScaleObj）
   gsap.killTweensOf(tweenObj)
+  gsap.killTweensOf(ringPosObj)
+  gsap.killTweensOf(ringScaleObj)
   window.removeEventListener('resize', onResize)
-  containerRef.value?.removeEventListener('pointerdown', onPointerDown)
-  containerRef.value?.removeEventListener('pointermove', onPointerMove)
-  containerRef.value?.removeEventListener('pointerup', onPointerUp)
+  const container = containerRef.value
+  if (container) {
+    container.removeEventListener('pointerdown', onPointerDown)
+    container.removeEventListener('pointermove', onPointerMove)
+    container.removeEventListener('pointerup', onPointerUp)
+  }
+  trackedMeshes.forEach(m => m.dispose())
   trackedGeos.forEach(g => g.dispose())
   trackedMats.forEach(m => m.dispose())
   renderer?.dispose()
@@ -721,6 +732,15 @@ onUnmounted(() => {
 
 <template>
   <div class="iceberg-3d-page">
+    <!-- Loading / WebGL unavailable states -->
+    <div v-if="isLoading" class="scene-loading">
+      <div class="scene-loading-spinner"></div>
+      <p>加载中…</p>
+    </div>
+    <div v-else-if="webglUnavailable" class="scene-error">
+      <p>您的浏览器不支持 WebGL，无法显示 3D 冰山。</p>
+    </div>
+
     <div ref="containerRef" class="canvas-container"></div>
 
     <div class="scene-ui" :class="{ 'hidden': isFocusMode }">
@@ -776,6 +796,19 @@ onUnmounted(() => {
 .canvas-container {
   position: absolute; inset: 0; z-index: 1;
 }
+
+.scene-loading, .scene-error {
+  position: absolute; inset: 0; z-index: 50;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  color: rgba(255,255,255,0.3); font-size: 0.85rem; gap: 1rem;
+  background: #020408;
+}
+.scene-loading-spinner {
+  width: 32px; height: 32px; border: 2px solid rgba(255,255,255,0.1);
+  border-top-color: rgba(255,255,255,0.4); border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 .scene-ui {
   position: absolute; top: 0; left: 0; right: 0; pointer-events: none; z-index: 10;

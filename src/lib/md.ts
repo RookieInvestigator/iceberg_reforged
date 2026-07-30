@@ -4,14 +4,17 @@ export function renderMd(src: string): string {
   const out: string[] = []
   let inList = false
 
-  function escape(s: string) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
+  function escape(s: string) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') }
 
   function inline(s: string): string {
     s = escape(s)
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     s = s.replace(/\*(.+?)\*/g, '<em>$1</em>')
     s = s.replace(/`(.+?)`/g, '<code>$1</code>')
-    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text, url) => {
+      const safe = /^(https?:|\/|\.\/|\.\.\/|#)/i.test(url) ? url : '#'
+      return '<a href="' + escape(safe) + '" target="_blank" rel="noopener">' + text + '</a>'
+    })
     return s
   }
 
@@ -34,16 +37,4 @@ export function renderMd(src: string): string {
   }
   if (inList) out.push('</ul>')
   return out.join('\n')
-}
-
-// 提取 h2/h3 标题生成目录
-export function extractToc(src: string): { id: string; text: string; level: 2 | 3 }[] {
-  const toc: { id: string; text: string; level: 2 | 3 }[] = []
-  for (const line of src.split('\n')) {
-    const h2 = line.match(/^## (.+)$/)
-    if (h2) { toc.push({ id: h2[1].trim().toLowerCase().replace(/\s+/g, '-').replace(/[·・]/g, ''), text: h2[1].trim(), level: 2 }); continue }
-    const h3 = line.match(/^### (.+)$/)
-    if (h3) { toc.push({ id: h3[1].trim().toLowerCase().replace(/\s+/g, '-').replace(/[·・]/g, ''), text: h3[1].trim(), level: 3 }) }
-  }
-  return toc
 }

@@ -2,7 +2,22 @@ import { atom } from 'nanostores';
 
 export function storedAtom<T>(key: string, fallback: T) {
   let val = fallback;
-  try { const v = localStorage.getItem(key); if (v != null) val = JSON.parse(v); } catch {}
+  try {
+    const v = localStorage.getItem(key);
+    if (v != null) {
+      const parsed = JSON.parse(v);
+      // 校验解析值类型与 fallback 一致，防止错误形状（如 {} 代替 []）导致运行时崩溃
+      const ok =
+        (typeof fallback === 'string' && typeof parsed === 'string') ||
+        (typeof fallback === 'boolean' && typeof parsed === 'boolean') ||
+        (typeof fallback === 'number' && typeof parsed === 'number') ||
+        (Array.isArray(fallback) && Array.isArray(parsed)) ||
+        (fallback !== null && typeof fallback === 'object' && !Array.isArray(fallback) &&
+         typeof parsed === 'object' && !Array.isArray(parsed));
+      if (ok) val = parsed as T;
+      // 类型不匹配 → 保持 fallback，静默修复损坏数据
+    }
+  } catch {}
   const a = atom<T>(val);
   a.listen((v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch {} });
   return a;
@@ -30,7 +45,7 @@ export function applySimpleMode() {
 }
 export function applyStandardMode() {
   detailMode.set('modal'); filterMode.set('hide'); immersiveMode.set(true);
-  showRandomBtn.set(true); showReadMark.set(true); bgMode.set('static'); floatMode.set('static'); noItemShadow.set(false);
+  showRandomBtn.set(true); showReadMark.set(true); showNewMark.set(true); bgMode.set('static'); floatMode.set('static'); noItemShadow.set(false);
 }
 
 export const FONT_SIZE_MAP: Record<string, number> = { xs: 0.75, sm: 0.875, md: 1.0, lg: 1.125, xl: 1.25 };

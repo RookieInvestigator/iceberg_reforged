@@ -6,6 +6,10 @@ import { normalizeData } from '../lib/data'
 import rawData from '../data/iceberg.json'
 import ItemModal from '../components/items/ItemModal.vue'
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
+}
+
 const route = useRoute()
 const router = useRouter()
 const slug = computed(() => route.params.slug as string)
@@ -23,7 +27,7 @@ const modules = import.meta.glob('../data/features/*.md', { query: '?raw', impor
 
 function parseFM(yaml: string): Record<string, any> {
   const fm: Record<string, any> = {}
-  const lines = yaml.split('\n')
+  const lines = yaml.split(/\r?\n/)
   let i = 0
   while (i < lines.length) {
     const line = lines[i]
@@ -56,7 +60,7 @@ onMounted(() => {
   const raw = (modules as any)[key]
   if (!raw) { router.replace('/features'); return }
 
-  const m = (raw as string).match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
+  const m = (raw as string).match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/)
   if (!m) { router.replace('/features'); return }
 
   const fm = parseFM(m[1])
@@ -79,15 +83,15 @@ onMounted(() => {
   text = text.replace(/\[item:([a-f0-9]+)\]/g, (_, id: string) => {
     const it = items.find((i: any) => i.id === id)
     if (!it) return `[未知词条: ${id}]`
-    const desc = it.desc ? `<span class="fic-desc">${it.desc.slice(0, 120)}${it.desc.length > 120 ? '…' : ''}</span>` : ''
+    const desc = it.desc ? `<span class="fic-desc">${escapeHtml(it.desc.slice(0, 120))}${it.desc.length > 120 ? '…' : ''}</span>` : ''
     const ph = `\x00CARD_${id}\x00`
-    cards[ph] = `<span class="fi-card" data-item-id="${id}"><span class="fic-title" style="color:${it.categoryColor}">${it.title}</span><span class="fic-cat">${it.category}</span>${desc}</span>`
+    cards[ph] = `<span class="fi-card" data-item-id="${id}"><span class="fic-title" style="color:${escapeHtml(it.categoryColor)}">${escapeHtml(it.title)}</span><span class="fic-cat">${escapeHtml(it.category)}</span>${desc}</span>`
     return ph
   })
 
   let html = renderMd(text)
   for (const [ph, card] of Object.entries(cards)) {
-    html = html.replace(ph, card)
+    html = html.replaceAll(ph, card)
   }
   bodyHtml.value = html
 })

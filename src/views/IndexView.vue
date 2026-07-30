@@ -6,6 +6,7 @@ import { useStore } from '@nanostores/vue'
 import { bgMode, noItemShadow } from '../lib/settingsStore'
 import raw from '../data/iceberg.json'
 import relatedRaw from '../data/appendix/related.csv?raw'
+import referencesRaw from '../data/appendix/references.csv?raw'
 import { normalizeData } from '../lib/data'
 import { parseCSV } from '../lib/csv'
 import IcebergBg from '../components/layout/IcebergBg.vue'
@@ -42,6 +43,17 @@ for (const row of parseCSV(relatedRaw)) {
   relatedMap.get(tgt)!.push(src)
 }
 
+// 副表加载：参考链接 (source_id → [{label, url}])
+const referencesMap = new Map<string, { label: string; url: string }[]>()
+for (const row of parseCSV(referencesRaw)) {
+  const src = (row.source_id || '').trim()
+  const label = (row.label || '').trim()
+  const url = (row.url || '').trim()
+  if (!src || !url) continue
+  if (!referencesMap.has(src)) referencesMap.set(src, [])
+  referencesMap.get(src)!.push({ label: label || url, url })
+}
+
 // 全局注入：子组件不需要 JSON.parse props
 provide('tierOrder', data.tierOrder)
 provide('categoryColors', data.categoryColors)
@@ -51,6 +63,7 @@ provide('renderItems', renderItemsRef)
 provide('descMap', descMap)
 provide('heroTitles', allItemsRaw.map((i: any) => i.title))
 provide('relatedMap', relatedMap)
+provide('referencesMap', referencesMap)
 
 const buildDate = new Date(data.generatedAt * 1000).toLocaleDateString('zh-CN')
 
@@ -58,7 +71,7 @@ const buildDate = new Date(data.generatedAt * 1000).toLocaleDateString('zh-CN')
 const bulletinModules = import.meta.glob('../data/bulletins/*.md', { query: '?raw', import: 'default', eager: true })
 const bulletins = computed(() =>
   Object.entries(bulletinModules).map(([p, raw]) => {
-    const m = (raw as string).match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/)
+    const m = (raw as string).match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/)
     if (!m) return null
     const fm: Record<string, string> = {}
     for (const line of m[1].split('\n')) {
@@ -149,7 +162,6 @@ onMounted(() => {
       <FooterSection :buildDate="buildDate" :entryCount="allItems.length" :bulletins="bulletins" />
     </div>
 
-    <OnThisDayModal v-if="showOnThisDay" @close="showOnThisDay = false" />
     <OnThisDayModal v-if="showOnThisDay" @close="showOnThisDay = false" />
   </div>
 </template>

@@ -1,7 +1,9 @@
 <script setup>
-import { inject } from 'vue';
+import { inject, ref } from 'vue';
+import { useStore } from '@nanostores/vue';
 import { useI18n } from '../../lib/useI18n';
-import { url } from '../../lib/baseUrl';
+import { user as userAtom } from '../../lib/authStore';
+import UserModal from '../modals/UserModal.vue';
 
 defineProps({
   buildDate: { type: String, default: '' },
@@ -11,6 +13,8 @@ defineProps({
 
 const { t } = useI18n();
 const openOnThisDay = inject('openOnThisDay', null);
+const u = useStore(userAtom);
+const showUser = ref(false);
 </script>
 
 <template>
@@ -33,7 +37,12 @@ const openOnThisDay = inject('openOnThisDay', null);
         <router-link v-else to="/on-this-day" class="text-white/25 hover:text-white/50 transition-colors py-1">{{ t('onThisDay') }}</router-link>
         <span class="text-white/10">|</span>
         <router-link to="/ancient-book" class="text-white/25 hover:text-white/50 transition-colors py-1">{{ t('ancientBook') }}</router-link>
+        <span class="text-white/10">|</span>
+        <button @click="showUser = true" class="text-white/25 hover:text-white/50 transition-colors py-1">
+          {{ u ? `用户: ${u.displayName}` : '登录' }}
+        </button>
       </div>
+      <UserModal v-if="showUser" @close="showUser = false" />
     </div>
 
     <p
@@ -44,3 +53,4 @@ const openOnThisDay = inject('openOnThisDay', null);
     </p>
   </div>
 </template>
+

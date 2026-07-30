@@ -38,7 +38,8 @@ export function getInitial(ch: string): string {
 // 获取文本首个汉字的拼音首字母
 export function getFirstInitial(text: string): string {
   for (const ch of text) {
-    if (/^[a-zA-Z0-9]$/.test(ch)) return ch.toUpperCase()
+    if (/^[0-9]$/.test(ch)) return '#'
+    if (/^[a-zA-Z]$/.test(ch)) return ch.toUpperCase()
     const p = PINYIN_INITIAL[ch]
     if (p) return p
   }

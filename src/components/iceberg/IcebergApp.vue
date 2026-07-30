@@ -178,9 +178,9 @@ function onDrawerTouchEnd() {
       <div>
         <div class="flex items-center gap-2 mb-3">
           <span class="text-xs font-bold text-gray-400 tracking-widest uppercase">{{ t('search') }}</span>
-          <div class="flex text-[0.6rem] font-bold tracking-wider uppercase cursor-pointer select-none" @click="searchMode.set(sMode === '全文' ? '标题' : '全文')">
-            <span :class="sMode === '全文' ? 'text-white/80 bg-white/15' : 'text-white/25 hover:text-white/40'" class="px-1.5 py-0.5 transition-colors">{{ t('searchFullText') }}</span>
-            <span :class="sMode === '标题' ? 'text-white/80 bg-white/15' : 'text-white/25 hover:text-white/40'" class="px-1.5 py-0.5 transition-colors">{{ t('searchTitleOnly') }}</span>
+          <div class="flex text-[0.6rem] font-bold tracking-wider uppercase cursor-pointer select-none" @click="searchMode.set(sMode === 'full' ? 'title' : 'full')">
+            <span :class="sMode === 'full' ? 'text-white/80 bg-white/15' : 'text-white/25 hover:text-white/40'" class="px-1.5 py-0.5 transition-colors">{{ t('searchFullText') }}</span>
+            <span :class="sMode === 'title' ? 'text-white/80 bg-white/15' : 'text-white/25 hover:text-white/40'" class="px-1.5 py-0.5 transition-colors">{{ t('searchTitleOnly') }}</span>
           </div>
         </div>
         <input
@@ -246,7 +246,9 @@ function onDrawerTouchEnd() {
               splFilter === 'hasDesc' ? 'bg-white/20 text-white hover:bg-white hover:text-black' : 'bg-transparent text-gray-500 hover:bg-white hover:text-black']">
             {{ t('hasDesc') }}
           </button>
-          <button class="group flex items-center gap-2 px-3 py-1.5 text-[0.85rem] font-medium tracking-wide select-none border-none bg-transparent text-gray-600 opacity-40 cursor-not-allowed">
+          <button @click="specialFilter.set(splFilter === 'isNew' ? 'all' : 'isNew')"
+            :class="['group flex items-center gap-2 px-3 py-1.5 text-[0.85rem] font-medium tracking-wide transition-colors duration-200 cursor-pointer select-none border-none',
+              splFilter === 'isNew' ? 'bg-white/20 text-white hover:bg-white hover:text-black' : 'bg-transparent text-gray-500 hover:bg-white hover:text-black']">
             {{ t('isNew') }}
           </button>
           <button @click="specialFilter.set(splFilter === 'noLinkNoDesc' ? 'all' : 'noLinkNoDesc')"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import csvRaw from '../../data/on-this-day.csv?raw'
 import { parseCSV } from '../../lib/csv'
 import { useI18n } from '../../lib/useI18n'
@@ -11,6 +11,9 @@ const { t } = useI18n()
 const emit = defineEmits(['close'])
 const mode = useStore(detailMode)
 
+let closeTimer = 0
+onUnmounted(() => clearTimeout(closeTimer))
+
 function goItem(id: string) {
   if (mode.value === 'modal') {
     document.dispatchEvent(new CustomEvent('open-item-modal', { detail: id }));
@@ -20,7 +23,7 @@ function goItem(id: string) {
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       el.classList.add('tooltip-active');
-      setTimeout(() => {
+      closeTimer = setTimeout(() => {
         el.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true }));
       }, 800);
     }
@@ -64,7 +67,7 @@ const getMonthName = (d: Date) => new Intl.DateTimeFormat('en-US', { month: 'sho
           <h3 class="text-zinc-200 text-sm font-medium leading-snug break-words">{{ event.title }}</h3>
           <p v-if="event.desc" class="text-zinc-500 text-xs leading-relaxed mt-0.5 sm:mt-1">{{ event.desc }}</p>
           <div v-if="event.link || event.item" class="flex gap-3 sm:gap-4 mt-1.5 sm:mt-2">
-            <a v-if="event.link" :href="event.link" target="_blank" class="text-[10px] text-zinc-600 hover:text-zinc-400 tracking-wider">{{ t('source') }}</a>
+            <a v-if="event.link" :href="event.link" target="_blank" rel="noopener" class="text-[10px] text-zinc-600 hover:text-zinc-400 tracking-wider">{{ t('source') }}</a>
             <a v-if="event.item" @click.prevent="goItem(event.item)" href="#" class="text-[10px] text-zinc-600 hover:text-zinc-400 tracking-wider cursor-pointer">{{ t('explore') }}</a>
           </div>
         </div>

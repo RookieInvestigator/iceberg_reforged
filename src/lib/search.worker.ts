@@ -19,7 +19,7 @@ self.onmessage = (e: MessageEvent) => {
 
   if (type === 'search') {
     if (!query) { self.postMessage({ type: 'results', ids: null }); return }
-    const fuse = mode === '标题' ? fuseTitle : fuseFull
+    const fuse = mode === 'title' ? fuseTitle : fuseFull
     if (!fuse) { self.postMessage({ type: 'results', ids: [] }); return }
     const results = fuse.search(query)
     const ids = results.map((r: any) => r.item.id)

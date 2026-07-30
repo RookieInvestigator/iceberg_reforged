@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
-  history: createWebHistory('/iceberg_reforged/'),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/',             component: () => import('../views/IndexView.vue') },
     { path: '/home',         component: () => import('../views/HomeView.vue') },
@@ -17,9 +17,10 @@ const router = createRouter({
   ],
 })
 
-// 开发专用路由：副表编辑器，构建时 tree-shake 掉
+// 开发专用路由：构建时 tree-shake 掉
 if (import.meta.env.DEV) {
   router.addRoute({ path: '/appendix-edit', component: () => import('../views/AppendixEditView.vue') })
+  router.addRoute({ path: '/avatar-test', component: () => import('../views/AvatarTestView.vue') })
 }
 
 export default router

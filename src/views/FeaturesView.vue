@@ -14,10 +14,10 @@ const modules = import.meta.glob('../data/features/*.md', { query: '?raw', impor
 const features = computed<FeatureMeta[]>(() =>
   Object.entries(modules)
     .map(([path, raw]) => {
-      const m = (raw as string).match(/^---\n([\s\S]*?)\n---/)
+      const m = (raw as string).match(/^---\r?\n([\s\S]*?)\r?\n---/)
       if (!m) return null
       const fm: Record<string, string> = {}
-      for (const line of m[1].split('\n')) {
+      for (const line of m[1].split(/\r?\n/)) {
         const sep = line.indexOf(':')
         if (sep === -1) continue
         fm[line.slice(0, sep).trim()] = line.slice(sep + 1).trim()
@@ -45,7 +45,10 @@ function go(slug: string) { router.push(`/features/${slug}`) }
         v-for="f in features"
         :key="f.slug"
         class="feature-card"
+        tabindex="0"
         @click="go(f.slug)"
+        @keydown.enter="go(f.slug)"
+        @keydown.space.prevent="go(f.slug)"
       >
         <time class="feature-date">{{ f.date }}</time>
         <h2 class="feature-title">{{ f.title }}</h2>

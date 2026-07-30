@@ -9,16 +9,30 @@ defineProps<{
   titleClick?: () => void
 }>();
 
-defineEmits(['close']);
+const emit = defineEmits(['close']);
 
-// 统一管理背景滚动锁
+function onKey(e: KeyboardEvent) {
+  if (e.key === 'Escape') emit('close')
+}
+
+let modalCount = 0
+
+// 统一管理背景滚动锁（引用计数）+ Esc 键
 onMounted(() => {
-  document.body.style.overflow = 'hidden';
-  document.documentElement.style.overflow = 'hidden';
+  modalCount++
+  if (modalCount === 1) {
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+  }
+  document.addEventListener('keydown', onKey);
 })
 onUnmounted(() => {
-  document.body.style.overflow = '';
-  document.documentElement.style.overflow = '';
+  modalCount--
+  if (modalCount === 0) {
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+  }
+  document.removeEventListener('keydown', onKey);
 })
 </script>
 

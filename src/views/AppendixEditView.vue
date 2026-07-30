@@ -138,7 +138,10 @@ async function saveAll() {
       for (const row of rows) {
         lines.push(def.headers.map(h => {
           const v = (row[h] || '').trim()
-          return v.includes(',') ? `"${v}"` : v
+          if (v.includes(',') || v.includes('"') || v.includes('\n') || v.includes('\r')) {
+            return '"' + v.replace(/"/g, '""') + '"'
+          }
+          return v
         }).join(','))
       }
     }
