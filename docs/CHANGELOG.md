@@ -1,6 +1,12 @@
 # 更新日志
 
 
+## 2026-08-16 — Cloudflare Pages 构建适配（仓库根迁移后）
+
+### 修复
+
+- **CF Pages 构建失败（npm run build 找不到根 package.json）** — 仓库根新增 `package.json` 构建 shim：`npm --prefix iceberg-vue ci && npm --prefix iceberg-vue run build`，并用新增 `scripts/build-cf.mjs` 将 `iceberg-vue/dist` 镜像到仓库根 `dist/`，兼容 CF Pages 面板中仍指向根目录的 `npm run build` + `dist` 输出设置；本地按根目录执行 `npm run build` 验证通过（根 `dist/` 含 index.html / 404.html）。
+
 ## 2026-08-16 — authStore 测试修复：显式 mock userState
 
 ### 修复

@@ -1,0 +1,8 @@
+{
+  "name": "iceberg-reforged",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "build": "npm --prefix iceberg-vue ci && npm --prefix iceberg-vue run build && node scripts/build-cf.mjs"
+  }
+}
