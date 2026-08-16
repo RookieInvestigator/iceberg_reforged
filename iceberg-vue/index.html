@@ -84,13 +84,21 @@
       height: 5px;
       border-radius: 50%;
       background: rgba(255,255,255,0.28);
+      animation: shield-dot-bounce 1.2s ease-in-out infinite;
+    }
+    #app-shield .shield-dots i:nth-child(2) { animation-delay: 0.15s; }
+    #app-shield .shield-dots i:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes shield-dot-bounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.25; }
+      30% { transform: translateY(-5px); opacity: 1; }
     }
     @keyframes shield-critical-fade-in { to { opacity: 1; } }
-    /* reduced-motion：静态呈现加载页（视觉不变，只去掉入场/呼吸动画） */
+    /* reduced-motion：静态呈现加载页（视觉不变，只去掉入场/呼吸/跳动动画） */
     @media (prefers-reduced-motion: reduce) {
       #app-shield .shield-icon,
       #app-shield .shield-text,
-      #app-shield .shield-dots { animation: none !important; opacity: 1; }
+      #app-shield .shield-dots,
+      #app-shield .shield-dots i { animation: none !important; opacity: 1; }
     }
     /* JS 禁用时：隐藏加载页，展示静态站点说明（利于爬虫与无 JS 用户） */
     .noscript-main {
@@ -116,7 +124,7 @@
     <main class="noscript-main">
       <h1>中文兔子洞冰山图</h1>
       <p>社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识冰山图目录，1400+ 词条按冷门程度分层。本站需要启用 JavaScript 才能浏览完整冰山图。</p>
-      <p><a href="%BASE_URL%">进入首页</a> · <a href="%BASE_URL%handbook">创作者手册</a> · <a href="%BASE_URL%features">专题</a></p>
+      <p><a href="%BASE_URL%">进入首页</a> · <a href="%BASE_URL%handbook">术语表</a> · <a href="%BASE_URL%features">专题</a></p>
     </main>
   </noscript>
   <div id="app"></div>

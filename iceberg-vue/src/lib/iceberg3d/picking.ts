@@ -15,6 +15,8 @@ export interface RingData {
   baseScales: number[]
   colors: number[]
   brightColors: number[]
+  /** 最近修改（NEW）标记，用于常态发光编码 */
+  newFlags: boolean[]
   visibleMeshes: THREE.InstancedMesh[]
   visibleItemIds: number[][]
 }

@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import router from '../../router'
 
 // 首帧加载页（#app-shield）生命周期。
 // 视觉样式全部内联在 index.html（首帧无 JS 也能渲染），这里只负责「何时显示/隐藏」：
-//   - 路由 path 变化：beforeEach 露出遮罩，afterEach + nextTick 后淡出；
-//   - 页面挂载后的 `vue-ready` 事件作为二次确认（幂等，重复触发无害）；
-//   - 2500ms 兜底：任何异常情况下都不会把用户永久挡在加载页。
+//   - 路由 path 变化：beforeEach 露出遮罩，afterEach 设置 2500ms 兜底；
+//   - App.vue 的 transition after-enter 派发 `route-ready` 后淡出（新页面已进入）；
+//   - 页面挂载后的 `vue-ready` 事件作为首帧二次确认（幂等，重复触发无害）。
 const SHIELD_FALLBACK_DELAY = 2500
 const SHIELD_FADE_OUT_DELAY = 140
 
@@ -38,6 +38,11 @@ function onVueReady() {
   hideShield(SHIELD_FADE_OUT_DELAY)
 }
 
+// 路由切换时由 App.vue 的 transition after-enter 派发，确保新页面已经进入后再隐藏遮罩
+function onRouteReady() {
+  hideShield(SHIELD_FADE_OUT_DELAY)
+}
+
 function onPageshow(event: PageTransitionEvent) {
   // bfcache 恢复：页面已有完整快照，直接淡出遮罩
   if (event.persisted) hideShield(SHIELD_FADE_OUT_DELAY)
@@ -52,8 +57,9 @@ router.beforeEach((to) => {
 })
 
 router.afterEach(() => {
-  // 路由确认 → 组件完成本轮渲染后淡出；兜底时间由 hideShield 内部 clearTimeout 覆盖
-  nextTick(() => hideShield(SHIELD_FADE_OUT_DELAY))
+  // 路由确认后不立即隐藏：等 App.vue 的 transition after-enter 派发 route-ready；
+  // 这里先设置兜底，避免异常情况下遮罩永久显示。
+  hideShield(SHIELD_FALLBACK_DELAY)
 })
 
 onMounted(() => {
@@ -61,11 +67,13 @@ onMounted(() => {
   if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual'
   hideShield(SHIELD_FALLBACK_DELAY)
   document.addEventListener('vue-ready', onVueReady)
+  document.addEventListener('route-ready', onRouteReady)
   window.addEventListener('pageshow', onPageshow)
 })
 
 onUnmounted(() => {
   document.removeEventListener('vue-ready', onVueReady)
+  document.removeEventListener('route-ready', onRouteReady)
   window.removeEventListener('pageshow', onPageshow)
   window.clearTimeout(shieldTimer)
 })

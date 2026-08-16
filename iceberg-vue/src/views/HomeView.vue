@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onActivated, onMounted, onUnmounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onActivated, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '@nanostores/vue'
 import { lang } from '../lib/i18nStore'
+import { user as userAtom, isSupabaseReady } from '../lib/userState'
 import { useI18n } from '../lib/useI18n'
 import raw from '../data/iceberg.json'
 import csvRaw from '../data/on-this-day.csv?raw'
@@ -10,12 +11,21 @@ import { parseCSV } from '../lib/csv'
 import { normalizeData } from '../lib/data'
 import LiquidGradient from '../components/layout/LiquidGradient.vue'
 import IcebergParticles from '../components/home/IcebergParticles.vue'
+import AboutModal from '../components/modals/AboutModal.vue'
+import LinksModal from '../components/modals/LinksModal.vue'
+
+const UserModal = defineAsyncComponent(() => import('../components/modals/UserModal.vue'))
 
 const router = useRouter()
 const { t } = useI18n()
 const currentLang = useStore(lang)
 
-const GITHUB_URL = 'https://github.com/RookieInvestigator/iceberg_reforged'
+const showAbout = ref(false)
+const showLinks = ref(false)
+const showUser = ref(false)
+const u = useStore(userAtom)
+const supReady = isSupabaseReady()
+
 const LANGS = [
   { code: 'zh', label: '中文' },
   { code: 'en', label: 'EN' },
@@ -24,7 +34,15 @@ const LANGS = [
 function setLang(code: string) { lang.set(code as 'zh' | 'en' | 'ja') }
 
 const loaded = ref(false)
-onMounted(() => requestAnimationFrame(() => { loaded.value = true }))
+onMounted(() => {
+  requestAnimationFrame(() => { loaded.value = true })
+  // P1-10: 空闲时加载 authStore（恢复会话/监听登录态），SDK 不进首屏关键路径
+  if (supReady) {
+    const preload = () => import('../lib/authStore')
+    if (typeof requestIdleCallback === 'function') requestIdleCallback(preload, { timeout: 3000 })
+    else window.setTimeout(preload, 800)
+  }
+})
 
 // 液态种子：每次进入页面（含 keep-alive 切回）重新随机，图案不重复
 const bgSeed = ref(Math.floor(Math.random() * 1001))
@@ -34,6 +52,7 @@ onActivated(() => { rerollSeed() })
 
 // 数据统计
 const data = normalizeData(raw)
+const buildDate = new Date(data.generatedAt * 1000).toLocaleDateString('zh-CN')
 const entryCount = computed(() => Object.values(data.tiers).flat().length)
 const tierCount = computed(() => data.tierOrder.length)
 const categoryCount = computed(() => Object.keys(data.categoryColors).length)
@@ -85,11 +104,22 @@ onUnmounted(() => {
       <span class="ds-bg-vignette"></span>
     </div>
 
-    <!-- 悬浮语言切换（无页头） -->
-    <div class="ds-lang" role="group" aria-label="Language">
-      <button v-for="l in LANGS" :key="l.code" type="button"
-        :class="{ 'is-active': currentLang === l.code }"
-        @click="setLang(l.code)">{{ l.label }}</button>
+    <!-- 左上角：登录/用户入口 + 语言切换 -->
+    <div class="ds-top-left">
+      <button v-if="supReady" type="button" class="ds-user" @click="showUser = true">
+        <svg v-if="!u" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+        <span v-else class="ds-user-dot" aria-hidden="true"></span>
+        <span>{{ u ? u.displayName : t('login') }}</span>
+      </button>
+
+      <div class="ds-lang" role="group" aria-label="Language">
+        <button v-for="l in LANGS" :key="l.code" type="button"
+          :class="{ 'is-active': currentLang === l.code }"
+          @click="setLang(l.code)">{{ l.label }}</button>
+      </div>
     </div>
 
     <!-- Hero：全屏粒子冰山（包围盒=整个屏幕，放大出屏，屏幕边缘切割）+ 内容层 -->
@@ -136,8 +166,8 @@ onUnmounted(() => {
           <nav class="flex flex-wrap gap-[1.1rem]" aria-label="Secondary">
             <button class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="router.push('/features')">{{ t('navFeatures') }}</button>
             <button class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="router.push('/handbook')">{{ t('homeGlossary') }}</button>
-            <a class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" :href="GITHUB_URL" target="_blank" rel="noopener noreferrer">{{ t('homeAbout') }}</a>
-            <a class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" href="https://icebergthreads.com" target="_blank" rel="noopener noreferrer">{{ t('homeLinks') }}</a>
+            <button type="button" class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="showAbout = true">{{ t('homeAbout') }}</button>
+            <button type="button" class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="showLinks = true">{{ t('homeLinks') }}</button>
           </nav>
         </div>
 
@@ -146,6 +176,9 @@ onUnmounted(() => {
       </div>
     </section>
 
+    <AboutModal v-if="showAbout" :build-date="buildDate" :entry-count="entryCount" @close="showAbout = false" />
+    <LinksModal v-if="showLinks" @close="showLinks = false" />
+    <UserModal v-if="showUser" @close="showUser = false" />
   </main>
 </template>
 
@@ -170,10 +203,15 @@ onUnmounted(() => {
   pointer-events: none; z-index: 9998;
 }
 
-/* 悬浮语言切换（左上：外缘对齐区块文字左缘，再左移内 padding 使文字光学对齐） */
+/* 左上角工具组：语言切换 + 登录/用户入口 */
+.ds-top-left {
+  position: absolute; top: 0.9rem; left: calc(max(var(--page-pad), calc((100vw - var(--page-max)) / 2 + var(--page-pad))) - 0.675rem);
+  z-index: 5;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+
+/* 悬浮语言切换（外缘对齐区块文字左缘，再左移内 padding 使文字光学对齐） */
 .ds-lang {
-  position: absolute; top: 0.9rem; z-index: 5;
-  left: calc(max(var(--page-pad), calc((100vw - var(--page-max)) / 2 + var(--page-pad))) - 0.675rem);
   display: inline-flex; padding: 2px; gap: 1px;
   background: var(--white-07); border-radius: 999px;
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -187,6 +225,28 @@ onUnmounted(() => {
 .ds-lang button.is-active { background: var(--white-14); color: var(--color-text-primary); }
 .ds-lang button:focus-visible {
   outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 6px;
+}
+
+/* 登录 / 用户入口（与语言按钮同尺寸） */
+.ds-user {
+  display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.18rem 0.55rem; border-radius: 999px;
+  border: none; background: var(--white-07);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  font-size: var(--font-tiny); font-weight: 400; color: var(--white-55);
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+.ds-user:hover {
+  color: var(--color-accent-soft); background: var(--white-14);
+}
+.ds-user:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 999px;
+}
+.ds-user-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--color-accent-soft);
+  box-shadow: 0 0 8px rgba(255, 179, 111, 0.6);
 }
 
 /* ═══ 全页背景（头尾透明融入） ═══ */

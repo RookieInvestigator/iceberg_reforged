@@ -96,7 +96,7 @@ iceberg-vue/
     ├── lib/ancient-book/           # 古籍模式（types / engine / layout / render + SpreadView/SpreadPage）
     ├── lib/iceberg/                # 冰山图 composables（搜索 Worker / 相关索引 / 筛选管线 / tooltip）
     ├── lib/iceberg3d/              # 3D 引擎（engine / picking / materials / cameraFlight / prng）
-    ├── lib/i18n/                   # 翻译字典（zh / en / ja，208×3 key）
+    ├── lib/i18n/                   # 翻译字典（zh / en / ja，222×3 key）
     ├── styles/                     # global.css, index.css, bg.css, modal.css, ancient-book.css, themes/
     ├── views/                      # IndexView, HomeView, HandbookView, FeaturesView, FeatureDetailView,
     │                               # OnThisDayView, AncientBookView, Iceberg3DView,
@@ -106,12 +106,12 @@ iceberg-vue/
         ├── iceberg/                # IcebergApp, Header, HeroSection（暂时下线）, TierNav, FloatingButtons, ScatterField
         ├── items/                  # ItemInteractivity, ItemTooltip, EntryDetailCardNext, MobileSheet,
         │                           # CommentPanel, EntryMetaBadges, EntryRelatedLinks
-        ├── modals/                 # BaseModal, SettingsPanel, AboutModal, ContactModal, BulletinModal, UserModal, GeoAvatar
+        ├── modals/                 # BaseModal, SettingsPanel, AboutModal, ContactModal, LinksModal, BulletinModal, UserModal, GeoAvatar
         ├── calendar/               # OnThisDayApp, OnThisDayModal
         └── home/                   # IcebergParticles
 ```
 
-`docs/` 目录含 CHANGELOG.md、TODO.md、STYLE_GUIDE.md 等设计与开发日志。
+`docs/` 目录含 CHANGELOG.md、AESTHETIC_GUIDE.md、TODO.md、STYLE_GUIDE.md 等设计与开发日志。
 
 ## 测试与类型检查约定
 
@@ -125,7 +125,7 @@ iceberg-vue/
 | ---- | ---- | ---- |
 | `/` | `IndexView.vue` | 主冰山图 |
 | `/home` | `HomeView.vue` | 首页导航 |
-| `/handbook` | `HandbookView.vue` | 创作者手册 |
+| `/handbook` | `HandbookView.vue` | 术语表 |
 | `/features` | `FeaturesView.vue` | 功能特性列表 |
 | `/features/:slug` | `FeatureDetailView.vue` | 功能特性详情 |
 | `/minimal` | redirect → `/` | 极简模式入口 |
@@ -183,7 +183,7 @@ function storedAtom<T>(key: string, fallback: T) {
 | 词条总数 | 1400（API 实时同步） |
 | 层级 / 分类 / tagMap | 8 / 15 / 67 |
 | iceberg.json 体积 | ~960KB |
-| i18n 字典 | 208 key × 3 语言 |
+| i18n 字典 | 222 key × 3 语言 |
 | 搜索防抖 / 阈值 | 150ms / 0.3 |
 | Tooltip 延迟 | 200ms |
 

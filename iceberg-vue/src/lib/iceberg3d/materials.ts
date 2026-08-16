@@ -11,15 +11,15 @@ export function createGemMaterial(): THREE.ShaderMaterial {
     uniforms: THREE.UniformsUtils.merge([
       THREE.UniformsLib.fog,
       {
-        uAmbient: { value: new THREE.Color(0x0a1525).multiplyScalar(0.9) },
+        uAmbient: { value: new THREE.Color(0x062238).multiplyScalar(0.9) },
         uLightDir0: { value: new THREE.Vector3(10, 20, 10).normalize() },
-        uLightColor0: { value: new THREE.Color(0xffffff).multiplyScalar(1.25) },
+        uLightColor0: { value: new THREE.Color(0xffb36f).multiplyScalar(1.15) },
         uLightDir1: { value: new THREE.Vector3(-15, 5, -20).normalize() },
-        uLightColor1: { value: new THREE.Color(0x1b6f9f).multiplyScalar(0.65) },
-        uRimColor: { value: new THREE.Color(0x8eb9d2) },
+        uLightColor1: { value: new THREE.Color(0x0a5a99).multiplyScalar(0.75) },
+        uRimColor: { value: new THREE.Color(0x7db5dc) },
         uFresnelPower: { value: 3.4 },
         uFresnelStrength: { value: 0.2 },
-        uCoreGlow: { value: 0.025 },
+        uCoreGlow: { value: 0.45 },
       },
     ]),
     vertexShader: /* glsl */ `
@@ -73,10 +73,13 @@ export function createGemMaterial(): THREE.ShaderMaterial {
       #include <fog_pars_fragment>
 
       void main() {
-        // Hover / Focus 实例的颜色分量会编码为「原色 + 2」；普通实例始终处于 0–1。
-        // 这样不增加额外 attribute，也能让单个实例切换到整面高饱和着色分支。
-        float hoverMask = step(1.5, max(vInstanceColor.r, max(vInstanceColor.g, vInstanceColor.b)));
-        vec3 baseColor = mix(vInstanceColor, clamp(vInstanceColor - vec3(2.0), 0.0, 1.0), hoverMask);
+        // 编码约定：
+        //   普通实例 0–1，最近修改（NEW）+1，Hover/Focus +2。
+        // 这样不增加额外 attribute，也能区分三种发光强度。
+        float enc = max(vInstanceColor.r, max(vInstanceColor.g, vInstanceColor.b));
+        float hoverMask = step(2.5, enc);
+        float newMask = step(1.5, enc) * (1.0 - hoverMask);
+        vec3 baseColor = vInstanceColor - vec3(hoverMask * 2.0 + newMask * 1.0);
 
         vec3 N = normalize(vNormal);
         vec3 V = normalize(cameraPosition - vWorldPos);
@@ -87,12 +90,14 @@ export function createGemMaterial(): THREE.ShaderMaterial {
           + uLightColor1 * max(dot(N, uLightDir1), 0.0)
         );
 
-        // 普通碎片保留克制的冷色边缘；Hover / Focus 碎片整面切换为原始高饱和分类色，
-        // 只保留 12% 的面向明暗，避免仅受光面变色或再次产生柔光。
+        // 自发光用类别色本身：普通词条极克制，最近修改词条常态发光，Hover/Focus 最强。
         float fresnel = pow(1.0 - abs(dot(N, V)), uFresnelPower);
         vec3 rim = uRimColor * fresnel * uFresnelStrength;
-        vec3 normalColor = lambert + rim + baseColor * uCoreGlow;
-        vec3 hoverColor = baseColor * (0.9 + keyLight * 0.12);
+        float glowFactor = mix(0.12, 1.3, newMask);
+        glowFactor = mix(glowFactor, 1.8, hoverMask);
+        vec3 glow = baseColor * uCoreGlow * glowFactor;
+        vec3 normalColor = lambert + rim + glow;
+        vec3 hoverColor = baseColor * (0.95 + keyLight * 0.15) + glow * 1.6;
         vec3 color = mix(normalColor, hoverColor, hoverMask);
 
         gl_FragColor = vec4(color, 1.0);
@@ -106,11 +111,12 @@ export function createGemMaterial(): THREE.ShaderMaterial {
 /** 低多边形冰山材质：半透明冰体，带轻微自发光冷色 */
 export function createIceMaterial(): THREE.MeshStandardMaterial {
   return new THREE.MeshStandardMaterial({
-    color: 0xdcf2ff,
+    color: 0xffffff,
     roughness: 0.55,
     metalness: 0.05,
     flatShading: true,
-    emissive: 0x021526,
+    vertexColors: true,
+    emissive: 0x062238,
     emissiveIntensity: 0.7,
     transparent: true,
     opacity: 0.92,

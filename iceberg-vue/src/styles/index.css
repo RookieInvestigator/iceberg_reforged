@@ -7,8 +7,9 @@
     font-family: var(--font-sans);
     color: var(--color-text-primary);
     min-height: 100vh;
-    overflow-x: hidden;
-    overflow-y: hidden;
+    /* clip 不创建滚动容器：保证 position: sticky 以视口为滚动上下文（hidden 会令吸顶失效） */
+    overflow-x: clip;
+    overflow-y: clip;
   }
   a { color: inherit; text-decoration: none; }
   html {

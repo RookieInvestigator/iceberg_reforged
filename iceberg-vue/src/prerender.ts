@@ -23,6 +23,7 @@ interface IcebergData {
   tierOrder: string[]
   tiers: Record<string, IcebergItem[]>
   categoryColors?: Record<string, string>
+  tagMap?: Record<string, string>
 }
 
 const data = raw as IcebergData
@@ -61,7 +62,7 @@ function nav(): string {
   return `<nav class="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm">
     <a href="${base}" class="text-sky-300 hover:text-sky-200">冰山图</a>
     <a href="${base}home" class="text-sky-300 hover:text-sky-200">首页</a>
-    <a href="${base}handbook" class="text-sky-300 hover:text-sky-200">创作者手册</a>
+    <a href="${base}handbook" class="text-sky-300 hover:text-sky-200">术语表</a>
     <a href="${base}features" class="text-sky-300 hover:text-sky-200">专题</a>
     <a href="${base}on-this-day" class="text-sky-300 hover:text-sky-200">历史上的今天</a>
   </nav>`
@@ -130,10 +131,53 @@ function homeNavHtml(): string {
   </div>`
 }
 
+function handbookSections(): Array<{ title: string; entries: { name: string; desc: string }[] }> {
+  const out: Array<{ title: string; entries: { name: string; desc: string }[] }> = []
+  const parts = handbookRaw.split(/\r?\n## /)
+  for (const part of parts.slice(1)) {
+    const nl = part.indexOf('\n')
+    const title = (nl === -1 ? part : part.slice(0, nl)).trim()
+    const body = nl === -1 ? '' : part.slice(nl + 1)
+    const entries: { name: string; desc: string }[] = []
+    for (const block of body.split(/\r?\n### /)) {
+      const sn = block.indexOf('\n')
+      if (sn === -1) continue
+      const name = block.slice(0, sn).trim()
+      const rest = block.slice(sn + 1)
+      const end = rest.search(/\n(?:### |## )/)
+      const desc = end === -1 ? rest.trim() : rest.slice(0, end).trim()
+      if (name && desc) entries.push({ name, desc })
+    }
+    out.push({ title, entries })
+  }
+  return out
+}
+
 function handbookHtml(): string {
-  return `<div class="max-w-3xl mx-auto px-6 py-10 text-white">
-    <h1 class="text-2xl font-black tracking-wider">创作者手册</h1>
-    <div class="mt-6 text-sm leading-7 text-gray-300 whitespace-pre-wrap">${esc(handbookRaw)}</div>
+  const sections = handbookSections()
+  const first = sections[0]
+  // 分类 / 标签的条目数与动态页面保持一致：以当前数据集为准，md 只补描述
+  const categoryCount = Object.keys(data.categoryColors || {}).length
+  const tagCount = Object.keys(data.tagMap || {}).length
+  const firstMdByName = new Map((first?.entries || []).map((e) => [e.name, e.desc]))
+  const firstEntries = first?.title === '分类解释'
+    ? Object.keys(data.categoryColors || {}).map((name) => ({ name, desc: firstMdByName.get(name) || '待补充' }))
+    : first?.entries || []
+  const cards = firstEntries
+    .map((e) => `<article class="rounded-lg border border-white/10 bg-white/[0.03] p-5"><h2 class="text-base font-bold">${esc(e.name)}</h2><p class="mt-2 text-xs leading-6 text-gray-400">${esc(e.desc)}</p></article>`)
+    .join('')
+  const tabs = sections
+    .map((s, i) => {
+      const count = s.title === '分类解释' ? categoryCount : s.title === '标签解释' ? tagCount : s.entries.length
+      return `<span class="rounded-full px-3 py-1 text-xs ${i === 0 ? 'bg-white/15 text-white' : 'bg-white/5 text-gray-500'}">${esc(s.title)} · ${count}</span>`
+    })
+    .join('')
+  return `<div class="max-w-4xl mx-auto px-6 py-10 text-white">
+    <a href="${base}home" class="text-sm text-sky-300 hover:text-sky-200">← 返回首页</a>
+    <h1 class="mt-4 text-2xl font-black tracking-wider">术语表</h1>
+    <p class="mt-3 text-sm leading-7 text-gray-400">冰山图所用的分类解释、标签解释、基本概念与人物索引。解释由社区手工整理，随数据同步更新。</p>
+    <div class="mt-6 flex flex-wrap gap-2">${tabs}</div>
+    <div class="mt-8 grid gap-4 sm:grid-cols-2">${cards || '<p class="text-sm text-gray-500">这个板块还没有内容，待后续补充。</p>'}</div>
     ${nav()}
   </div>`
 }
@@ -221,7 +265,7 @@ export async function prerender({ url }: { url: string }) {
     return { html: homeNavHtml(), links: baseLinks, head: headFor('/home', `首页 · ${SITE}`) }
   }
   if (url === '/handbook') {
-    return { html: handbookHtml(), links: baseLinks, head: headFor('/handbook', `创作者手册 · ${SITE}`) }
+    return { html: handbookHtml(), links: baseLinks, head: headFor('/handbook', `术语表 · ${SITE}`) }
   }
   if (url === '/features') {
     const links = new Set([...baseLinks, ...featureEntries().map((f) => `/features/${f.slug}`)])

@@ -119,7 +119,7 @@ function build() {
       y: (0.5 + Math.sin(angle) * dist) * h,
       tx: cx + (nx - 0.5) * bw,
       ty: cy + (ny - 0.5) * bh,
-      r: 2.8,
+      r: 3.4,
       a: 0.75 + Math.random() * 0.25,
       alphaNow: 0,
       needed: true,

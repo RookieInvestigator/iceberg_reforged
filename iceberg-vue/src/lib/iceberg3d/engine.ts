@@ -3,8 +3,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js'
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
 import gsap from 'gsap'
 import type { IcebergData, IcebergItem } from '../data'
+import { NEW_MARK_WINDOW_DAYS } from '../filterStore'
 import { mulberry32, ValueNoise3D, fbm } from './prng'
 import { createGemMaterial, createIceMaterial } from './materials'
 import { pickInstance, getInstanceWorldPos, type RingData, type PickHit } from './picking'
@@ -92,7 +94,9 @@ export class Iceberg3DEngine {
   private rings: RingData[] = []
 
   private gemGeos: THREE.BufferGeometry[] = []
-  private focusRing!: THREE.Mesh
+  private focusRing!: THREE.Group
+  private focusScene!: THREE.Scene
+  private iceDust!: THREE.Points
   private focusTargetMesh: FocusTarget | null = null
   private currentFocusInstance: PickHit | null = null
   private currentHoverInstance: PickHit | null = null
@@ -120,6 +124,7 @@ export class Iceberg3DEngine {
   // 聚焦光环的 GSAP 动画目标
   private ringPosObj = { x: 0, y: 0, z: 0 }
   private ringScaleObj = { s: 0 }
+  private ringPosAnimating = false
 
   // 资源追踪（dispose 时统一清理）
   private trackedGeos: THREE.BufferGeometry[] = []
@@ -137,9 +142,10 @@ export class Iceberg3DEngine {
   init(): void {
     const { width, height } = this.container.getBoundingClientRect()
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false })
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     this.renderer.setSize(width, height)
+    this.renderer.setClearColor(0x000000, 0)
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping
     this.renderer.toneMappingExposure = 1.0
@@ -147,43 +153,55 @@ export class Iceberg3DEngine {
     this.renderer.domElement.addEventListener('webglcontextlost', this.onContextLost)
 
     this.scene = new THREE.Scene()
-    this.scene.background = new THREE.Color(0x020408)
-    this.scene.fog = new THREE.FogExp2(0x020408, 0.015)
+    this.scene.background = null
+    this.scene.fog = new THREE.FogExp2(0x04101c, 0.015)
 
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 200)
-    this.camera.position.set(10, 6, 16)
+    this.camera.position.set(12, 7, 18)
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement)
     this.controls.enableDamping = true
-    this.controls.dampingFactor = 0.05
+    this.controls.dampingFactor = 0.08
     this.controls.maxDistance = 80
     this.controls.minDistance = 2
     this.controls.enablePan = true
     this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE }
 
     this.flight = new CameraFlight(this.camera, this.controls, this.container)
+
+    // 入场镜头：从更远的深空缓慢推近到主体，增强电影感；reduced-motion 下直接到位
+    if (!prefersReducedMotion()) {
+      const introFrom = new THREE.Vector3(18, 11, 26)
+      gsap.fromTo(this.camera.position,
+        { x: introFrom.x, y: introFrom.y, z: introFrom.z },
+        { x: 12, y: 7, z: 18, duration: 2.2, ease: 'power2.out' })
+    }
     this.coarsePointer =
       typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
 
-    // 保留色彩输出处理，但不再使用 Bloom，避免粒子、边缘和高亮代理扩散为柔光团。
+    // 保留色彩输出处理；加入极克制的 Bloom，让橙色聚焦环与高亮宝石有一层柔和光晕。
     const renderScene = new RenderPass(this.scene, this.camera)
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0.22, 0.5, 0.55)
     const outputPass = new OutputPass()
 
     this.composer = new EffectComposer(this.renderer)
     this.composer.addPass(renderScene)
+    this.composer.addPass(bloomPass)
     this.composer.addPass(outputPass)
 
-    this.scene.add(new THREE.AmbientLight(0x0a1525, 1.0))
-    const mainLight = new THREE.DirectionalLight(0xffffff, 1.5)
+    this.scene.add(new THREE.AmbientLight(0x0a2a4a, 1.0))
+    const mainLight = new THREE.DirectionalLight(0xffb36f, 1.4)
     mainLight.position.set(10, 20, 10)
     this.scene.add(mainLight)
-    const rimLight = new THREE.DirectionalLight(0x0088ff, 4.0)
+    const rimLight = new THREE.DirectionalLight(0x7db5dc, 3.5)
     rimLight.position.set(-15, 5, -20)
     this.scene.add(rimLight)
 
     this.buildIceberg()
     this.buildGems()
     this.buildFocusRing()
+    this.buildStars()
+    this.buildIceDust()
 
     this.container.addEventListener('pointerdown', this.onPointerDown)
     this.container.addEventListener('pointermove', this.onPointerMove)
@@ -234,6 +252,31 @@ export class Iceberg3DEngine {
     const coreGeo = new THREE.IcosahedronGeometry(2.0, 2)
     this.trackedGeos.push(coreGeo)
     this.sculptIceberg(coreGeo, noise)
+
+    // 冰体顶点色：上方冰蓝 → 中层深海蓝 → 下方纯黑，形成「冰面受光、水下坠入深渊」的纵深感
+    const icePos = coreGeo.attributes.position
+    let minY = Infinity, maxY = -Infinity
+    for (let i = 0; i < icePos.count; i++) {
+      const y = icePos.getY(i)
+      if (y < minY) minY = y
+      if (y > maxY) maxY = y
+    }
+    const iceSpan = (maxY - minY) || 1
+    const iceColors = new Float32Array(icePos.count * 3)
+    const cTop = new THREE.Color(0xbfd9f2)
+    const cMid = new THREE.Color(0x0a5a99)
+    const cBottom = new THREE.Color(0x020408)
+    const tmpColor = new THREE.Color()
+    for (let i = 0; i < icePos.count; i++) {
+      const t = (icePos.getY(i) - minY) / iceSpan
+      if (t < 0.45) tmpColor.copy(cBottom).lerp(cMid, t / 0.45)
+      else tmpColor.copy(cMid).lerp(cTop, (t - 0.45) / 0.55)
+      iceColors[i * 3] = tmpColor.r
+      iceColors[i * 3 + 1] = tmpColor.g
+      iceColors[i * 3 + 2] = tmpColor.b
+    }
+    coreGeo.setAttribute('color', new THREE.BufferAttribute(iceColors, 3))
+
     const coreMesh = new THREE.Mesh(coreGeo, iceMaterial)
     this.icebergGroup.add(coreMesh)
 
@@ -295,6 +338,7 @@ export class Iceberg3DEngine {
     const defaultColor = new THREE.Color()
     const dummy = new THREE.Object3D()
     const rng = mulberry32(Iceberg3DEngine.SEED ^ 0x9e5)
+    const newCutoff = Date.now() / 1000 - NEW_MARK_WINDOW_DAYS * 24 * 60 * 60
 
     tierOrder.forEach((tierName, ti) => {
       const items = this.data.tiers[tierName] || []
@@ -321,6 +365,7 @@ export class Iceberg3DEngine {
       const scales: number[] = []
       const colors: number[] = []
       const brightColors: number[] = []
+      const newFlags: boolean[] = []
       const visibleItemIds: number[][] = [[], [], []]
       const geoCounts = [0, 0, 0]
 
@@ -330,9 +375,13 @@ export class Iceberg3DEngine {
         const x = Math.cos(angle) * (radius + (rng() - 0.5) * 2.0)
         const z = Math.sin(angle) * (radius + (rng() - 0.5) * 2.0)
 
+        const isNew = (item.modifiedAt || 0) >= newCutoff
         const catColor = categoryColors[item.category] || 0xffffff
-        colors.push(catColor)
-        brightColors.push(saturatedCategoryColors[item.category] || 0xffffff)
+        const brightColor = saturatedCategoryColors[item.category] || 0xffffff
+        newFlags.push(isNew)
+        // 最近修改词条使用高饱和分类色作为常态底色，便于识别与发光
+        colors.push(isNew ? brightColor : catColor)
+        brightColors.push(brightColor)
         scales.push(baseScale)
 
         dummy.position.set(x, yOffset, z)
@@ -347,7 +396,10 @@ export class Iceberg3DEngine {
         const geoIdx = i % 3
         const localIdx = geoCounts[geoIdx]
         visibleMeshes[geoIdx].setMatrixAt(localIdx, dummy.matrix)
-        visibleMeshes[geoIdx].setColorAt(localIdx, defaultColor.setHex(catColor))
+        // 编码：普通 0–1，最近修改 +1，Hover/Focus 由 setInstanceHoverColor 再 +2
+        defaultColor.setHex(isNew ? brightColor : catColor)
+        if (isNew) defaultColor.addScalar(1)
+        visibleMeshes[geoIdx].setColorAt(localIdx, defaultColor)
         visibleItemIds[geoIdx][localIdx] = i
         geoCounts[geoIdx]++
 
@@ -384,6 +436,7 @@ export class Iceberg3DEngine {
         baseScales: scales,
         colors,
         brightColors,
+        newFlags,
         visibleMeshes,
         visibleItemIds,
       })
@@ -392,22 +445,137 @@ export class Iceberg3DEngine {
     this.scene.add(ringsGroup)
   }
 
-  /** 聚焦光环：跟随目标宝石的圆环 */
+  /** 聚焦取景框：相机式四角括号（左上/左下/右上/右下），白色加粗薄片 */
   private buildFocusRing() {
-    const ringGeo = new THREE.RingGeometry(0.85, 0.92, 48)
-    this.trackedGeos.push(ringGeo)
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x88bbff,
+    const group = new THREE.Group()
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
       transparent: true,
-      opacity: 0.7,
-      side: THREE.DoubleSide,
+      opacity: 0.95,
       depthTest: false,
     })
-    this.trackedMats.push(ringMat)
-    this.focusRing = new THREE.Mesh(ringGeo, ringMat)
+    this.trackedMats.push(mat)
+
+    const half = 0.62
+    const corner = 0.26
+    const thick = 0.05
+
+    const addCorner = (sx: number, sy: number) => {
+      // 外边缘对齐：横向条贴住上/下边，竖向条贴住左/右边，角部形成实心重叠
+      const hGeo = new THREE.BoxGeometry(corner, thick, 0.02)
+      const h = new THREE.Mesh(hGeo, mat)
+      h.position.set(sx * (half - corner / 2), sy * (half - thick / 2), 0)
+      h.renderOrder = 999
+      group.add(h)
+      this.trackedGeos.push(hGeo)
+
+      const vGeo = new THREE.BoxGeometry(thick, corner, 0.02)
+      const v = new THREE.Mesh(vGeo, mat)
+      v.position.set(sx * (half - thick / 2), sy * (half - corner / 2), 0)
+      v.renderOrder = 999
+      group.add(v)
+      this.trackedGeos.push(vGeo)
+    }
+
+    addCorner(-1, 1)  // 左上
+    addCorner(1, 1)   // 右上
+    addCorner(-1, -1) // 左下
+    addCorner(1, -1)  // 右下
+
+    this.focusRing = group
     this.focusRing.renderOrder = 999
     this.focusRing.visible = false
-    this.scene.add(this.focusRing)
+    this.focusScene = new THREE.Scene()
+    this.focusScene.add(this.focusRing)
+  }
+
+  /** 渐变星空：在远处球壳撒冰蓝/白/少量暖橙星点，配合 CSS 渐变背景 */
+  private buildStars() {
+    const count = 700
+    const positions = new Float32Array(count * 3)
+    const colors = new Float32Array(count * 3)
+    const rng = mulberry32(Iceberg3DEngine.SEED ^ 0x5a7)
+    const color = new THREE.Color()
+
+    for (let i = 0; i < count; i++) {
+      const theta = rng() * Math.PI * 2
+      const phi = Math.acos(2 * rng() - 1)
+      const r = 70 + rng() * 60
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta)
+      positions[i * 3 + 1] = r * Math.cos(phi)
+      positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta)
+
+      // 大部分冰蓝/白，少量暖橙作为「落日余晖里的星」
+      const warm = rng() < 0.08
+      if (warm) color.setHex(0xffb36f)
+      else color.setHex(rng() < 0.5 ? 0xbfd9f2 : 0xffffff)
+      const brightness = 0.5 + rng() * 0.5
+      colors[i * 3] = color.r * brightness
+      colors[i * 3 + 1] = color.g * brightness
+      colors[i * 3 + 2] = color.b * brightness
+    }
+
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    const mat = new THREE.PointsMaterial({
+      size: 0.18,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.85,
+      sizeAttenuation: true,
+      depthWrite: false,
+      fog: false,
+    })
+    const stars = new THREE.Points(geo, mat)
+    stars.frustumCulled = false
+    this.trackedGeos.push(geo)
+    this.trackedMats.push(mat)
+    this.scene.add(stars)
+  }
+
+  /** 冰山周围的冰尘：近距离细小粒子，缓慢旋转增加深海悬浮感 */
+  private buildIceDust() {
+    const count = 320
+    const positions = new Float32Array(count * 3)
+    const colors = new Float32Array(count * 3)
+    const rng = mulberry32(Iceberg3DEngine.SEED ^ 0x3c1)
+    const color = new THREE.Color()
+
+    for (let i = 0; i < count; i++) {
+      const theta = rng() * Math.PI * 2
+      const phi = Math.acos(2 * rng() - 1)
+      const r = 4 + rng() * 14
+      positions[i * 3] = r * Math.sin(phi) * Math.cos(theta)
+      positions[i * 3 + 1] = r * Math.cos(phi) * 0.7
+      positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta)
+
+      const warm = rng() < 0.06
+      if (warm) color.setHex(0xffb36f)
+      else color.setHex(rng() < 0.6 ? 0xbfd9f2 : 0xffffff)
+      const brightness = 0.35 + rng() * 0.45
+      colors[i * 3] = color.r * brightness
+      colors[i * 3 + 1] = color.g * brightness
+      colors[i * 3 + 2] = color.b * brightness
+    }
+
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+    const mat = new THREE.PointsMaterial({
+      size: 0.06,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.55,
+      sizeAttenuation: true,
+      depthWrite: false,
+      fog: false,
+    })
+    this.iceDust = new THREE.Points(geo, mat)
+    this.iceDust.frustumCulled = false
+    this.trackedGeos.push(geo)
+    this.trackedMats.push(mat)
+    this.scene.add(this.iceDust)
   }
 
   // ── 拾取与高亮 ──
@@ -451,7 +619,11 @@ export class Iceberg3DEngine {
     const localIndex = Math.floor(hit.id / 3)
     const mesh = mapData.visibleMeshes[geometryIndex]
     const color = new THREE.Color(highlighted ? hit.brightColor : hit.color)
-    if (highlighted) color.offsetHSL(0, 0.16, 0.05).addScalar(2)
+    if (highlighted) {
+      color.offsetHSL(0, 0.16, 0.05).addScalar(2)
+    } else if (mapData.newFlags[hit.id]) {
+      color.addScalar(1)
+    }
     mesh.setColorAt(localIndex, color)
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
   }
@@ -508,6 +680,7 @@ export class Iceberg3DEngine {
     this.ringPosObj.x = oldPos.x
     this.ringPosObj.y = oldPos.y
     this.ringPosObj.z = oldPos.z
+    this.ringPosAnimating = true
     gsap.to(this.ringPosObj, {
       x: worldPos.x,
       y: worldPos.y,
@@ -515,21 +688,17 @@ export class Iceberg3DEngine {
       duration: wasVisible ? 0.45 : 0.01,
       ease: 'power2.out',
       onUpdate: () => this.focusRing.position.set(this.ringPosObj.x, this.ringPosObj.y, this.ringPosObj.z),
+      onComplete: () => { this.ringPosAnimating = false },
     })
 
     gsap.killTweensOf(this.ringScaleObj)
-    if (!wasVisible) {
-      this.ringScaleObj.s = 0
-      gsap.to(this.ringScaleObj, {
-        s: targetScale,
-        duration: 0.55,
-        ease: 'back.out(1.4)',
-        onUpdate: () => this.focusRing.scale.setScalar(this.ringScaleObj.s),
-      })
-    } else {
-      this.ringScaleObj.s = targetScale
-      this.focusRing.scale.setScalar(targetScale)
-    }
+    this.ringScaleObj.s = wasVisible ? this.focusRing.scale.x : 0
+    gsap.to(this.ringScaleObj, {
+      s: targetScale,
+      duration: wasVisible ? 0.35 : 0.55,
+      ease: wasVisible ? 'power2.out' : 'back.out(1.4)',
+      onUpdate: () => this.focusRing.scale.setScalar(this.ringScaleObj.s),
+    })
   }
 
   private exitFocus() {
@@ -543,6 +712,8 @@ export class Iceberg3DEngine {
       this.setInstanceHoverColor(previousFocus, false)
     }
 
+    gsap.killTweensOf(this.ringPosObj)
+    this.ringPosAnimating = false
     gsap.killTweensOf(this.ringScaleObj)
     this.ringScaleObj.s = this.focusRing.scale.x
     gsap.to(this.ringScaleObj, {
@@ -715,11 +886,12 @@ export class Iceberg3DEngine {
     for (const ring of this.rings) {
       ring.group.rotation.y += ring.group.userData.rotateSpeed * ringSpeedFactor
     }
+    if (this.iceDust) this.iceDust.rotation.y += 0.0003 * ringSpeedFactor
 
     // 聚焦光环持续追踪宝石世界坐标（GSAP 未接管时）
     const target = this.focusTargetMesh
     if (this.focusRing.visible && target) {
-      if (!gsap.isTweening(this.ringPosObj)) {
+      if (!this.ringPosAnimating && !gsap.isTweening(this.ringPosObj)) {
         const mapData = this.rings.find((r) => r.hitMesh === target.mesh)
         if (mapData) {
           mapData.group.updateMatrixWorld(true)
@@ -740,6 +912,13 @@ export class Iceberg3DEngine {
       reportError('iceberg3d', error, { phase: 'render-loop' })
       this.onError()
       return
+    }
+
+    // 聚焦取景框单独在 Bloom 之后绘制，避免白色框也被辉光模糊
+    if (this.focusRing.visible) {
+      this.renderer.autoClear = false
+      this.renderer.render(this.focusScene, this.camera)
+      this.renderer.autoClear = true
     }
 
     this.animationId = requestAnimationFrame(this.animate)
@@ -787,6 +966,7 @@ export class Iceberg3DEngine {
     this.flight?.kill()
     gsap.killTweensOf(this.ringPosObj)
     gsap.killTweensOf(this.ringScaleObj)
+    this.ringPosAnimating = false
     window.removeEventListener('resize', this.onResize)
 
     if (this.container) {
