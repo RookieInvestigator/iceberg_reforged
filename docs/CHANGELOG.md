@@ -1,6 +1,12 @@
 # 更新日志
 
 
+## 2026-08-16 — authStore 测试修复：显式 mock userState
+
+### 修复
+
+- **CI 环境 authStore 测试全挂** — `authStore.test.ts` 原以为 `isSupabaseReady` 来自 `./supabase` mock，实际来自 `./userState`；CI 无 `.env` 时真实实现返回 false，同步提前退出导致 6 项失败。补 `vi.mock('./userState')`（atom user + isSupabaseReady true），本地模拟 CI（移走 .env）验证 80/80 全绿。
+
 ## 2026-08-16 — 文档分级：内部开发文档移出版本控制
 
 ### 移除

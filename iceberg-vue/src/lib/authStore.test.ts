@@ -11,6 +11,16 @@ vi.mock('./supabase', () => ({
   onAuthChange: vi.fn(),
 }))
 
+// authStore 的 isSupabaseReady 来自 userState（不经过 supabase mock），
+// CI 无 .env 时真实实现会返回 false 导致同步提前退出 —— 测试必须显式 mock。
+vi.mock('./userState', async () => {
+  const { atom } = await import('nanostores')
+  return {
+    user: atom(null),
+    isSupabaseReady: () => true,
+  }
+})
+
 vi.mock('./supabaseData', () => ({
   fetchMyFavorites: vi.fn(),
   syncFavorites: vi.fn(),
