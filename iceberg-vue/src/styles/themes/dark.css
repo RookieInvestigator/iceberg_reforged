@@ -1,0 +1,6 @@
+/* ===== Dark Theme (default) =====
+ * 颜色令牌已上收到 base.css 的 @theme（当前仅暗色主题，单一事实源）。
+ * 此处只保留非颜色命名空间的暗色专属 token；新增主题时新建 [name].css 覆盖同名 token 即可。 */
+:root {
+  --shadow-color: rgba(0, 0, 0, 0.85);
+}

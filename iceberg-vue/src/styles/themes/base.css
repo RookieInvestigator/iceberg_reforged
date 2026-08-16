@@ -1,0 +1,220 @@
+/* ===== Iceberg Theme System =====
+ * 设计令牌分层：
+ *   1) :root —— 单一事实源（含语义色 / 白透明度 ramp / 字体 / 字号 / 缓动），
+ *      保证历史写法 var(--color-*) / var(--white-*) / var(--font-*) 全部有效。
+ *   2) @theme inline —— 仅把令牌暴露为 Tailwind 工具类（bg-accent / text-white-60 / text-micro …），
+ *      inline 模式不重复发射变量，工具类直接引用 :root 的 var()。
+ * 新增主题：新建 [name].css 并 import，覆盖 :root 同名 token 即可。
+ */
+@import './dark.css';
+
+:root {
+  /* ── 语义色（橙色单一出口 + 语义色 + 表面/文本/弹窗/tooltip/滚动条） ── */
+  --color-accent: #ff6a06;
+  --color-accent-bright: #ff9a3c;
+  --color-accent-soft: #ffb36f;
+  --color-fav: #f59e0b;
+  --color-new: #feca57;
+  --color-danger: #f87171;
+  --color-success: #4ade80;
+
+  --color-surface: #050505;
+  --color-surface-border: #333333;
+  --color-text-primary: #ffffff;
+  --color-tooltip-bg: #ffffff;
+  --color-tooltip-text: #000000;
+  --color-tooltip-meta: #888888;
+  --color-tooltip-border: #eeeeee;
+  --color-modal-bg: #111111;
+  --color-scrollbar-thumb-hover: var(--white-40);
+  --color-scrollbar-track: var(--white-10);
+  --color-scrollbar-progress: var(--white-45);
+  --color-scrollbar-arrow: var(--white-35);
+
+  /* ── 字体规范：正文思源黑体 Noto Sans SC / 标题与 Hero 思源宋体 Noto Serif SC ── */
+  --font-sans: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'PingFang SC',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+
+  /* ── 字号阶梯：小字号只允许这 5 个阶梯，最小 10px ── */
+  --font-micro: 0.625rem;   /* 10px —— 徽章/时间戳下限 */
+  --font-tiny: 0.6875rem;   /* 11px */
+  --font-xs: 0.75rem;       /* 12px */
+  --font-sm: 0.875rem;      /* 14px */
+  --font-base: 1rem;
+
+  /* ── Spacing / Layout ── */
+  --header-padding-x: 60px;
+  --tier-gap: 12px 16px;
+  --max-width: 1400px;
+
+  /* Iceberg float range — keeps X subtle, Y dominant */
+  --float-range-x: 2px;
+  --float-range-y: 4px;
+
+  /* 焦点环（非 Tailwind 命名空间，供全局 :focus-visible 使用） */
+  --focus-ring: var(--white-70);
+
+  /* ── 过渡曲线（覆盖 Tailwind 默认 ease-* 值） ── */
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-hero: cubic-bezier(0.2, 0.75, 0.2, 1);
+  --ease-float: cubic-bezier(0.35, 0, 0.65, 1);
+
+  /* ── White-alpha ramp：命名 = 百分比整数（--white-30 = 30% 白）；
+     三位数（--white-012）为 1.2% 等低透明度 ── */
+  --white-02: rgba(255, 255, 255, 0.02);
+  --white-03: rgba(255, 255, 255, 0.03);
+  --white-04: rgba(255, 255, 255, 0.04);
+  --white-05: rgba(255, 255, 255, 0.05);
+  --white-06: rgba(255, 255, 255, 0.06);
+  --white-07: rgba(255, 255, 255, 0.07);
+  --white-08: rgba(255, 255, 255, 0.08);
+  --white-09: rgba(255, 255, 255, 0.09);
+  --white-10: rgba(255, 255, 255, 0.10);
+  --white-11: rgba(255, 255, 255, 0.11);
+  --white-12: rgba(255, 255, 255, 0.12);
+  --white-012: rgba(255, 255, 255, 0.012);
+  --white-13: rgba(255, 255, 255, 0.13);
+  --white-14: rgba(255, 255, 255, 0.14);
+  --white-15: rgba(255, 255, 255, 0.15);
+  --white-015: rgba(255, 255, 255, 0.015);
+  --white-16: rgba(255, 255, 255, 0.16);
+  --white-18: rgba(255, 255, 255, 0.18);
+  --white-20: rgba(255, 255, 255, 0.20);
+  --white-22: rgba(255, 255, 255, 0.22);
+  --white-25: rgba(255, 255, 255, 0.25);
+  --white-025: rgba(255, 255, 255, 0.025);
+  --white-28: rgba(255, 255, 255, 0.28);
+  --white-30: rgba(255, 255, 255, 0.30);
+  --white-32: rgba(255, 255, 255, 0.32);
+  --white-33: rgba(255, 255, 255, 0.33);
+  --white-35: rgba(255, 255, 255, 0.35);
+  --white-035: rgba(255, 255, 255, 0.035);
+  --white-38: rgba(255, 255, 255, 0.38);
+  --white-40: rgba(255, 255, 255, 0.40);
+  --white-42: rgba(255, 255, 255, 0.42);
+  --white-45: rgba(255, 255, 255, 0.45);
+  --white-48: rgba(255, 255, 255, 0.48);
+  --white-50: rgba(255, 255, 255, 0.50);
+  --white-52: rgba(255, 255, 255, 0.52);
+  --white-55: rgba(255, 255, 255, 0.55);
+  --white-055: rgba(255, 255, 255, 0.055);
+  --white-58: rgba(255, 255, 255, 0.58);
+  --white-60: rgba(255, 255, 255, 0.60);
+  --white-65: rgba(255, 255, 255, 0.65);
+  --white-70: rgba(255, 255, 255, 0.70);
+  --white-72: rgba(255, 255, 255, 0.72);
+  --white-75: rgba(255, 255, 255, 0.75);
+  --white-80: rgba(255, 255, 255, 0.80);
+  --white-82: rgba(255, 255, 255, 0.82);
+  --white-85: rgba(255, 255, 255, 0.85);
+  --white-88: rgba(255, 255, 255, 0.88);
+  --white-90: rgba(255, 255, 255, 0.90);
+  --white-92: rgba(255, 255, 255, 0.92);
+}
+
+/* ── 暴露为 Tailwind 工具类（inline：工具类直接引用 :root 的 var()，不重复发射变量） ── */
+@theme inline {
+  /* 语义色 → bg-accent / text-accent / border-accent / … */
+  --color-accent: var(--color-accent);
+  --color-accent-bright: var(--color-accent-bright);
+  --color-accent-soft: var(--color-accent-soft);
+  --color-fav: var(--color-fav);
+  --color-new: var(--color-new);
+  --color-danger: var(--color-danger);
+  --color-success: var(--color-success);
+  --color-surface: var(--color-surface);
+  --color-surface-border: var(--color-surface-border);
+  --color-text-primary: var(--color-text-primary);
+  --color-tooltip-bg: var(--color-tooltip-bg);
+  --color-tooltip-text: var(--color-tooltip-text);
+  --color-tooltip-meta: var(--color-tooltip-meta);
+  --color-tooltip-border: var(--color-tooltip-border);
+  --color-modal-bg: var(--color-modal-bg);
+  --color-scrollbar-thumb-hover: var(--color-scrollbar-thumb-hover);
+  --color-scrollbar-track: var(--color-scrollbar-track);
+  --color-scrollbar-progress: var(--color-scrollbar-progress);
+  --color-scrollbar-arrow: var(--color-scrollbar-arrow);
+
+  /* 白透明度 → white-XX 工具类 */
+  --color-white-02: var(--white-02);
+  --color-white-03: var(--white-03);
+  --color-white-04: var(--white-04);
+  --color-white-05: var(--white-05);
+  --color-white-06: var(--white-06);
+  --color-white-07: var(--white-07);
+  --color-white-08: var(--white-08);
+  --color-white-09: var(--white-09);
+  --color-white-10: var(--white-10);
+  --color-white-11: var(--white-11);
+  --color-white-12: var(--white-12);
+  --color-white-012: var(--white-012);
+  --color-white-13: var(--white-13);
+  --color-white-14: var(--white-14);
+  --color-white-15: var(--white-15);
+  --color-white-015: var(--white-015);
+  --color-white-16: var(--white-16);
+  --color-white-18: var(--white-18);
+  --color-white-20: var(--white-20);
+  --color-white-22: var(--white-22);
+  --color-white-25: var(--white-25);
+  --color-white-025: var(--white-025);
+  --color-white-28: var(--white-28);
+  --color-white-30: var(--white-30);
+  --color-white-32: var(--white-32);
+  --color-white-33: var(--white-33);
+  --color-white-35: var(--white-35);
+  --color-white-035: var(--white-035);
+  --color-white-38: var(--white-38);
+  --color-white-40: var(--white-40);
+  --color-white-42: var(--white-42);
+  --color-white-45: var(--white-45);
+  --color-white-48: var(--white-48);
+  --color-white-50: var(--white-50);
+  --color-white-52: var(--white-52);
+  --color-white-55: var(--white-55);
+  --color-white-055: var(--white-055);
+  --color-white-58: var(--white-58);
+  --color-white-60: var(--white-60);
+  --color-white-65: var(--white-65);
+  --color-white-70: var(--white-70);
+  --color-white-72: var(--white-72);
+  --color-white-75: var(--white-75);
+  --color-white-80: var(--white-80);
+  --color-white-82: var(--white-82);
+  --color-white-85: var(--white-85);
+  --color-white-88: var(--white-88);
+  --color-white-90: var(--white-90);
+  --color-white-92: var(--white-92);
+
+  /* 字号 → text-micro / text-tiny / text-xs / text-sm / text-base */
+  --text-micro: var(--font-micro);
+  --text-tiny: var(--font-tiny);
+  --text-xs: var(--font-xs);
+  --text-sm: var(--font-sm);
+  --text-base: var(--font-base);
+}
+
+@media (max-width: 640px) {
+  :root {
+    --header-padding-x: 20px;
+    --tier-gap: 10px 12px;
+  }
+}
+
+/* Water-like buoyant drift — continuous elliptical loop, no ping-pong */
+@keyframes float-drift {
+  0%   { transform: translate(0, 0); }
+  20%  { transform: translate(calc(var(--float-range-x) * 0.7),  calc(var(--float-range-y) * -0.9)); }
+  40%  { transform: translate(calc(var(--float-range-x) * 0.2),  calc(var(--float-range-y) * -0.3)); }
+  60%  { transform: translate(calc(var(--float-range-x) * -0.7), calc(var(--float-range-y) * 0.6)); }
+  80%  { transform: translate(calc(var(--float-range-x) * -0.2), calc(var(--float-range-y) * 0.9)); }
+  100% { transform: translate(0, 0); }
+}
+
+.iceberg-item.float-drift {
+  animation-name: float-drift;
+  animation-timing-function: var(--ease-float);
+  animation-iteration-count: infinite;
+}

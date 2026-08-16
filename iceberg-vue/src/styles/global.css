@@ -1,0 +1,19 @@
+@import "tailwindcss";
+/* 主题文件仅在此加载一次：base.css 内含 @import dark.css，避免重复加载 */
+@import "./themes/base.css";
+@import "./index.css";
+@import "./bg.css";
+@import "./modal.css";
+
+/* style 审计：全局键盘焦点环（:focus-visible 统一出口；局部样式仍可覆盖颜色/偏移） */
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* style 审计：reduced-motion 全覆盖 —— 屏蔽 CSS 动画/过渡/平滑滚动（canvas JS 动画另行处理） */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

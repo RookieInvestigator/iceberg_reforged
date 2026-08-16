@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>404 · 冰山图</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #020408; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100dvh; text-align: center;
+    }
+    .card { max-width: 360px; padding: 2rem; }
+    h1 { font-size: 5rem; font-weight: 900; color: #ffffff0a; line-height: 1; margin-bottom: 1rem; }
+    p { color: #ffffff99; font-size: 0.85rem; line-height: 1.6; margin-bottom: 2rem; }
+    a {
+      display: inline-block; padding: 0.6rem 2rem;
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px; color: #ffffffb3; text-decoration: none;
+      font-size: 0.8rem; transition: all 0.2s;
+    }
+    a:hover { background: rgba(255,255,255,0.06); color: #ffffffcc; border-color: rgba(255,255,255,0.3); }
+  </style>
+  <script>
+    // 双部署兼容：GitHub Pages 部署在 /iceberg_reforged/ 子路径，CF Pages 部署在根路径
+    var root = location.pathname.indexOf('/iceberg_reforged') === 0 ? '/iceberg_reforged/' : '/'
+    var path = location.pathname.replace(/^\/iceberg_reforged/, '') || '/'
+    location.replace(root + '?r=' + encodeURIComponent(path + location.search + location.hash))
+    document.getElementById('home').href = root
+  </script>
+</head>
+<body>
+  <div class="card">
+    <h1>404</h1>
+    <p>你试图潜入的深渊页面不存在。<br>正在带你返回洋面……</p>
+    <a id="home" href="./">返回冰山图</a>
+  </div>
+</body>
+</html>

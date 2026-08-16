@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <link rel="icon" type="image/svg+xml" href="%BASE_URL%assets/iceberg.svg" />
+  <!-- SEO（seoarch P1）：description / robots / OG / Twitter。canonical 与 og:url 由构建期预渲染按路由注入，浏览器端 router.afterEach 同步更新 -->
+  <meta name="description" content="中文兔子洞冰山图——社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识冰山图目录，按冷门程度分层呈现。" />
+  <meta name="robots" content="index, follow" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="中文兔子洞冰山图" />
+  <meta property="og:title" content="中文兔子洞冰山图" />
+  <meta property="og:description" content="社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识冰山图目录。" />
+  <meta property="og:image" content="https://RookieInvestigator.github.io/iceberg_reforged/assets/og-cover.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="中文兔子洞冰山图" />
+  <meta name="twitter:description" content="社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识冰山图目录。" />
+  <meta name="twitter:image" content="https://RookieInvestigator.github.io/iceberg_reforged/assets/og-cover.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- 字体规范：正文思源黑体 Noto Sans SC / 标题与 Hero 思源宋体 Noto Serif SC（Hero 巨字滚动词条用 200/300 字重）/ 古籍模式繁体思源宋体 Noto Serif TC（从 CSS @import 提升到 HTML 并行加载） -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@200;300;400;500;700;900&family=Noto+Serif+SC:wght@200;300&family=Noto+Serif+TC:wght@400;700;900&display=swap" rel="stylesheet">
+  <title>中文兔子洞冰山图</title>
+  <!-- P0-审计（2026-08-16）：CSP —— 会话令牌存 localStorage，无 CSP 时一次 XSS 即全盘失守。
+       script-src 的 sha256 哈希仅放行下方内联 JSON-LD 数据块，不放行任何可执行内联脚本 -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Z5q8TZYONrNqyLxSr3ur3paaNHAy1TijELePKQ4UYaQ='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://count.moeyy.cn; connect-src 'self' https://*.supabase.co wss://*.supabase.co ws://localhost:* ws://127.0.0.1:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <!-- 结构化数据（WebSite）：CSP 按内容哈希放行 -->
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"中文兔子洞冰山图","alternateName":"Chinese Oddities Iceberg","url":"https://RookieInvestigator.github.io/iceberg_reforged/","description":"社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识冰山图目录。","inLanguage":["zh-CN","en","ja"]}</script>
+  <style>
+    /* 首帧同步遮罩：在 Vue 与业务样式加载前覆盖页面，避免正文短暂闪现。 */
+    html, body { margin: 0; min-height: 100%; background: #0a0e14; }
+    #app-shield {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+      color: #fff;
+      background: #0a0e14;
+    }
+    #app-shield .shield-icon {
+      display: block;
+      width: 56px;
+      height: 56px;
+      flex: none;
+      color: #fff;
+      opacity: 0;
+      animation: shield-critical-fade-in 0.4s ease-out 0.05s forwards;
+    }
+    #app-shield .shield-text {
+      text-align: center;
+      opacity: 0;
+      animation: shield-critical-fade-in 0.4s ease-out 0.1s forwards;
+    }
+    #app-shield .shield-title {
+      color: rgba(255,255,255,0.7);
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+    }
+    #app-shield .shield-sub {
+      margin-top: 5px;
+      color: rgba(255,255,255,0.22);
+      font-size: 0.68rem;
+      font-weight: 300;
+      letter-spacing: 0.32em;
+      text-transform: uppercase;
+    }
+    #app-shield .shield-dots {
+      display: flex;
+      gap: 6px;
+      opacity: 0;
+      animation: shield-critical-fade-in 0.4s ease-out 0.15s forwards;
+    }
+    #app-shield .shield-dots i {
+      display: block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.28);
+    }
+    @keyframes shield-critical-fade-in { to { opacity: 1; } }
+    /* reduced-motion：静态呈现加载页（视觉不变，只去掉入场/呼吸动画） */
+    @media (prefers-reduced-motion: reduce) {
+      #app-shield .shield-icon,
+      #app-shield .shield-text,
+      #app-shield .shield-dots { animation: none !important; opacity: 1; }
+    }
+    /* JS 禁用时：隐藏加载页，展示静态站点说明（利于爬虫与无 JS 用户） */
+    .noscript-main {
+      position: fixed; inset: 0; z-index: 10001; background: #05080e; color: #fff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px; text-align: center; font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .noscript-main p { max-width: 34em; line-height: 1.8; color: #b8c6d8; }
+    .noscript-main a { color: #7cc0ff; }
+  </style>
+</head>
+<body class="bg-black">
+  <div id="app-shield" class="app-shield" aria-hidden="true">
+    <svg class="shield-icon" viewBox="0 0 175 171.19"><path d="M159.82,50.81,146,106.87l-25.11,23.6-15.45,40.72L46.88,138.64,35.41,101.19,18.76,86.55,13.1,50.81,0,43.15H21.25l35-22.21L66.46,28.6,100,0l53.57,43.15H175ZM56.25,30.87,37.5,43.15H52.74ZM100,10.47,62.5,43.15h56.25l-2.57-12.81L97.07,24.86Z" fill="currentColor"/></svg>
+    <div class="shield-text">
+      <div class="shield-title">中文兔子洞冰山图</div>
+      <div class="shield-sub">Chinese Oddities Iceberg</div>
+    </div>
+    <div class="shield-dots"><i></i><i></i><i></i></div>
+  </div>
+  <noscript>
+    <style>#app-shield { display: none; }</style>
+    <main class="noscript-main">
+      <h1>中文兔子洞冰山图</h1>
+      <p>社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识冰山图目录，1400+ 词条按冷门程度分层。本站需要启用 JavaScript 才能浏览完整冰山图。</p>
+      <p><a href="%BASE_URL%">进入首页</a> · <a href="%BASE_URL%handbook">创作者手册</a> · <a href="%BASE_URL%features">专题</a></p>
+    </main>
+  </noscript>
+  <div id="app"></div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

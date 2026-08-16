@@ -1,5 +1,56 @@
+# ── Node / 构建产物 ─────────────────────────────
 node_modules/
 dist/
-.DS_Store
-*.local
+*.log
+*.tsbuildinfo
+*.bak
+
+# ── 密钥（永不入库） ────────────────────────────
 .env
+.env.*
+!.env.example
+*.local
+
+# ── Python ──────────────────────────────────────
+__pycache__/
+*.pyc
+
+# ── 数据工作区（work / archive / reports，全部不进 git；仅根目录） ──
+/data/
+iceberg.yaml
+broken_links.csv
+uncertain_links.csv
+
+# ── 内部开发文档（仅开发者，不入库） ─────────────
+docs/TODO.md
+docs/audits/
+docs/plans/
+
+
+# ── 根目录原始素材（已归档 / 可再抓取） ──────────
+/*.html
+/*.webp
+
+# ── 历史项目（已压缩归档至 data/archive/legacy-2026-08/） ──
+iceberg-astro/
+iceberg-react/
+iceberg_web/
+
+# ── 字体（本地重灌勿入库） ───────────────────────
+font/
+
+# ── 工具 / Agent 产物 ───────────────────────────
+.dsh-vision-router/
+.shots/
+.workbuddy*/
+.agents/
+.claude/
+.astro/
+memory/
+_DataURI/
+skills-lock.json
+fonts.googleapis.com/
+wasm---wasm/
+
+# ── 系统 ────────────────────────────────────────
+.DS_Store

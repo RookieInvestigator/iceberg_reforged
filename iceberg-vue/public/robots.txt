@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://RookieInvestigator.github.io/iceberg_reforged/sitemap.xml

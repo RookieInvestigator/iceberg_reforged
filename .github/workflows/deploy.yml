@@ -3,30 +3,47 @@ name: Deploy
 on:
   push:
     branches: [master]
+  pull_request:
+    paths: ['iceberg-vue/**']
   workflow_dispatch:
+
+concurrency:
+  group: github-iceberg-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# 2026-08-16 仓储治理：git 仓库根迁移至 Iceberg/（原 iceberg-vue/.git 上移），
+# 前端位于 iceberg-vue/ 子目录，所有 run 步骤与产物路径相应加 working-directory / 前缀
 jobs:
   build-gh:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: iceberg-vue
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: iceberg-vue/package-lock.json
       - run: npm ci
+      # P0-审计（2026-08-16）：测试与双类型检查接入 CI —— 绿了才继续构建/部署
+      - run: npm run typecheck:test
+      - run: npm run test
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist/
+          path: iceberg-vue/dist/
 
   deploy-gh:
     needs: build-gh
@@ -38,5 +55,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
-
