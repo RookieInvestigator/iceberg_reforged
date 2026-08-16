@@ -5,7 +5,7 @@
  * 引擎为官方 ShaderCanvas 移植（src/lib/shaderCanvas.ts）。
  * WebGL2 不可用时回退为静态渐变。
  */
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue'
 import { createShaderCanvas, prepareFragmentShader, type ShaderCanvas } from '../../lib/shaderCanvas'
 import { fragmentShader, fragmentHeader, buildUniforms } from '../../lib/liquidGradient'
 
@@ -62,9 +62,19 @@ const props = withDefaults(
 const containerRef = ref<HTMLElement>()
 const failed = ref(false)
 let engine: ShaderCanvas | null = null
+let pageActive = true
 
 function syncUniforms() {
   engine?.setUniforms(buildUniforms(props))
+}
+
+// 标签页切到后台时也暂停，切回且页面仍激活时恢复（不降低可见时的表现）
+function onVisibilityChange() {
+  if (document.hidden) {
+    engine?.pause()
+  } else if (pageActive) {
+    engine?.resume()
+  }
 }
 
 onMounted(() => {
@@ -78,12 +88,24 @@ onMounted(() => {
   } catch {
     failed.value = true
   }
+  document.addEventListener('visibilitychange', onVisibilityChange)
+})
+
+// keep-alive 失活时暂停 WebGL 渲染循环，避免后台多个流体背景同时跑
+onActivated(() => {
+  pageActive = true
+  if (!document.hidden) engine?.resume()
+})
+onDeactivated(() => {
+  pageActive = false
+  engine?.pause()
 })
 
 // props 是响应式对象 → watch 深层监听，运行时调参实时生效
 watch(props, syncUniforms)
 
 onUnmounted(() => {
+  document.removeEventListener('visibilitychange', onVisibilityChange)
   engine?.dispose()
   engine = null
 })

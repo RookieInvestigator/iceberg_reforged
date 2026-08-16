@@ -164,13 +164,14 @@ export function pickInstance(
   return best
 }
 
-/** 实例世界坐标：本地矩阵 × 轨道组世界矩阵。 */
+/** 实例世界坐标：本地矩阵 × 轨道组世界矩阵。可传入 target 复用向量，避免热路径分配。 */
 export function getInstanceWorldPos(
   hitMesh: THREE.InstancedMesh,
   instanceId: number,
   parentGroup: THREE.Group,
+  target: THREE.Vector3 = new THREE.Vector3(),
 ) {
   hitMesh.getMatrixAt(instanceId, instanceMatrix)
   worldCenter.setFromMatrixPosition(instanceMatrix)
-  return worldCenter.clone().applyMatrix4(parentGroup.matrixWorld)
+  return target.copy(worldCenter).applyMatrix4(parentGroup.matrixWorld)
 }

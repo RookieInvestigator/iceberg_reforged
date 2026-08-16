@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue'
 import { url } from '../../lib/baseUrl'
 
 const props = defineProps<{ label: string }>()
@@ -7,6 +7,7 @@ const emit = defineEmits<{ activate: [] }>()
 
 const canvasEl = ref<HTMLCanvasElement | null>(null)
 let raf = 0
+let paused = false
 let resizeHandler: (() => void) | null = null
 let rotateTimer = 0
 
@@ -202,6 +203,25 @@ onMounted(() => {
   }, ROTATE_MS)
   raf = requestAnimationFrame(frame)
 })
+
+// keep-alive 失活时暂停粒子动画与轮换，避免后台持续占用 GPU/CPU
+onDeactivated(() => {
+  if (paused) return
+  paused = true
+  if (raf) cancelAnimationFrame(raf)
+  if (rotateTimer) window.clearInterval(rotateTimer)
+  rotateTimer = 0
+})
+onActivated(() => {
+  if (!paused) return
+  paused = false
+  rotateTimer = window.setInterval(() => {
+    imgIndex = 1 - imgIndex
+    build()
+  }, ROTATE_MS)
+  raf = requestAnimationFrame(frame)
+})
+
 onUnmounted(() => {
   if (raf) cancelAnimationFrame(raf)
   if (rotateTimer) window.clearInterval(rotateTimer)

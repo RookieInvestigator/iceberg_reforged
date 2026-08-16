@@ -125,6 +125,8 @@ export class Iceberg3DEngine {
   private ringPosObj = { x: 0, y: 0, z: 0 }
   private ringScaleObj = { s: 0 }
   private ringPosAnimating = false
+  private scratchColor = new THREE.Color()
+  private scratchWorldPos = new THREE.Vector3()
 
   // 资源追踪（dispose 时统一清理）
   private trackedGeos: THREE.BufferGeometry[] = []
@@ -181,7 +183,8 @@ export class Iceberg3DEngine {
 
     // 保留色彩输出处理；加入极克制的 Bloom，让橙色聚焦环与高亮宝石有一层柔和光晕。
     const renderScene = new RenderPass(this.scene, this.camera)
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(width, height), 0.22, 0.5, 0.55)
+    // Bloom 使用半分辨率渲染，显著降低后处理开销；视觉上仍保留柔和光晕
+    const bloomPass = new UnrealBloomPass(new THREE.Vector2(Math.max(1, Math.floor(width / 2)), Math.max(1, Math.floor(height / 2))), 0.2, 0.5, 0.55)
     const outputPass = new OutputPass()
 
     this.composer = new EffectComposer(this.renderer)
@@ -618,13 +621,13 @@ export class Iceberg3DEngine {
     const geometryIndex = hit.id % 3
     const localIndex = Math.floor(hit.id / 3)
     const mesh = mapData.visibleMeshes[geometryIndex]
-    const color = new THREE.Color(highlighted ? hit.brightColor : hit.color)
+    this.scratchColor.setHex(highlighted ? hit.brightColor : hit.color)
     if (highlighted) {
-      color.offsetHSL(0, 0.16, 0.05).addScalar(2)
+      this.scratchColor.offsetHSL(0, 0.16, 0.05).addScalar(2)
     } else if (mapData.newFlags[hit.id]) {
-      color.addScalar(1)
+      this.scratchColor.addScalar(1)
     }
-    mesh.setColorAt(localIndex, color)
+    mesh.setColorAt(localIndex, this.scratchColor)
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
   }
 
@@ -895,7 +898,7 @@ export class Iceberg3DEngine {
         const mapData = this.rings.find((r) => r.hitMesh === target.mesh)
         if (mapData) {
           mapData.group.updateMatrixWorld(true)
-          this.focusRing.position.copy(getInstanceWorldPos(target.mesh, target.id, mapData.group))
+          this.focusRing.position.copy(getInstanceWorldPos(target.mesh, target.id, mapData.group, this.scratchWorldPos))
         }
       }
       this.focusRing.quaternion.copy(this.camera.quaternion)

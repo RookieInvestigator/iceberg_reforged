@@ -124,7 +124,7 @@ onMounted(() => {
   <div class="relative h-dvh min-h-screen w-full overflow-hidden bg-surface font-sans text-white-92">
     <!-- 橙蓝黑流体背景：固定铺满视口，纯装饰不拦截交互 -->
     <div class="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
-      <LiquidGradient colorA="#000000" colorB="#012945" colorC="#045B8D" colorD="#0076A2" colorE="#B25512" :seed="bgSeed" />
+      <LiquidGradient colorA="#000000" colorB="#012945" colorC="#045B8D" colorD="#0076A2" colorE="#B25512" :seed="bgSeed" :turb-iter="7" />
       <span class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-black/70"></span>
     </div>
 

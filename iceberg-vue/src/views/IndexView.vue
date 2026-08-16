@@ -125,6 +125,8 @@ const route = useRoute()
 // 监听 ?item=xxx 触发词条弹窗（支持从其他地方跳转过来）；定时器在卸载/重复触发时清理
 let itemTimer = 0
 watch(() => route.query.item, (itemId) => {
+  // 只在冰山图主页消费 ?item=；3D 等页面也会同步该 query，不能在这里弹主站词条弹窗
+  if (route.path !== '/') return
   if (itemId) {
     clearTimeout(itemTimer)
     itemTimer = window.setTimeout(() => {

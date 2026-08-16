@@ -43,6 +43,10 @@ export interface ShaderCanvas {
   setUniforms(partial: Record<string, unknown>): void
   /** 更新 heightmap 纹理 */
   setHeightmap(heightmap: HeightmapOptions | undefined): void
+  /** 暂停渲染循环（keep-alive 失活时调用，节省 GPU/CPU） */
+  pause(): void
+  /** 恢复渲染循环 */
+  resume(): void
   dispose(): void
 }
 
@@ -115,12 +119,16 @@ function hexToRgb(value: string): [number, number, number] {
   return [((int >> 16) & 255) / 255, ((int >> 8) & 255) / 255, (int & 255) / 255]
 }
 
-/** 官方 setColorArray：u_colors[i] 逐元素上传（vec4，alpha=1）+ 设置 u_colors_length */
+/** setColorArray：u_colors[i] 逐元素上传（vec4，alpha=1）+ 设置 u_colors_length。
+ *  颜色在 CPU 端转 linear（gamma 2.2），shader 中无需每像素重复 pow。 */
 function setColorArray(gl: WebGL2RenderingContext, program: WebGLProgram, values: string[]) {
   const colors = values.slice(0, 8)
   gl.uniform1i(gl.getUniformLocation(program, 'u_colors_length'), colors.length)
   colors.forEach((color, index) => {
-    const [r, g, b] = hexToRgb(color)
+    const [sr, sg, sb] = hexToRgb(color)
+    const r = Math.pow(sr, 2.2)
+    const g = Math.pow(sg, 2.2)
+    const b = Math.pow(sb, 2.2)
     gl.uniform4f(gl.getUniformLocation(program, `u_colors[${index}]`), r, g, b, 1)
   })
 }
@@ -234,6 +242,8 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
 
   // ── 值容器：用户 uniform + 内置变量 ──
   const values: Record<string, unknown> = { ...uniforms }
+  let uniformsDirty = true
+  let sizeDirty = true
   const reducedMotion =
     typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -244,10 +254,15 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width
       canvas.height = height
+      sizeDirty = true
     }
-    gl.viewport(0, 0, width, height)
-    gl.uniform2f(resolution, width, height)
-    gl.uniform1f(pixelRatioLocation, pixelRatio)
+    // 尺寸未变化时跳过 viewport/uniform 上传，减少每帧 CPU 开销
+    if (sizeDirty) {
+      gl.viewport(0, 0, width, height)
+      gl.uniform2f(resolution, width, height)
+      gl.uniform1f(pixelRatioLocation, pixelRatio)
+      sizeDirty = false
+    }
   }
   resize()
 
@@ -257,10 +272,11 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
   // ── 渲染循环（官方：每帧 resize + 全量上传 uniforms + 绘制） ──
   let frame = 0
   let disposed = false
+  let paused = false
   const start = performance.now()
 
   const render = (now: number) => {
-    if (disposed) return
+    if (disposed || paused) return
     resize()
     gl.useProgram(program)
     gl.uniform1f(time, reducedMotion ? 0 : (now - start) / 1000)
@@ -285,32 +301,36 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
       }
     }
 
-    for (const [name, value] of Object.entries(values)) {
-      // 官方：colors 数组走 setColorArray（含 u_colors_length）
-      if (name === 'u_colors' && Array.isArray(value)) {
-        setColorArray(gl, program, value as string[])
-        continue
+    // 静态 uniform 只在首次或 setUniforms 后上传，避免每帧全量上传
+    if (uniformsDirty) {
+      for (const [name, value] of Object.entries(values)) {
+        // 官方：colors 数组走 setColorArray（含 u_colors_length）
+        if (name === 'u_colors' && Array.isArray(value)) {
+          setColorArray(gl, program, value as string[])
+          continue
+        }
+        const location = getLocation(name)
+        if (!location) continue
+        if (name === 'u_colorBack' && typeof value === 'string') {
+          const [r, g, b] = hexToRgb(value)
+          gl.uniform4f(location, r, g, b, 1)
+        } else if (name === 'u_mousePosition') {
+          gl.uniform4f(location, 0.5, 0.5, 0, 0)
+        } else if (typeof value === 'number') {
+          gl.uniform1f(location, value)
+        } else if (typeof value === 'boolean') {
+          gl.uniform1f(location, value ? 1 : 0)
+        } else if (typeof value === 'string') {
+          const [r, g, b] = hexToRgb(value)
+          gl.uniform3f(location, r, g, b)
+        } else if (Array.isArray(value) && value.every((v) => typeof v === 'number')) {
+          // 兜底：vec2/3/4 数字数组（官方仅 colors 数组走特殊分支，这里按长度上传）
+          if (value.length >= 4) gl.uniform4f(location, value[0], value[1], value[2], value[3])
+          else if (value.length === 3) gl.uniform3f(location, value[0], value[1], value[2])
+          else if (value.length === 2) gl.uniform2f(location, value[0], value[1])
+        }
       }
-      const location = getLocation(name)
-      if (!location) continue
-      if (name === 'u_colorBack' && typeof value === 'string') {
-        const [r, g, b] = hexToRgb(value)
-        gl.uniform4f(location, r, g, b, 1)
-      } else if (name === 'u_mousePosition') {
-        gl.uniform4f(location, 0.5, 0.5, 0, 0)
-      } else if (typeof value === 'number') {
-        gl.uniform1f(location, value)
-      } else if (typeof value === 'boolean') {
-        gl.uniform1f(location, value ? 1 : 0)
-      } else if (typeof value === 'string') {
-        const [r, g, b] = hexToRgb(value)
-        gl.uniform3f(location, r, g, b)
-      } else if (Array.isArray(value) && value.every((v) => typeof v === 'number')) {
-        // 兜底：vec2/3/4 数字数组（官方仅 colors 数组走特殊分支，这里按长度上传）
-        if (value.length >= 4) gl.uniform4f(location, value[0], value[1], value[2], value[3])
-        else if (value.length === 3) gl.uniform3f(location, value[0], value[1], value[2])
-        else if (value.length === 2) gl.uniform2f(location, value[0], value[1])
-      }
+      uniformsDirty = false
     }
 
     gl.drawArrays(gl.TRIANGLES, 0, 6)
@@ -330,13 +350,25 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
     canvas,
     setUniforms(partial) {
       Object.assign(values, partial)
+      uniformsDirty = true
     },
     setHeightmap(heightmap) {
       heightmapRef = heightmap
     },
+    pause() {
+      if (paused || disposed) return
+      paused = true
+      cancelAnimationFrame(frame)
+    },
+    resume() {
+      if (!paused || disposed) return
+      paused = false
+      frame = requestAnimationFrame(render)
+    },
     dispose() {
       if (disposed) return
       disposed = true
+      paused = true
       cancelAnimationFrame(frame)
       observer.disconnect()
       canvas.removeEventListener('webglcontextlost', onContextLost)

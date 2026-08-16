@@ -45,7 +45,7 @@ onUnmounted(() => {
 <template>
   <div class="liquid-bg" aria-hidden="true">
     <!-- colorA 传纯黑：沉海终点为纯黑（色板最深端由深蓝黑 #001220 改为 #000000） -->
-    <LiquidGradient :darkShift="liquidShift" colorA="#000000" :seed="liquidSeed" />
+    <LiquidGradient :darkShift="liquidShift" colorA="#000000" :seed="liquidSeed" :turb-iter="7" />
   </div>
 </template>
 

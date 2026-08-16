@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onActivated, onMounted, onUnmounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '@nanostores/vue'
 import { lang } from '../lib/i18nStore'
@@ -69,29 +69,38 @@ const todayEvent = computed(() => allEvents.find(e => e.date === mmdd) || null)
 const ringEl = ref<HTMLDivElement | null>(null)
 let ringRaf = 0
 let ringMove: ((e: PointerEvent) => void) | null = null
+let ringActive = false
 function initCursorRing() {
   const el = ringEl.value
-  if (!el) return
+  if (!el || ringActive) return
   if (!window.matchMedia('(pointer: fine)').matches) return
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  ringActive = true
   let x = window.innerWidth / 2, y = window.innerHeight / 2, tx = x, ty = y
   function step() {
-    if (!el) return
+    if (!el || !ringActive) return
     ringRaf = 0
     x += (tx - x) * 0.16; y += (ty - y) * 0.16
     el.style.transform = 'translate3d(' + x + 'px, ' + y + 'px, 0)'
     if (Math.abs(tx - x) > 0.3 || Math.abs(ty - y) > 0.3) ringRaf = requestAnimationFrame(step)
   }
-  function schedule() { if (!ringRaf) ringRaf = requestAnimationFrame(step) }
+  function schedule() { if (ringActive && !ringRaf) ringRaf = requestAnimationFrame(step) }
   ringMove = (e: PointerEvent) => { tx = e.clientX; ty = e.clientY; schedule() }
   window.addEventListener('pointermove', ringMove, { passive: true })
 }
+function stopCursorRing() {
+  ringActive = false
+  if (ringRaf) cancelAnimationFrame(ringRaf)
+  ringRaf = 0
+  if (ringMove) window.removeEventListener('pointermove', ringMove)
+  ringMove = null
+}
 
 onMounted(initCursorRing)
-onUnmounted(() => {
-  if (ringRaf) cancelAnimationFrame(ringRaf)
-  if (ringMove) window.removeEventListener('pointermove', ringMove)
-})
+// keep-alive 切走后停止光标圆环 RAF，切回再恢复
+onActivated(() => { if (!ringActive) initCursorRing() })
+onDeactivated(stopCursorRing)
+onUnmounted(stopCursorRing)
 </script>
 
 <template>
@@ -100,7 +109,7 @@ onUnmounted(() => {
 
     <!-- 全页液态背景（头尾完全透明融入） -->
     <div class="ds-bg" aria-hidden="true">
-      <LiquidGradient colorA="#000000" :seed="bgSeed" />
+      <LiquidGradient colorA="#000000" :seed="bgSeed" :turb-iter="7" />
       <span class="ds-bg-vignette"></span>
     </div>
 

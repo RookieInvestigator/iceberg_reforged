@@ -13,8 +13,8 @@ function onPageAfterEnter() {
     <router-view v-slot="{ Component, route }">
       <div style="min-height: 100vh">
         <transition name="page-fade" mode="out-in" @after-enter="onPageAfterEnter">
-          <!-- 有界缓存：限制常驻页面数；古籍/3D 每次进入重建（资源清理依赖卸载触发 / 避免 GPU 资源常驻） -->
-          <keep-alive :max="4" :exclude="['AncientBookView', 'Iceberg3DView']">
+          <!-- 有界缓存：限制常驻页面数；古籍/3D/Home 每次进入重建（资源清理依赖卸载触发 / 避免 GPU 资源常驻） -->
+          <keep-alive :max="3" :exclude="['AncientBookView', 'Iceberg3DView', 'HomeView']">
             <component :is="Component" :key="route.path" />
           </keep-alive>
         </transition>

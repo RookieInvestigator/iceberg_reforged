@@ -97,8 +97,9 @@ onUnmounted(() => {
       <p>{{ t('webglUnsupported') }}</p>
     </div>
 
-    <!-- 流动流体背景：纯 CSS 动画渐变，避免第二个 WebGL 上下文导致卡顿 -->
+    <!-- 流动流体背景：纯 CSS transform 动画渐变，避免第二个 WebGL 上下文导致卡顿 -->
     <div class="scene-sky" aria-hidden="true">
+      <span class="scene-sky-layer"></span>
       <span class="scene-sky-overlay"></span>
     </div>
 
@@ -166,17 +167,20 @@ onUnmounted(() => {
 
 .scene-sky {
   position: absolute; inset: 0; z-index: 0; overflow: hidden;
+}
+.scene-sky-layer {
+  position: absolute; inset: -12%;
   background:
     radial-gradient(38% 32% at 18% 22%, rgba(255, 107, 6, 0.28), transparent 70%),
     radial-gradient(45% 40% at 78% 28%, rgba(10, 90, 153, 0.45), transparent 70%),
     radial-gradient(30% 30% at 55% 82%, rgba(125, 181, 220, 0.22), transparent 70%),
     linear-gradient(180deg, #0a2a4a 0%, #04101c 55%, #000 100%);
-  background-size: 180% 180%;
-  animation: sky-flow 24s ease-in-out infinite alternate;
+  will-change: transform;
+  animation: sky-flow 28s ease-in-out infinite alternate;
 }
 @keyframes sky-flow {
-  0% { background-position: 0% 0%, 100% 0%, 50% 100%, 0 0; }
-  100% { background-position: 100% 100%, 0% 100%, 50% 0%, 0 0; }
+  from { transform: translate3d(-1.5%, -1%, 0) scale(1.04); }
+  to { transform: translate3d(1.5%, 1%, 0) scale(1.07); }
 }
 .scene-sky-overlay {
   position: absolute; inset: 0; pointer-events: none;
@@ -184,7 +188,7 @@ onUnmounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scene-sky { animation: none; }
+  .scene-sky-layer { animation: none; }
 }
 
 .canvas-container {

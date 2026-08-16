@@ -120,8 +120,9 @@ vec3 paletteN(float t, int count) {
     int idx = min(int(floor(t / segmentSize)), count - 2);
     float localT = clamp((t - float(idx) * segmentSize) / segmentSize, 0.0, 1.0);
 
-    vec3 lab0 = linearToOklab(toLinear(getColor(idx)));
-    vec3 lab1 = linearToOklab(toLinear(getColor(idx + 1)));
+    // 颜色已在 CPU 端转为 linear，无需再 toLinear
+    vec3 lab0 = linearToOklab(getColor(idx));
+    vec3 lab1 = linearToOklab(getColor(idx + 1));
 
     return oklabToLinear(mixLch(lab0, lab1, localT));
 }

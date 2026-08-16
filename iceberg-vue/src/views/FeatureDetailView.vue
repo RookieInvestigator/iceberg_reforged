@@ -13,7 +13,7 @@ const bgSeed = ref(Math.floor(Math.random() * 1001))
   <div class="relative min-h-screen bg-surface">
     <!-- 橙蓝黑流体背景：固定铺满视口，纯装饰不拦截交互 -->
     <div class="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
-      <LiquidGradient colorA="#000000" colorB="#012945" colorC="#045B8D" colorD="#0076A2" colorE="#B25512" :seed="bgSeed" />
+      <LiquidGradient colorA="#000000" colorB="#012945" colorC="#045B8D" colorD="#0076A2" colorE="#B25512" :seed="bgSeed" :turb-iter="7" />
       <span class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-black/70"></span>
     </div>
 

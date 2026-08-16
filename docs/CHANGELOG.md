@@ -1,11 +1,20 @@
 # 更新日志
 
 
-## 2026-08-16 — OG 社交封面重做
+## v4.1.0 — 2026-08-16 — OG 社交封面重做
 
 ### 改进
 
 - **`public/assets/og-cover.png` 更换为用户指定封面** — 使用 `中文兔子洞冰山图-oc.png`（1200×630）替换原 OG 封面，并将源图一并放入 `public/assets/`。
+- **修复 3D 点击碎片同时弹出主站词条弹窗** — 主站 `IndexView` 的 `?item=` 监听增加 `route.path === '/'` 守卫，避免 3D 页面同步 URL query 时被 keep-alive 缓存的主站触发 `open-item-modal`。
+- **3D 性能优化** — Bloom 后处理改为半分辨率渲染，降低 GPU 开销；背景流动动画从 `background-position` 改为 `transform: translate3d + scale`（GPU 合成），减少每帧重绘。
+- **keep-alive 后台保活优化** — `LiquidGradient`、`IcebergParticles`、Home 光标圆环增加 `onActivated/onDeactivated` 暂停/恢复：页面切走后停止 WebGL 渲染循环、粒子 RAF/轮换、光标圆环 RAF，避免多个页面在后台同时跑动画导致整体卡顿；`ShaderCanvas` 新增 `pause/resume` 接口。
+- **LiquidGradient 迭代次数** — 全站 `LiquidGradient` 明确使用 `:turb-iter="7"`，保持默认的高质量流动细节；性能优化主要依赖 keep-alive 后台暂停机制。
+- **标签页后台暂停** — `LiquidGradient` 增加 `visibilitychange` 监听：浏览器标签页切到后台时暂停 WebGL，切回且页面仍激活时恢复；可见状态下表现不变。
+- **ShaderCanvas 底层渲染优化** — 静态 uniform 只在首次或更新时上传，尺寸未变化时跳过 viewport/uniform 上传，减少每帧 CPU 开销；`u_colors` 改为 CPU 端预转 linear，shader 不再每像素重复 `pow`，视觉等价。
+- **3D hover 颜色分配优化** — `setInstanceHoverColor` 复用 `scratchColor`，避免每次 hover 变更都 `new THREE.Color`，减少 GC 压力。
+- **3D 取景框跟随零分配** — `getInstanceWorldPos` 支持传入 `target` 复用向量，动画循环中不再每帧 `clone()` 新 Vector3。
+- **keep-alive 策略收紧** — `:max` 从 4 降到 3，并将 HomeView 加入 exclude，Home 页切走后直接卸载释放 WebGL/粒子资源。
 
 
 ## 2026-08-16 — 3D 冰山深度美学升级
