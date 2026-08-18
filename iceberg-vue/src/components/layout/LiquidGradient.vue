@@ -84,6 +84,9 @@ onMounted(() => {
     engine = createShaderCanvas(el, {
       fragmentShader: prepareFragmentShader(fragmentShader, fragmentHeader),
       uniforms: buildUniforms(props),
+      // 性能：backing store 半分辨率（低频渐变视觉无损，片元数 1/4）+ 30fps 封顶（慢速流动无感）
+      resolutionScale: 0.5,
+      fps: 30,
     })
   } catch {
     failed.value = true

@@ -8,12 +8,12 @@
   display: flex; 
   align-items: center; 
   justify-content: center;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.78);
 }
-/* P2：触屏设备降级为纯色遮罩（省 GPU 重采样），桌面保留磨砂玻璃 */
-@media (hover: hover) {
-  .modal-overlay { backdrop-filter: blur(4px); /* 增加磨砂玻璃效果提升質感 */ }
-}
+/* perf：不用 backdrop-filter —— 遮罩后面是整页冰山图（1400 词条 + 巨型背景层），
+   模糊需全屏重采样；液态模式下背后 shader 每帧都在动，blur 会逐帧重算。
+   纯色半透明遮罩已足够聚焦，与 recently-updated 高亮去毛玻璃的决策一致。 */
+/* .modal-overlay { backdrop-filter: blur(4px); } */
 
 /* 面板基底 */
 .modal-panel {

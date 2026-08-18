@@ -1,6 +1,57 @@
 # 更新日志
 
 
+## v4.5.2 — 2026-08-19 — 弹窗遮罩加深
+
+### 改进
+
+- **弹窗遮罩 `rgba(0,0,0,.6)` → `rgba(0,0,0,.78)`** — 打开弹窗时背景更暗，面板更聚焦。
+
+
+## 2026-08-19 — 修复液态背景模式变纯黑
+
+### 修复
+
+- **bgMode='liquid' 时液态背景不渲染（纯黑）** — 冰山背景静态化重写 `IcebergBg.vue` 时丢失 `import LiquidBg from './LiquidBg.vue'`，模板中的 `<LiquidBg v-if>` 被降级为未解析的自定义元素（仅 console.warn、无 error，静默不渲染），只剩 `bg-root` 黑底透出。补回 import；无头浏览器验证液态模式完整渲染（含半分辨率 backing store）。
+
+
+## 2026-08-19 — 词条墙按需渲染（content-visibility）
+
+### 性能
+
+- **`.iceberg-tier` 启用 `content-visibility: auto`** — 视口外层级跳过 layout/paint/raster，1400+ 词条的渲染成本从 O(词条总数) 降为 O(视口内)：boot 长任务实测 **-60%**（1260→516ms，最差单任务 750→311ms），穿全页滚动 p95 从 69→56ms、最差帧 160→125ms（dev 注入对照；生产构建 A/B 见 2026-08-19 性能研究）。
+- **`contain-intrinsic-size: auto 1800px`** — 首渲染前按 8×1800 估值（总估值 ≈ 实际页高 15652px，滚动条基本不跳）；渲染过一次后 `auto` 记住该层真实高度（实测层高 565-2964px，平均 ~1830px）。
+- 功能回归验证：1411 词条完整渲染、滚底回顶正常、hash 深链弹窗正常、词条点击弹窗正常、无页面错误。
+
+
+## 2026-08-19 — 冰山背景取消全部动态（死代码清理）
+
+### 改进
+
+- **冰山背景（bgMode='static'）动画全量移除** — 此前动画已被 `.bg-root.static` 暂停（视觉定格、成本为零），此番彻底删除死代码：`bg.css` 移除全部 `animation` 声明、10 组 `@keyframes`、`will-change`、`paused`/`static` 暂停规则与 prefers-reduced-motion 规则；云层（暂停态下几乎不可见）整层移除；光晕定格于原呼吸初值（opacity .5）。
+- **`IcebergBg.vue` 精简** — 移除滚动暂停监听（`pauseBg` 的 class 切换每轮滚动触发两次样式重算）、`--bg-hf` 高度因子设置、`static` 类绑定；`useFilterPipeline.ts` 同步移除 `--bg-hf` 设置（过滤后页面高度变化时的一次强制测量 + 样式写入）。
+- 视觉与此前暂停态一致（定格），液态/纯黑模式不受影响。
+
+
+## 2026-08-19 — 弹窗开启卡顿与冰山背景合成层修复
+
+### 性能
+
+- **弹窗遮罩移除 `backdrop-filter: blur(4px)`** — 遮罩背后是整页冰山图（1400 词条 + 巨型背景层），模糊需全屏重采样；液态模式下背后 shader 每帧流动，blur 会逐帧重算。纯色半透明遮罩（rgba(0,0,0,.6)）已足够聚焦，与高亮去毛玻璃决策一致。
+- **滚动锁补偿滚动条宽度** — `lockOverlay()` 此前直接 `overflow:hidden`：滚动条消失 → 视口宽度变化 → 1400 词条整页 reflow，与弹窗挂载挤在同一帧（开启卡顿主因）。现在锁滚时给 body 补偿等宽 `padding-right`，视口宽度不变。MobileSheet 同锁共用此修复（移动端滚动条宽 0，自动无操作）。
+- **冰山背景 static 模式撤销 `will-change`** — `.bg-root.static *` 本已暂停全部动画，但 sky/云层/冰山/水体等约 8 个**整页文档高度**的层仍因 will-change 各占独立合成器层，滚动时逐层重合成。`will-change:auto` 让它们合并回常规绘制。
+
+
+## 2026-08-19 — LiquidGradient 性能：半分辨率渲染 + 30fps 封顶
+
+### 性能
+
+- **液态渐变 shader backing store 降为 1/2 分辨率** — `shaderCanvas.ts` 新增 `resolutionScale` 选项（CSS 尺寸不变、浏览器放大）：低频有机渐变无锐利边缘，半分辨率视觉几乎无损，片元着色计算量降为 1/4。全站 LiquidGradient（含冰山页 LiquidBg、Home、Handbook、Features 等）统一生效。
+- **帧率封顶 30fps** — `shaderCanvas.ts` 新增 `fps` 选项：rAF 循环保留但按帧间隔跳帧绘制，`u_time` 基于真实时间、动画速度不变；speed 0.2 的慢速流动 30fps 无感知差异。与半分辨率合计约 8 倍 GPU 开销削减。
+- **关闭 WebGL antialias** — 全屏三角形着色器无几何边缘，MSAA 零收益白吃显存带宽。
+- 背景：用户反馈部署版冰山页与液态渐变页明显卡顿、纯黑页面不卡，归因为全屏 shader（4 层湍流 × OKLab 转换每像素开销 × DPR2 全分辨率 × 60fps）。`turb-iter=7` 的流动细节保持不变。
+
+
 ## v4.5.1 — 2026-08-18 — 实验功能名称修正（三语）
 
 ### 修正

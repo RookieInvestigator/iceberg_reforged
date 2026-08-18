@@ -1,61 +1,22 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+/**
+ * IcebergBg —— 冰山图页面背景（bgMode 分发）。
+ * 'static'（冰山）/'black'：纯静态 SVG 场景（2026-08-19 取消全部动态，
+ * 云层/波动/光晕动画已移除；black 模式由 IndexView 的 v-if 整体卸载）；
+ * 'liquid'：挂 LiquidBg（WebGL 液态渐变 + 滚动沉海）。
+ * bgMode 来自 settingsStore 的 storedAtom（legacy 'dynamic' 由设置面板归一为 static）。
+ */
 import { useStore } from '@nanostores/vue'
 import { bgMode } from '../../lib/settingsStore'
 import LiquidBg from './LiquidBg.vue'
 
-// bgMode 直接来自 settingsStore 的 storedAtom（'static' | 'dynamic' | 'black' | 'liquid'），
-// 取代原先手动读写 localStorage，避免与设置面板双数据源（P1-39）
 const mode = useStore(bgMode)
-
-onMounted(() => {
-  const el = document.getElementById('iceberg-bg')
-  if (el) {
-    const h = Math.max(document.documentElement.scrollHeight, el.getBoundingClientRect().height)
-    el.style.setProperty('--bg-hf', Math.max(h / 1000, 1).toString())
-  }
-
-  let tid: ReturnType<typeof setTimeout>
-  function pauseBg() {
-    const root = document.getElementById('iceberg-bg')
-    if (!root) return
-    root.classList.add('paused')
-    clearTimeout(tid)
-    tid = setTimeout(() => root.classList.remove('paused'), 200)
-  }
-  window.addEventListener('scroll', pauseBg, { passive: true })
-  onUnmounted(() => window.removeEventListener('scroll', pauseBg))
-})
 </script>
 
 <template>
-  <div id="iceberg-bg" class="bg-root" :class="{ static: mode !== 'dynamic' }">
+  <div id="iceberg-bg" class="bg-root">
     <div class="bg-wrap" v-show="mode !== 'liquid'">
       <div class="bg-sky"></div>
-      <div class="bg-clouds">
-        <div class="bg-clouds-slow">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none"><g stroke="none">
-            <g style="animation:bg-cp 11s ease-in-out infinite 0s"><rect x="8" y="6" width="12" height="1.5" fill="currentColor" fill-opacity=".09"/><rect x="5" y="7.5" width="18" height="1.5" fill="currentColor" fill-opacity=".11"/><rect x="10" y="9" width="10" height="1.5" fill="currentColor" fill-opacity=".06"/></g>
-            <g style="animation:bg-cp 9s ease-in-out infinite -8s"><rect x="22" y="4" width="8" height="1.4" fill="currentColor" fill-opacity=".08"/></g>
-            <g style="animation:bg-cp 14s ease-in-out infinite -3s"><rect x="30" y="5" width="14" height="1.6" fill="currentColor" fill-opacity=".08"/><rect x="28" y="6.6" width="18" height="1.6" fill="currentColor" fill-opacity=".10"/><rect x="32" y="8.2" width="10" height="1.4" fill="currentColor" fill-opacity=".06"/></g>
-            <g style="animation:bg-cp 8s ease-in-out infinite -2s"><rect x="50" y="3" width="12" height="1.3" fill="currentColor" fill-opacity=".07"/></g>
-            <g style="animation:bg-cp 12s ease-in-out infinite -6s"><rect x="55" y="7" width="9" height="1.5" fill="currentColor" fill-opacity=".08"/></g>
-            <g style="animation:bg-cp 13s ease-in-out infinite -7s"><rect x="65" y="8" width="15" height="1.8" fill="currentColor" fill-opacity=".09"/><rect x="60" y="9.8" width="22" height="1.8" fill="currentColor" fill-opacity=".14"/><rect x="68" y="11.6" width="18" height="1.8" fill="currentColor" fill-opacity=".11"/><rect x="75" y="13.4" width="8" height="1.8" fill="currentColor" fill-opacity=".06"/></g>
-            <g style="animation:bg-cp 10s ease-in-out infinite -5s"><rect x="88" y="6" width="7" height="1.6" fill="currentColor" fill-opacity=".07"/></g>
-          </g></svg>
-        </div>
-        <div class="bg-clouds-fast">
-          <svg viewBox="0 0 100 100" preserveAspectRatio="none"><g stroke="none">
-            <g style="animation:bg-cp 10s ease-in-out infinite -1s"><rect x="18" y="13" width="14" height="1.2" fill="currentColor" fill-opacity=".18"/><rect x="14" y="14.2" width="22" height="1.2" fill="currentColor" fill-opacity=".25"/><rect x="20" y="15.4" width="12" height="1.2" fill="currentColor" fill-opacity=".14"/></g>
-            <g style="animation:bg-cp 13s ease-in-out infinite -5s"><rect x="3" y="19" width="11" height="1.4" fill="currentColor" fill-opacity=".15"/></g>
-            <g style="animation:bg-cp 8s ease-in-out infinite -9s"><rect x="8" y="22" width="8" height="1.3" fill="currentColor" fill-opacity=".12"/></g>
-            <g style="animation:bg-cp 12s ease-in-out infinite -4s"><rect x="35" y="12" width="16" height="1.3" fill="currentColor" fill-opacity=".19"/><rect x="32" y="13.5" width="22" height="1.3" fill="currentColor" fill-opacity=".24"/><rect x="37" y="14.8" width="12" height="1.2" fill="currentColor" fill-opacity=".15"/></g>
-            <g style="animation:bg-cp 10s ease-in-out infinite -6s"><rect x="45" y="18" width="10" height="1.3" fill="currentColor" fill-opacity=".14"/></g>
-            <g style="animation:bg-cp 11s ease-in-out infinite -7s"><rect x="58" y="17" width="20" height="1.5" fill="currentColor" fill-opacity=".23"/><rect x="52" y="18.5" width="30" height="1.5" fill="currentColor" fill-opacity=".30"/><rect x="60" y="20" width="25" height="1.5" fill="currentColor" fill-opacity=".28"/><rect x="68" y="21.5" width="12" height="1.5" fill="currentColor" fill-opacity=".18"/></g>
-            <g style="animation:bg-cp 9s ease-in-out infinite -3s"><rect x="80" y="16" width="9" height="1.4" fill="currentColor" fill-opacity=".14"/></g>
-          </g></svg>
-        </div>
-      </div>
       <div class="bg-glow"></div>
       <div class="bg-water-bg">
         <div class="bg-water-wave-bg">

@@ -125,11 +125,6 @@ export function useFilterPipeline(allItems: RenderItem[], opts: PipelineOptions)
         if (globalMsg) globalMsg.remove();
         c.querySelectorAll<HTMLElement>('.iceberg-tier').forEach(t => { t.style.display = ''; });
       }
-      const bg = document.getElementById('iceberg-bg');
-      if (bg) {
-        const h = Math.max(document.documentElement.scrollHeight, bg.getBoundingClientRect().height);
-        bg.style.setProperty('--bg-hf', String(Math.max(h / 1000, 1)));
-      }
     });
   });
 

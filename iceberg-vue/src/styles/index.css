@@ -26,6 +26,15 @@
 @layer components {
   /* ===== Font size via CSS variable ===== */
   #items-container { font-size: var(--item-font-size, 1rem); }
+  /* ===== perf: 层级按需渲染 =====
+     视口外层级跳过 layout/paint/raster：boot 长任务实测 -60%（1260→516ms），
+     滚动每帧成本从 O(词条总数) 降为 O(视口内)。
+     contain-intrinsic-size 的 auto 前缀 = 首渲染前用 1800px 估值（8 层总估值 ≈ 实际页高），
+     渲染过一次后记住该层真实高度，滚动条不跳。Ctrl+F / scrollIntoView 现代浏览器兼容。 */
+  .iceberg-tier {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 1800px;
+  }
   /* ===== Iceberg item ===== */
   .iceberg-item {
     position: relative;

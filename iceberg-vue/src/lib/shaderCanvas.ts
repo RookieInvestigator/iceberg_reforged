@@ -18,6 +18,8 @@
  * - 引擎创建在任意容器内（canvas display:block + 100%/100%）
  * - setUniforms() 增量合并 uniform 值（组件 watch 调用），渲染循环仍每帧全量上传
  * - 增加 prefers-reduced-motion 冻结 u_time、webglcontextlost 停止循环
+ * - [项目扩展] resolutionScale：backing store 降分辨率渲染（CSS 放大，低频渐变视觉无损）
+ * - [项目扩展] fps：帧率封顶（rAF 仍在跑但跳帧绘制，u_time 基于真实时间不受影响）
  * - 编译失败抛异常（由组件捕获回退静态渐变），而非静默 console.error
  */
 
@@ -28,6 +30,17 @@ export interface ShaderCanvasOptions {
   uniforms?: Record<string, unknown>
   /** heightmap 纹理（可选，LiquidGradient 不使用） */
   heightmap?: HeightmapOptions
+  /**
+   * [项目扩展] backing store 分辨率缩放系数，默认 1（全分辨率）。
+   * 画布 CSS 尺寸不变、由浏览器放大；对低频有机渐变类 shader，0.5 视觉几乎无损，
+   * 片元数量降为 1/4。u_resolution / u_pixelRatio 均按缩放后的实际像素上传。
+   */
+  resolutionScale?: number
+  /**
+   * [项目扩展] 帧率封顶（0 = 不限制，默认 0）。慢速流动类动画 30fps 足够，
+   * GPU 每秒开销按比例下降；u_time 基于真实时间，封顶不会拖慢动画速度。
+   */
+  fps?: number
 }
 
 export interface HeightmapOptions {
@@ -185,12 +198,15 @@ function updateHeightmapTexture(
 
 export function createShaderCanvas(container: HTMLElement, options: ShaderCanvasOptions): ShaderCanvas {
   const { fragmentShader, uniforms = {}, heightmap: initialHeightmap } = options
+  const resolutionScale = Math.max(0.1, Math.min(options.resolutionScale ?? 1, 1))
+  const minFrameTime = options.fps && options.fps > 0 ? 1000 / options.fps : 0
 
   const canvas = document.createElement('canvas')
   canvas.style.cssText = 'display:block;width:100%;height:100%;'
   container.appendChild(canvas)
 
-  const gl = canvas.getContext('webgl2', { alpha: false, antialias: true, premultipliedAlpha: false })
+  // 全屏三角形着色器没有几何边缘，MSAA 无收益，关闭省显存带宽
+  const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, premultipliedAlpha: false })
   if (!gl) {
     canvas.remove()
     throw new Error('WebGL2 not supported')
@@ -248,7 +264,8 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
     typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
   const resize = () => {
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2)
+    // backing store = CSS 尺寸 × min(DPR,2) × resolutionScale；CSS 布局尺寸不受影响
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2) * resolutionScale
     const width = Math.max(1, Math.floor(canvas.clientWidth * pixelRatio))
     const height = Math.max(1, Math.floor(canvas.clientHeight * pixelRatio))
     if (canvas.width !== width || canvas.height !== height) {
@@ -274,9 +291,14 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
   let disposed = false
   let paused = false
   const start = performance.now()
+  let lastDraw = -Infinity
 
   const render = (now: number) => {
     if (disposed || paused) return
+    // 先排下一帧再判断节流，保证封顶时循环不断流；u_time 用真实时间，动画速度不受影响
+    frame = requestAnimationFrame(render)
+    if (minFrameTime > 0 && now - lastDraw < minFrameTime) return
+    lastDraw = now
     resize()
     gl.useProgram(program)
     gl.uniform1f(time, reducedMotion ? 0 : (now - start) / 1000)
@@ -334,7 +356,6 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
     }
 
     gl.drawArrays(gl.TRIANGLES, 0, 6)
-    frame = requestAnimationFrame(render)
   }
   frame = requestAnimationFrame(render)
 
