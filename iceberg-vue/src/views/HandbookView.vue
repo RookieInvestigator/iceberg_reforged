@@ -19,14 +19,13 @@ const bgSeed = ref(Math.floor(Math.random() * 1001))
 const LETTER_ORDER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('')
 
 interface GlossaryEntry { name: string; desc: string; initial: string; color?: string; emoji?: string }
-interface TabDef { key: string; heading: string; labelKey: string; source?: 'categories' | 'tags' }
+interface TabDef { key: string; heading: string; labelKey: string; source?: 'criteria' }
 
 // handbook.md 的二级标题即标签页；后续新增板块（组织、事件等）时在 md 加一节并在此注册
 const TABS: TabDef[] = [
-  { key: 'categories', heading: '分类解释', labelKey: 'handbookTabCategories', source: 'categories' },
-  { key: 'tags', heading: '标签解释', labelKey: 'handbookTabTags', source: 'tags' },
-  { key: 'concepts', heading: '基本概念', labelKey: 'handbookTabConcepts' },
-  { key: 'people', heading: '人物', labelKey: 'handbookTabPeople' },
+  { key: 'criteria', heading: '划定标准', labelKey: 'handbookTabCriteria', source: 'criteria' },
+  { key: 'concepts', heading: '各类概念', labelKey: 'handbookTabConcepts' },
+  { key: 'people', heading: '人物作品', labelKey: 'handbookTabPeople' },
 ]
 
 function parseSections(md: string): Map<string, Record<string, string>> {
@@ -58,22 +57,20 @@ const sections = parseSections(rawMd)
 function buildEntries(def: TabDef): GlossaryEntry[] {
   const mdEntries = sections.get(def.heading) || {}
   const fallback = t('handbookPending')
-  if (def.source === 'categories') {
-    return Object.entries(data.categoryColors).map(([name, color]) => ({
+  if (def.source === 'criteria') {
+    const cats = Object.entries(data.categoryColors).map(([name, color]) => ({
       name,
       desc: mdEntries[name] || fallback,
       initial: getFirstInitial(name),
       color,
     }))
-      .sort((a, b) => a.initial.localeCompare(b.initial) || a.name.localeCompare(b.name, 'zh-CN'))
-  }
-  if (def.source === 'tags') {
-    return Object.entries(data.tagMap).map(([emoji, name]) => ({
+    const tags = Object.entries(data.tagMap).map(([emoji, name]) => ({
       name,
       desc: mdEntries[name] || fallback,
       initial: getFirstInitial(name),
       emoji,
     }))
+    return [...cats, ...tags]
       .sort((a, b) => a.initial.localeCompare(b.initial) || a.name.localeCompare(b.name, 'zh-CN'))
   }
   return Object.entries(mdEntries).map(([name, desc]) => ({

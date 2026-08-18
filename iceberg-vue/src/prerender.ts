@@ -160,22 +160,23 @@ function handbookHtml(): string {
   const categoryCount = Object.keys(data.categoryColors || {}).length
   const tagCount = Object.keys(data.tagMap || {}).length
   const firstMdByName = new Map((first?.entries || []).map((e) => [e.name, e.desc]))
-  const firstEntries = first?.title === '分类解释'
-    ? Object.keys(data.categoryColors || {}).map((name) => ({ name, desc: firstMdByName.get(name) || '待补充' }))
+  const firstEntries = first?.title === '划定标准'
+    ? [...Object.keys(data.categoryColors || {}).map((name) => ({ name, desc: firstMdByName.get(name) || '待补充' })),
+       ...Object.keys(data.tagMap || {}).map((name) => ({ name, desc: firstMdByName.get(name) || '待补充' }))]
     : first?.entries || []
   const cards = firstEntries
     .map((e) => `<article class="rounded-lg border border-white/10 bg-white/[0.03] p-5"><h2 class="text-base font-bold">${esc(e.name)}</h2><p class="mt-2 text-xs leading-6 text-gray-400">${esc(e.desc)}</p></article>`)
     .join('')
   const tabs = sections
     .map((s, i) => {
-      const count = s.title === '分类解释' ? categoryCount : s.title === '标签解释' ? tagCount : s.entries.length
+      const count = s.title === '划定标准' ? categoryCount + tagCount : s.entries.length
       return `<span class="rounded-full px-3 py-1 text-xs ${i === 0 ? 'bg-white/15 text-white' : 'bg-white/5 text-gray-500'}">${esc(s.title)} · ${count}</span>`
     })
     .join('')
   return `<div class="max-w-4xl mx-auto px-6 py-10 text-white">
     <a href="${base}home" class="text-sm text-sky-300 hover:text-sky-200">← 返回首页</a>
     <h1 class="mt-4 text-2xl font-black tracking-wider">术语表</h1>
-    <p class="mt-3 text-sm leading-7 text-gray-400">冰山图所用的分类解释、标签解释、基本概念与人物索引。解释由社区手工整理，随数据同步更新。</p>
+    <p class="mt-3 text-sm leading-7 text-gray-400">冰山图所用的划定标准、各类概念与人物作品索引。解释由社区手工整理，随数据同步更新。</p>
     <div class="mt-6 flex flex-wrap gap-2">${tabs}</div>
     <div class="mt-8 grid gap-4 sm:grid-cols-2">${cards || '<p class="text-sm text-gray-500">这个板块还没有内容，待后续补充。</p>'}</div>
     ${nav()}

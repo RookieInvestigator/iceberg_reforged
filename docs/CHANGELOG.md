@@ -1,6 +1,82 @@
 # 更新日志
 
 
+## v4.5.1 — 2026-08-18 — 实验功能名称修正（三语）
+
+### 修正
+
+设置面板「实验功能」区六个开关的名称按实际行为重写（zh/en/ja 同步）：
+
+- **浮动模式 → 错落排版（词条随机偏移）** — 原名完全误导：该功能无任何浮动动画，实际是词条按 id 哈希得到固定随机偏移（±3px）打破整齐排列。`ItemInteractivity.vue` 的误导注释一并修正。
+- **沉浸式浮动按钮（悬停时显示）→ 沉浸模式（悬停时显示浮动按钮）** — 原名是名词短语，读起来像某个按钮的名字而非开关行为。
+- **无层级（词条随机排序）→ 无层级模式（词条随机排列）** — 强调这是切换整个版式，不只是排序。
+- **Random Entry → Random Entry Button / ランダム → ランダムボタン** — 补全「按钮」语义（开关控制的是按钮显隐）。
+- **Highlight Recent → Highlight Recent Updates / Dim Read → Dim Read Entries** — 补全成完整短语；日文同步（既読を淡く表示 等）。
+
+仅改 i18n 文案与注释，无逻辑改动；六个 key 均只被 `SettingsPanel.vue` 引用。
+
+
+## 2026-08-18 — 修复沉浸模式 FAB 未生效
+
+### 修复
+
+- **沉浸式浮动按钮（悬停时显示）从未生效** — 根因：`IndexView.vue` 挂载 `content-enter` 后不移除，入场动画 `.content-enter .fab-btn { animation: fade-in ... both }` 的 forwards 填充让 `to { opacity: 1 }` 永久生效；CSS 动画优先于普通声明，把 `.immersive-group .fab-btn { opacity: 0 }` 永久压制。修复：fab-btn 入场动画 fill 改 `both` → `backwards`（入场后交还控制权给层叠规则），视觉行为不变。`.iceberg-tier` / `.sidebar-toggle` 的 `both` 不受影响（结尾态即常规态）。
+
+### 排查记录
+
+- **弹窗模式下 `tooltip-active` 无残留路径** — hover（`useTooltip.ts onMouseOver`）、随机词条（`showRandom`）、hash 导航三处入口均有 `dm === 'modal'` 守卫；`index.css` 中 `.tooltip-active` 未套 `:not([data-detail="modal"])` 属冗余但安全。
+
+
+## 2026-08-18 — 高亮去毛玻璃 + 词条阴影调轻
+
+### 改进
+
+- **`recently-updated` 高亮移除毛玻璃** — 去掉 `backdrop-filter: blur(4px)`（移动端性能开销大），保留 `--white-80` 半透明白底 + 黑字。
+- **词条 text-shadow 调轻** — `--shadow-color` 令牌 `rgba(0,0,0,.85)` → `rgba(0,0,0,.6)`（只降浓度，偏移/模糊半径不变），四向描边保留保证可读性。
+
+
+## 2026-08-18 — 最近更新高亮微调 + 冰山图页入口调整
+
+### 改进
+
+- **`recently-updated` 高亮微调** — 透明度降一档（`--white-85` → `--white-80`），新增 `backdrop-filter: blur(4px)` 毛玻璃效果（含 `-webkit-` 前缀），底下内容轻微模糊透出。
+- **冰山图页头部入口改为主页** — `Header.vue` 的「古籍」链接替换为「主页」（`/home`），新增 `navHome` i18n key（zh/en/ja 三语）；Home 页的古籍卡片入口保留不动。
+
+
+## 2026-08-18 — 最近更新高亮改半透明
+
+### 改进
+
+- **`recently-updated` 高亮改为半透明白** — `--white-85` 令牌（85% 白）+ 黑字（原为实底 `--color-new` 黄 + 黑字），接近实底但能微微透出 hover 分类色底。
+- 顺带修复：实底背景此前会完全遮住 hover 的分类色底滑入效果（`::before` z-index:-1），半透明后 hover 反馈可正常透出。
+
+
+## 2026-08-18 — Home 页移动端重做
+
+### 改进
+
+- **Home 页移动端布局重做** — `/home` 在 ≤ 859px 视口下切换到移动版布局：跳过粒子冰山挂载（`v-if="!isMobile"`，竖屏构图不适用 + 省性能），液态渐变背景独自承担氛围。
+- **卡片区改纵排** — 主卡（冰山图）全宽横排（标题+描述居左、箭头居右），古籍 / 3D 副卡双列并排，触控区加大（主卡 56px / 副卡 52px），新增 `:active` 缩放触摸反馈。
+- **内容整体居中** — Hero 内容（历史上的今天 / 标题 / 统计 / 卡片 / 文字入口）在竖屏下垂直水平居中，限制 400px 列宽；顶部控件改为固定右上定位。
+- 移动端检测用 `matchMedia('(max-width: 859px)')` 响应式监听（含横竖屏切换），`onMounted` 初始化（SSR 安全）、`onUnmounted` 清理。
+
+
+## 2026-08-18 — 术语表板块更名
+
+### 改进
+
+- **术语表三板块更名** — `/handbook` 板块重命名：收录标准 → 划定标准、基本概念 → 各类概念、人物 → 人物作品。`各类概念` 定位为概念性知识收纳板块（元概念 / 行话 / 母题 / 意象），`人物作品` 合并人物与标志性创作体系，避免与「艺术创作物」标签单开重叠。
+- 同步更新 `handbook.md`（三个 `##` 标题 + 首段 intro）、`HandbookView.vue`（TABS `heading`）、`prerender.ts`（两处 `title ===` 比对 + intro 文案）、三语言 i18n（`handbookTabCriteria/Concepts/People` label + `handbookIntro`）。`buildEntries`/`parseSections` 逻辑不变，`criteria` 仍自动派生。
+
+
+## 2026-08-18 — 术语表板块合并
+
+### 改进
+
+- **「分类解释」与「标签解释」合并为「收录标准」** — 术语表（`/handbook`）原有四个板块精简为三个：收录标准 / 基本概念 / 人物。分类条目（带颜色点）与标签条目（带 emoji）合并到同一板块，按拼音首字母 A-Z 混排，视觉标记保留以区分两类来源。
+- 同步更新 `HandbookView.vue`（TABS 注册 + `buildEntries` 新增 `criteria` 分支合并两类数据源）、`prerender.ts`（预渲染首板块条目数改为分类+标签总数）、三语言 i18n 字典（删 `handbookTabCategories`/`handbookTabTags`，加 `handbookTabCriteria`，intro 文案同步）、`handbook.md`（两个 `##` 合并为一个 `## 收录标准`）。
+
+
 ## v4.5.0 — 2026-08-16 — OG 社交封面重做
 
 ### 改进

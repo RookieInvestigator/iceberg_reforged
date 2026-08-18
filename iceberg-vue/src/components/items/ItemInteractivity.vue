@@ -113,7 +113,7 @@ function onModalNav(item: { id: string }) {
 
 function findItem(el: HTMLElement) { return itemMap.get(el.dataset.id || ''); }
 
-// Float mode（词条随机浮动，仅视觉）
+// 错落排版（原 floatMode）：词条按 id 哈希得到固定随机偏移，打破整齐排列（仅视觉，无动画）
 watch(fm, (mode) => {
   const c = document.getElementById('items-container');
   if (!c) return;

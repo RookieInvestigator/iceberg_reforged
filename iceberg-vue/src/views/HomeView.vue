@@ -26,6 +26,11 @@ const showUser = ref(false)
 const u = useStore(userAtom)
 const supReady = isSupabaseReady()
 
+// 移动端检测：≤ 859px 跳过粒子冰山（竖屏构图不适用 + 省性能），液态背景独自承担氛围
+const isMobile = ref(false)
+let mobileMq: MediaQueryList | null = null
+function onMobileChange(e: MediaQueryListEvent) { isMobile.value = e.matches }
+
 const LANGS = [
   { code: 'zh', label: '中文' },
   { code: 'en', label: 'EN' },
@@ -36,6 +41,12 @@ function setLang(code: string) { lang.set(code as 'zh' | 'en' | 'ja') }
 const loaded = ref(false)
 onMounted(() => {
   requestAnimationFrame(() => { loaded.value = true })
+  // 移动端检测（SSR 阶段 window 不存在，安全跳过；hydrate 后由 onMounted 修正）
+  if (typeof window.matchMedia === 'function') {
+    mobileMq = window.matchMedia('(max-width: 859px)')
+    isMobile.value = mobileMq.matches
+    mobileMq.addEventListener('change', onMobileChange)
+  }
   // P1-10: 空闲时加载 authStore（恢复会话/监听登录态），SDK 不进首屏关键路径
   if (supReady) {
     const preload = () => import('../lib/authStore')
@@ -100,7 +111,10 @@ onMounted(initCursorRing)
 // keep-alive 切走后停止光标圆环 RAF，切回再恢复
 onActivated(() => { if (!ringActive) initCursorRing() })
 onDeactivated(stopCursorRing)
-onUnmounted(stopCursorRing)
+onUnmounted(() => {
+  stopCursorRing()
+  if (mobileMq) mobileMq.removeEventListener('change', onMobileChange)
+})
 </script>
 
 <template>
@@ -134,13 +148,13 @@ onUnmounted(stopCursorRing)
     <!-- Hero：全屏粒子冰山（包围盒=整个屏幕，放大出屏，屏幕边缘切割）+ 内容层 -->
     <section class="ds-hero">
       <div class="ds-berg-wrap">
-        <IcebergParticles :label="t('homeIcebergCta')" />
+        <IcebergParticles v-if="!isMobile" :label="t('homeIcebergCta')" />
       </div>
       <div class="ds-hero-inner">
         <!-- 左栏 -->
         <div class="ds-hero-left">
           <!-- 历史上的今天：一行文字（今天的事件 / 无事件仅日期 + 名称） -->
-          <button class="group inline-flex items-baseline gap-2 border-none bg-transparent cursor-pointer p-0 text-sm text-white-52 text-left transition-colors duration-200 hover:text-accent-soft" @click="router.push('/on-this-day')">
+          <button class="ds-today group inline-flex items-baseline gap-2 border-none bg-transparent cursor-pointer p-0 text-sm text-white-52 text-left transition-colors duration-200 hover:text-accent-soft" @click="router.push('/on-this-day')">
             <span class="font-mono text-white-85 tracking-[0.04em]">{{ String(today.getMonth() + 1).padStart(2, '0') }}.{{ String(today.getDate()).padStart(2, '0') }}</span>
             <span class="text-white-22" aria-hidden="true">｜</span>
             <span v-if="todayEvent" class="max-w-[36ch] overflow-hidden text-ellipsis whitespace-nowrap">{{ todayEvent.year }} · {{ todayEvent.title }}</span>
@@ -338,9 +352,83 @@ onUnmounted(stopCursorRing)
 }
 
 
-/* ═══ 移动端 ═══ */
-@media (max-width: 639px) {
+/* ═══ 移动端（≤ 859px）：去粒子，液态背景独自承担氛围 ═══ */
+@media (max-width: 859px) {
+  /* 粒子冰山与右栏占位在竖屏下不适用，直接隐藏（v-if 已跳过挂载，此处双保险） */
+  .ds-berg-wrap,
   .ds-berg-space { display: none; }
+
+  /* 光标圆环仅桌面 */
+  .ds-ring { display: none; }
+
+  /* 顶部控件：固定右上，简化定位（桌面版对齐内容左缘的 calc 在窄屏会溢出） */
+  .ds-top-left {
+    position: fixed;
+    top: max(0.75rem, env(safe-area-inset-top));
+    right: 1rem;
+    left: auto;
+    z-index: 10;
+  }
+
+  /* Hero：全屏居中，内容不会被裁切（min-height 而非 height） */
+  .ds-hero { min-height: 100dvh; }
+  .ds-hero-inner {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: 4.5rem 1.25rem max(2.5rem, env(safe-area-inset-bottom));
+    gap: 1.5rem;
+  }
+  .ds-hero-left {
+    width: 100%;
+    max-width: 400px;
+    align-items: center;
+    text-align: center;
+    gap: 1.25rem;
+  }
+
+  /* 历史上的今天：居中，长标题不溢出 */
+  .ds-today { justify-content: center; max-width: 100%; }
+
+  /* 标题居中 */
+  .ds-hero-left > h1 { text-align: center; }
+
+  /* 卡片区：主卡全宽横排 + 副卡双列，触摸友好 */
+  .ds-cards {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 0.6rem;
+  }
+  .ds-card--main {
+    grid-row: 1;
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 56px;
+    padding: 0.85rem 1rem;
+  }
+  .ds-card--main .ds-cta-title { font-size: 1.1rem; }
+  .ds-card--main .ds-cta-desc { font-size: var(--font-xs); }
+  .ds-card--main .ds-cta-arrow { align-self: center; }
+
+  /* 副卡：竖向堆叠，加大触控区 */
+  .ds-cta:not(.ds-card--main) {
+    min-height: 52px;
+    padding: 0.75rem 0.85rem;
+  }
+  /* 触摸反馈：移动端没有 hover，用 active 缩放代替 */
+  .ds-cta:active {
+    transform: scale(0.97);
+    background: var(--white-12);
+  }
+
+  /* 文字入口：居中排列 */
+  .ds-hero-left > nav {
+    justify-content: center;
+    gap: 0.85rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

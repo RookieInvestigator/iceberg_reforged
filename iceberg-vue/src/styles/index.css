@@ -33,14 +33,15 @@
     padding: 0.125rem 0.375rem; font-weight: 700;
     line-height: 1.5; /* 行距 1.5 倍（用户指定） */
     contain: layout style;
-    text-shadow: 1px 1px 1px var(--shadow-color, rgba(0,0,0,.85)), 1px -1px 1px var(--shadow-color, rgba(0,0,0,.85)), -1px -1px 1px var(--shadow-color, rgba(0,0,0,.85)), -1px 1px 1px var(--shadow-color, rgba(0,0,0,.85)), 4px 3px 4px var(--shadow-color, rgba(0,0,0,.7));
+    text-shadow: 1px 1px 1px var(--shadow-color, rgba(0,0,0,.6)), 1px -1px 1px var(--shadow-color, rgba(0,0,0,.6)), -1px -1px 1px var(--shadow-color, rgba(0,0,0,.6)), -1px 1px 1px var(--shadow-color, rgba(0,0,0,.6)), 4px 3px 4px var(--shadow-color, rgba(0,0,0,.6));
     cursor: pointer;
   }
   .iceberg-item.dimmed { opacity: 0.15; pointer-events: none; transition: opacity 0.2s ease; }
   /* P1-6/7: 键盘焦点环（仅 :focus-visible，鼠标点击不出现） */
   .iceberg-item:focus-visible { outline: 2px solid var(--white-90); outline-offset: 2px; border-radius: 4px; z-index: 10; }
   /* CJK 字形在行盒中偏下（字形顶部空隙 > 底部），用不对称 padding 补偿上下空隙 */
-  .iceberg-item.recently-updated { background: var(--color-new); border-radius: 4px; color: #1a1a1a; padding: 1px 0.4rem 6px; }
+  /* 半透明白底（--white-80）+ 黑字：能微微透出 hover 分类色底（::before z-index:-1）；不用 backdrop-filter（移动端性能开销大） */
+  .iceberg-item.recently-updated { background: var(--white-80); border-radius: 4px; color: #1a1a1a; padding: 1px 0.4rem 6px; }
   .iceberg-item.read { opacity: 0.35; transition: opacity 0.3s ease; }
   .iceberg-item::before {
     content: ""; position: absolute; inset: 0;
@@ -132,7 +133,9 @@
 
   /* ===== Content enter animations ===== */
   .content-enter .iceberg-tier { animation: fade-in-up 0.5s var(--ease-out) both; animation-delay: calc(0.3s + var(--tier-stagger, 0s) * 0.08s); }
-  .content-enter .fab-btn { animation: fade-in 0.4s ease-out 0.55s both; }
+  /* fill 用 backwards 而非 both：content-enter 挂载后不移除，both 会让 to{opacity:1} 永久生效、
+     压掉沉浸模式 FAB 的 .immersive-group .fab-btn { opacity: 0 }（CSS 动画优先于普通声明） */
+  .content-enter .fab-btn { animation: fade-in 0.4s ease-out 0.55s backwards; }
   .content-enter .sidebar-toggle { animation: fade-in 0.3s ease-out 0.3s both; }
   @keyframes fade-in-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }

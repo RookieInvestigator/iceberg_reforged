@@ -48,7 +48,7 @@ onMounted(() => {
         <button v-if="openOnThisDay" @click="openOnThisDay()" class="text-white/60 hover:text-white/90 transition-colors py-1">{{ t('onThisDay') }}</button>
         <router-link v-else to="/on-this-day" class="text-white/60 hover:text-white/90 transition-colors py-1">{{ t('onThisDay') }}</router-link>
         <span class="text-white/10">|</span>
-        <router-link to="/ancient-book" class="text-white/60 hover:text-white/90 transition-colors py-1">{{ t('ancientBook') }}</router-link>
+        <router-link to="/home" class="text-white/60 hover:text-white/90 transition-colors py-1">{{ t('navHome') }}</router-link>
         <span class="text-white/10">|</span>
         <button v-if="supReady" @click="showUser = true" class="text-white/60 hover:text-white/90 transition-colors py-1">
           {{ u ? t('user') + ': ' + u.displayName : t('login') }}
