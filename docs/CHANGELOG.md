@@ -1,6 +1,32 @@
 # 更新日志
 
 
+## v4.5.3 — 2026-08-19 — 集体创作定位 · 主页彩蛋 · 粒子底图文件夹化
+
+### 新增
+
+- **根目录 README** — 面向站点使用者：项目定位（集体创作、非权威榜单）、功能概览、使用方式、社区公约、本地预览；正式书面语气，中文全名「中文兔子洞冰山图 / Chinese Oddities Iceberg Reforged」。
+- **主页低调彩蛋** — 次级导航下方新增极淡「制作中」行：欧美兔子洞冰山图、日韩兔子洞冰山图（默认 opacity .5 / 悬停微亮），中英日三语词条。
+
+### 改进
+
+- **handbook 描述排版** — `white-space: pre-line` 保留 md 换行；新增 `==...==` 显式强调语法（标记不显示、内容淡橙高亮，支持跨行/嵌套），引号便捷写法保留；prerender 静态壳同步换行。
+- **handbook 对齐** — 分类色点与 tag emoji 统一 `w-6` 引导槽，名字列垂直/水平对齐。
+- **主页亮度对齐 handbook** — 液态背景改用低饱和暗色板 + 遮罩加深（顶 45% / 中 20% / 底 70%）。
+- **背景调参统一** — 新增 `src/lib/bgTheme.ts`，5 个静态页共用 `BG_COLORS` + `BG_TUNING`（brightness / saturation / darkShift 三旋钮）；`LiquidGradient` 新增 `brightness` prop（CSS filter，回退图也生效）。主冰山图页保持滚动驱动 darkShift 独立。
+- **主页粒子** — 鱼形底图接入轮换（30s/张）；变换过程提速（SPRING_DIV 30→22、淡入/淡出速率约 2.4×）；粒子源改为从 `public/assets/particles/` 文件夹读取 `manifest.json`（新图丢文件夹 + 加一行即可，含 `offsetY`/`offsetYPx` 位置字段），不再写死在组件里。
+- **数据管线离线模式** — `build_data_api.py` 新增 `--input <file>`：API 不可达时可用本地保存的原始 JSON 走完整管线（映射 / F30 ID 持久化 / 校验门 / 原子写）。
+
+### 数据
+
+- **API 同步** — 词条 1411 → 1420（+9），8 层 / 15 分类 / 68 标签，`id_history.json` 锚点同步。
+
+### 其他
+
+- `related.csv` 修正误加的 UTF-8 BOM（会导致 Python 孤儿校验静默失效）；新增 12 条关联关系保留。
+- `public/assets/_unused/` 移入 .gitignore（沙箱环境无法删除的待清理死文件）。
+
+
 ## v4.5.2 — 2026-08-19 — 弹窗遮罩加深
 
 ### 改进

@@ -31,6 +31,9 @@ docs/plans/
 /*.html
 /*.webp
 
+# ── 已废弃/待清理素材（沙箱环境无法删除，仅本机暂存） ──
+iceberg-vue/public/assets/_unused/
+
 # ── 历史项目（已压缩归档至 data/archive/legacy-2026-08/） ──
 iceberg-astro/
 iceberg-react/

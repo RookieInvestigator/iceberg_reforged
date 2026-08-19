@@ -10,6 +10,7 @@ import csvRaw from '../data/on-this-day.csv?raw'
 import { parseCSV } from '../lib/csv'
 import { normalizeData } from '../lib/data'
 import LiquidGradient from '../components/layout/LiquidGradient.vue'
+import { BG_COLORS, BG_TUNING } from '../lib/bgTheme'
 import IcebergParticles from '../components/home/IcebergParticles.vue'
 import AboutModal from '../components/modals/AboutModal.vue'
 import LinksModal from '../components/modals/LinksModal.vue'
@@ -123,7 +124,8 @@ onUnmounted(() => {
 
     <!-- 全页液态背景（头尾完全透明融入） -->
     <div class="ds-bg" aria-hidden="true">
-      <LiquidGradient colorA="#000000" :seed="bgSeed" :turb-iter="7" />
+      <!-- 流体背景：配色与亮暗/饱和统一在 src/lib/bgTheme.ts 调，勿在此改色值 -->
+      <LiquidGradient v-bind="BG_COLORS" :seed="bgSeed" :turb-iter="7" :brightness="BG_TUNING.brightness" :saturation="BG_TUNING.saturation" :dark-shift="BG_TUNING.darkShift" />
       <span class="ds-bg-vignette"></span>
     </div>
 
@@ -192,6 +194,14 @@ onUnmounted(() => {
             <button type="button" class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="showAbout = true">{{ t('homeAbout') }}</button>
             <button type="button" class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="showLinks = true">{{ t('homeLinks') }}</button>
           </nav>
+
+          <!-- 彩蛋：制作中的冰山图（低调，不醒目；hover 才轻微提亮） -->
+          <div class="ds-wip">
+            <span class="ds-wip-label">{{ t('homeWip') }}</span>
+            <span class="ds-wip-item" :title="t('homeWipEuus')">{{ t('homeWipEuus') }}</span>
+            <span class="ds-wip-sep" aria-hidden="true">/</span>
+            <span class="ds-wip-item" :title="t('homeWipJpkr')">{{ t('homeWipJpkr') }}</span>
+          </div>
         </div>
 
         <!-- 右栏占位（保持左 52% / 右 48% 布局与底部对齐；视觉由全屏冰山承担） -->
@@ -277,8 +287,8 @@ onUnmounted(() => {
 .ds-bg-vignette {
   position: absolute; inset: 0; pointer-events: none;
   background:
-    radial-gradient(ellipse 120% 80% at 50% 40%, transparent 58%, rgba(0, 0, 10, 0.32) 100%),
-    linear-gradient(180deg, rgba(0, 0, 10, 0.22) 0%, transparent 20%, transparent 80%, rgba(0, 0, 10, 0.34) 100%);
+    radial-gradient(ellipse 120% 80% at 50% 40%, transparent 55%, rgba(0, 0, 10, 0.38) 100%),
+    linear-gradient(180deg, rgba(0, 0, 10, 0.45) 0%, rgba(0, 0, 10, 0.20) 50%, rgba(0, 0, 10, 0.70) 100%);
 }
 
 /* ═══ Hero ═══ */
@@ -429,7 +439,36 @@ onUnmounted(() => {
     justify-content: center;
     gap: 0.85rem;
   }
+
+  /* 彩蛋行：居中，与 nav 一致 */
+  .ds-wip { justify-content: center; }
 }
+
+/* ═══ 彩蛋：制作中的冰山图（低调，不醒目） ═══ */
+.ds-wip {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  font-size: var(--font-tiny);
+  color: var(--white-22);
+  opacity: 0.5;
+  user-select: none;
+  transition: opacity 0.3s ease, color 0.3s ease;
+}
+.ds-wip:hover { opacity: 1; color: var(--white-45); }
+.ds-wip-label {
+  font-size: 0.72em;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 0.06rem 0.5rem;
+}
+.ds-wip-item {
+  position: relative;
+  cursor: default;
+  transition: text-shadow 0.3s ease;
+}
+.ds-wip:hover .ds-wip-item { text-shadow: 0 0 8px rgba(255, 179, 111, 0.35); }
+.ds-wip-sep { opacity: 0.5; }
 
 @media (prefers-reduced-motion: reduce) {
   .ds-home { transition: none; opacity: 1; }

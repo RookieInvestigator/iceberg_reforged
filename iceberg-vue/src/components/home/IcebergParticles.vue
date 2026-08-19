@@ -12,7 +12,7 @@ let resizeHandler: (() => void) | null = null
 let rotateTimer = 0
 
 // ── 物理参数 ──
-const SPRING_DIV = 30       // 速度 = -位移 / 30：单调指数收敛
+const SPRING_DIV = 22       // 速度 = -位移 / 22：单调指数收敛（越小变换越快）
 const FORCE_RATIO = 350     // 斥力：1/d × FORCE_RATIO（大幅增强）
 const D_SPEED_MAX = 4       // 速度上限
 
@@ -21,18 +21,43 @@ const FIT = 1.06            // 冰山放大倍数（出屏）
 const CENTER_X = 0.70       // 中心偏右
 const CENTER_Y = 0.68       // 中心偏下
 
-// ── 轮换：两张采样图，每 30s 切换（参考 needed/淡出机制） ──
-const ROTATE_MS = 30_000
-const sourceUrls = ['/assets/iceberg-berg.svg', '/assets/rabbit.svg']
-const sources: HTMLImageElement[] = []
+// ── 轮换：从 /assets/particles/ 文件夹读取 manifest.json，按其中列表加载采样图 ──
+// 新增底图：把 svg 丢进该文件夹，并在 manifest.json 加一行即可，无需改组件代码。
+// offsetY：相对屏幕高度的比例偏移（负=上移，正=下移），如鱼 -0.3333 即上移 1/3 屏。
+// offsetYPx：在比例偏移之后再叠加的像素偏移（正=下移），如鱼 +100 即在此基础上再下移约 100px。
+const ROTATE_MS = 30_000   // 每张图展示 30s
+interface ParticleSource { img: HTMLImageElement; offsetY: number; offsetYPx: number }
+const sources: ParticleSource[] = []
 let readyCount = 0
 let imgIndex = 0
-sourceUrls.forEach((p, i) => {
-  const img = new Image()
-  img.src = url(p)
-  img.onload = () => { readyCount++; if (readyCount === 1) build() }
-  sources[i] = img
-})
+
+// manifest 缺失时的兜底清单（与文件夹内默认三张一致）
+const FALLBACK_SOURCES = [
+  { file: '/assets/particles/iceberg-berg.svg', offsetY: 0 },
+  { file: '/assets/particles/rabbit.svg', offsetY: 0 },
+  { file: '/assets/particles/iceberg-fish.svg', offsetY: 0 },
+]
+
+function loadSources() {
+  let list: { file: string; offsetY?: number; offsetYPx?: number }[]
+  fetch(url('/assets/particles/manifest.json'))
+    .then((r) => (r.ok ? r.json() : Promise.reject()))
+    .then((j) => {
+      if (!Array.isArray(j) || !j.length) throw new Error('empty manifest')
+      list = j
+    })
+    .catch(() => { list = FALLBACK_SOURCES })
+    .finally(() => {
+      list!.forEach((entry, i) => {
+        const img = new Image()
+        const src = entry.file.startsWith('/') ? entry.file : '/assets/particles/' + entry.file
+        img.src = url(src)
+        img.onload = () => { readyCount++; if (readyCount === 1) build() }
+        sources[i] = { img, offsetY: entry.offsetY ?? 0, offsetYPx: entry.offsetYPx ?? 0 }
+      })
+    })
+}
+loadSources()
 
 interface P {
   x: number; y: number
@@ -96,8 +121,9 @@ function build() {
   canvas.style.width = w + 'px'; canvas.style.height = h + 'px'
   const ctx = canvas.getContext('2d')
   if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-  const img = sources[imgIndex]
-  if (!img || !img.naturalWidth) return
+  const cur = sources[imgIndex]
+  if (!cur || !cur.img.naturalWidth) return
+  const img = cur.img
   const cells = sampleGrid(img)
   if (!cells.length) return
   // 内容包围盒归一化 → 两张图内容精确充满同一尺寸（轮换时大小匹配）
@@ -109,7 +135,7 @@ function build() {
   const imgAR = img.naturalWidth / img.naturalHeight
   const bw = Math.max(w, h) * FIT
   const bh = bw / imgAR
-  const cx = w * CENTER_X, cy = h * CENTER_Y
+  const cx = w * CENTER_X, cy = h * CENTER_Y + cur.offsetY * h + cur.offsetYPx
   const newPs: P[] = cells.map(({ x, y }) => {
     const angle = Math.random() * Math.PI * 2
     const dist = 0.4 + Math.random() * 0.9
@@ -161,14 +187,14 @@ function frame() {
   for (let i = ps.length - 1; i >= 0; i--) {
     const p = ps[i]
     if (!p.needed) {
-      // 淡出并移除（参考 disappear）
-      p.alphaNow -= 0.01
+      // 淡出并移除（参考 disappear）—— 提升速率让变换过程更快
+      p.alphaNow -= 0.024
       if (p.alphaNow <= 0) { ps.splice(i, 1); continue }
       ctx.fillStyle = 'rgba(228, 240, 255, ' + Math.max(0, p.alphaNow) + ')'
       ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r)
       continue
     }
-    if (p.alphaNow < p.a) p.alphaNow = Math.min(p.a, p.alphaNow + 0.005)
+    if (p.alphaNow < p.a) p.alphaNow = Math.min(p.a, p.alphaNow + 0.012)
     let vx = -(p.x - p.tx) / SPRING_DIV
     let vy = -(p.y - p.ty) / SPRING_DIV
     if (mouse.inside) {
@@ -196,9 +222,9 @@ onMounted(() => {
   window.addEventListener('resize', build)
   window.addEventListener('pointermove', onPointerMove, { passive: true })
   window.addEventListener('pointerleave', onPointerLeave)
-  // 30s 轮换采样图（A ↔ B 循环）
+  // 30s 轮换采样图（按 manifest 顺序循环；变换快慢由 SPRING_DIV / 淡入淡出速率控制）
   rotateTimer = window.setInterval(() => {
-    imgIndex = 1 - imgIndex
+    imgIndex = (imgIndex + 1) % sources.length
     build()
   }, ROTATE_MS)
   raf = requestAnimationFrame(frame)
@@ -216,7 +242,7 @@ onActivated(() => {
   if (!paused) return
   paused = false
   rotateTimer = window.setInterval(() => {
-    imgIndex = 1 - imgIndex
+    imgIndex = (imgIndex + 1) % sources.length
     build()
   }, ROTATE_MS)
   raf = requestAnimationFrame(frame)

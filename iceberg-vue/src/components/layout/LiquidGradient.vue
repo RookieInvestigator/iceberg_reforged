@@ -5,7 +5,7 @@
  * 引擎为官方 ShaderCanvas 移植（src/lib/shaderCanvas.ts）。
  * WebGL2 不可用时回退为静态渐变。
  */
-import { onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue'
 import { createShaderCanvas, prepareFragmentShader, type ShaderCanvas } from '../../lib/shaderCanvas'
 import { fragmentShader, fragmentHeader, buildUniforms } from '../../lib/liquidGradient'
 
@@ -33,6 +33,8 @@ const props = withDefaults(
     saturation?: number
     /** [项目扩展] 越大则色板采样越向深色端偏移（黑色占比越大），默认 0 = 官方行为 */
     darkShift?: number
+    /** [项目扩展] CSS filter: brightness()，1 = 不变，<1 整体压暗（含 WebGL 静态回退图），>1 提亮 */
+    brightness?: number
   }>(),
   {
     colorA: '#001220',
@@ -56,11 +58,14 @@ const props = withDefaults(
     contrast: 1,
     saturation: 0.9,
     darkShift: 0,
+    brightness: 1,
   },
 )
 
 const containerRef = ref<HTMLElement>()
 const failed = ref(false)
+/** 整体亮度旋钮：CSS filter 包住渲染结果（WebGL canvas 与静态回退图都受控），默认 1 即不变 */
+const liquidFilter = computed(() => ({ filter: `brightness(${props.brightness ?? 1})` }))
 let engine: ShaderCanvas | null = null
 let pageActive = true
 
@@ -115,7 +120,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="containerRef" class="liquid-gradient" aria-hidden="true">
+  <div ref="containerRef" class="liquid-gradient" :style="liquidFilter" aria-hidden="true">
     <div v-if="failed" class="liquid-gradient__fallback"></div>
   </div>
 </template>

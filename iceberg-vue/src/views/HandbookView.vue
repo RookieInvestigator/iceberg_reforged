@@ -7,6 +7,7 @@ import rawMd from '../data/handbook.md?raw'
 import { getFirstInitial } from '../lib/pinyin'
 import { useI18n } from '../lib/useI18n'
 import LiquidGradient from '../components/layout/LiquidGradient.vue'
+import { BG_COLORS, BG_TUNING } from '../lib/bgTheme'
 
 const { t } = useI18n()
 const data = normalizeData(rawData)
@@ -49,6 +50,50 @@ function parseSections(md: string): Map<string, Record<string, string>> {
     sections.set(title, entries)
   }
   return sections
+}
+
+// 描述里用 ==...== 标记强调：双等号包裹的内容会被高亮，标记本身不显示（可嵌套）。
+// 另外「」『』“”‘’《》引号包裹的内容也会自动微微高亮，作为便捷写法。
+const QUOTE_OPEN: Record<string, string> = {
+  '「': '」', '『': '』', '“': '”', '‘': '’', '《': '》',
+}
+const QUOTE_CLOSE = new Set(Object.values(QUOTE_OPEN))
+
+interface DescSeg { text: string; em: boolean }
+
+function segmentDesc(text: string): DescSeg[] {
+  const segs: DescSeg[] = []
+  const stack: string[] = [] // 当前生效的强调定界符（'==' 或引号闭字符）
+  let buf = ''
+  let em = false
+  const flush = () => {
+    if (buf) { segs.push({ text: buf, em }); buf = '' }
+  }
+  let i = 0
+  while (i < text.length) {
+    const two = text.slice(i, i + 2)
+    // ==...== 显式强调：标记不进入输出，仅切换高亮状态
+    if (two === '==') {
+      flush()
+      if (stack[stack.length - 1] === '==') stack.pop()
+      else stack.push('==')
+      em = stack.length > 0
+      i += 2
+      continue
+    }
+    const ch = text[i]
+    if (QUOTE_OPEN[ch]) {
+      flush(); stack.push(QUOTE_OPEN[ch]); em = true; buf += ch; i++
+    } else if (QUOTE_CLOSE.has(ch)) {
+      buf += ch; flush()
+      if (stack[stack.length - 1] === ch) stack.pop()
+      em = stack.length > 0; i++
+    } else {
+      buf += ch; i++
+    }
+  }
+  flush()
+  return segs
 }
 
 const sections = parseSections(rawMd)
@@ -149,7 +194,8 @@ function onTabKeydown(e: KeyboardEvent, index: number) {
   <div class="min-h-screen">
     <!-- 橙蓝黑流体背景：固定铺满视口，纯装饰不拦截交互 -->
     <div class="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
-      <LiquidGradient colorA="#000000" colorB="#012945" colorC="#045B8D" colorD="#0076A2" colorE="#B25512" :seed="bgSeed" :turb-iter="7" />
+      <!-- 流体背景：配色与亮暗/饱和统一在 src/lib/bgTheme.ts 调，勿在此改色值 -->
+      <LiquidGradient v-bind="BG_COLORS" :seed="bgSeed" :turb-iter="7" :brightness="BG_TUNING.brightness" :saturation="BG_TUNING.saturation" :dark-shift="BG_TUNING.darkShift" />
       <span class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-black/70"></span>
     </div>
 
@@ -212,11 +258,16 @@ function onTabKeydown(e: KeyboardEvent, index: number) {
             <!-- 词条百科式排版：只留标题与解释，不用卡片框住每个词条 -->
             <article v-for="e in entries" :key="e.name" class="mb-5 last:mb-0">
               <h3 class="mb-1.5 flex items-baseline gap-2 text-base font-bold leading-[1.4] text-white-85">
-                <span v-if="e.emoji" class="inline-flex w-6 shrink-0 items-center justify-center text-sm leading-none" aria-hidden="true">{{ e.emoji }}</span>
-                <span v-if="e.color" class="h-2 w-2 self-center rounded-full" :style="{ backgroundColor: e.color }" aria-hidden="true"></span>
+                <!-- 引导槽：emoji 与色点共用同一固定宽度（w-6），保证名字列在整张列表里对齐 -->
+                <span v-if="e.emoji" class="inline-flex w-6 shrink-0 items-center justify-center self-center text-base leading-none" aria-hidden="true">{{ e.emoji }}</span>
+                <span v-else-if="e.color" class="inline-flex w-6 shrink-0 items-center justify-center self-center" aria-hidden="true">
+                  <span class="h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: e.color }"></span>
+                </span>
                 <span>{{ e.name }}</span>
               </h3>
-              <p class="max-w-[640px] text-sm leading-[1.85] text-white-40">{{ e.desc }}</p>
+              <p class="hb-desc max-w-[640px] text-sm leading-[1.85] text-white-40">
+                <span v-for="(seg, si) in segmentDesc(e.desc)" :key="si" :class="seg.em ? 'hb-em' : ''">{{ seg.text }}</span>
+              </p>
             </article>
           </section>
         </template>
@@ -235,6 +286,19 @@ function onTabKeydown(e: KeyboardEvent, index: number) {
   </template>
 
 <style scoped>
+/* 词条描述：保留 md 里的换行（pre-line 折叠多余空格但保留 \n）；==...== 或引号包裹的内容微微高亮 */
+.hb-desc {
+  white-space: pre-line;
+}
+.hb-em {
+  color: var(--white-72);
+  background: rgba(245, 158, 11, 0.12);
+  border-radius: 4px;
+  padding: 0 0.18em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
 /* A-Z 快速跳转横向滚动条：小屏可见、可拖动，避免「看不到后面字母也不知道能滚」 */
 .hb-scroll-x {
   scrollbar-width: thin;

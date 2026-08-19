@@ -58,6 +58,14 @@ python scripts/build_data_api.py
 
 零外部依赖（仅 Python 标准库）。从 `https://icebergthreads.com/api/iceberg/fel4BTCqlMAGSa2gelRJ` 获取 JSON，输出 `iceberg.json`。
 
+**离线模式**（API 从本机网络不可达时）：把 API 返回的原始 JSON 存成本地文件（浏览器直接打开 API 链接另存，或到可联网的机器上抓），再以 `--input` 指定：
+
+```bash
+python scripts/build_data_api.py --input /path/to/api.json
+```
+
+与网络路径共用同一套映射 / F30 ID 持久化 / 校验门 / 原子写管线，数据一致性无差别。校验不过仍拒绝覆盖（旧数据保留）。
+
 **备用 HTML 方式**（从浏览器保存的 HTML 文件刮取）：
 
 ```bash

@@ -165,7 +165,7 @@ function handbookHtml(): string {
        ...Object.keys(data.tagMap || {}).map((name) => ({ name, desc: firstMdByName.get(name) || '待补充' }))]
     : first?.entries || []
   const cards = firstEntries
-    .map((e) => `<article class="rounded-lg border border-white/10 bg-white/[0.03] p-5"><h2 class="text-base font-bold">${esc(e.name)}</h2><p class="mt-2 text-xs leading-6 text-gray-400">${esc(e.desc)}</p></article>`)
+    .map((e) => `<article class="rounded-lg border border-white/10 bg-white/[0.03] p-5"><h2 class="text-base font-bold">${esc(e.name)}</h2><p class="mt-2 text-xs leading-6 text-gray-400" style="white-space:pre-line">${esc(e.desc)}</p></article>`)
     .join('')
   const tabs = sections
     .map((s, i) => {

@@ -14,6 +14,7 @@ build_data_api.py — 从 icebergthreads.com API 获取数据，编译为 iceber
     - 颜色/标签无需正则解析 style 属性
 """
 
+import argparse
 import hashlib
 import json
 import os
@@ -179,6 +180,19 @@ def fetch_api(url: str, retries: int = 3) -> dict:
                 time.sleep(wait)
     print(f"ERROR: Failed to fetch API after {retries} attempts: {last_err}")
     sys.exit(1)
+
+
+def load_api_data(input_path: str | None) -> dict:
+    """数据源入口：`--input 本地 JSON`（API 不可达时的离线通路）优先，否则走网络 API。
+
+    本地文件应为 API 返回的原始 JSON（结构：{layers: [{title, items: [...]}]}）。
+    与网络路径共用同一套 build_from_api / 校验 / 原子写管线，数据一致性无差别。
+    """
+    if input_path:
+        print(f"LOAD {input_path} (local, offline mode)")
+        with open(input_path, encoding='utf-8') as f:
+            return json.load(f)
+    return fetch_api(API_URL)
 
 
 # ==========================================
@@ -430,7 +444,11 @@ def compile_output(data: dict, output_dir: str):
 # 主入口
 # ==========================================
 def build():
-    api_data = fetch_api(API_URL)
+    parser = argparse.ArgumentParser(description='从 icebergthreads API 编译 iceberg.json')
+    parser.add_argument('--input', metavar='FILE', default=None,
+                        help='本地 API JSON 文件（离线模式，跳过网络拉取）')
+    args = parser.parse_args()
+    api_data = load_api_data(args.input)
 
     layers = api_data.get('layers', [])
     print(f"  API returned {len(layers)} layers")
