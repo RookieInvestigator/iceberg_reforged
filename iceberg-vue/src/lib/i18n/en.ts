@@ -89,6 +89,7 @@ export default {
 	bgDynamicWarn: 'Dynamic BG heavily impacts performance',
 	bgLiquid: 'Liquid',
 	bgLiquidHint: 'WebGL liquid gradient, darkens as you scroll',
+	bgHeavyHint: 'High rendering cost — this mode does not save performance; use "Black" on low-end devices',
 	settingsRefreshHint: 'Some settings require a page refresh',
 	dataExport: 'Export Data',
 	dataImport: 'Import Data',

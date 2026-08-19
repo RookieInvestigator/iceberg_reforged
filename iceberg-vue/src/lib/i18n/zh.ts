@@ -89,6 +89,7 @@ export default {
 	bgDynamicWarn: '动态背景大幅增加性能消耗',
 	bgLiquid: '液态',
 	bgLiquidHint: 'WebGL 液态渐变，滚动越深越黑',
+	bgHeavyHint: '此模式渲染开销较高，不能节省性能；低性能设备建议使用「纯黑」',
 	settingsRefreshHint: '部分设置需刷新页面后生效',
 	dataExport: '导出数据',
 	dataImport: '导入数据',

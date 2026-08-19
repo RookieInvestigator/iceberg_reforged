@@ -88,6 +88,13 @@
   color: var(--color-accent); padding: 0 4px;
 }
 
+/* 设置内警告：耗性能背景模式（冰山/液态）橙色提示 */
+.setting-warn {
+  margin-top: 2px;
+  font-weight: 500;
+  color: var(--color-accent);
+}
+
 /* 隱藏滾動條 */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

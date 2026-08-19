@@ -89,6 +89,7 @@ export default {
 	bgDynamicWarn: '動的背景はパフォーマンスに大きく影響します',
 	bgLiquid: '液体',
 	bgLiquidHint: 'WebGLの液体グラデーション、スクロールで暗くなる',
+	bgHeavyHint: 'このモードは描画負荷が高く、性能を節約できません。低スペック端末では「黒」を推奨します',
 	settingsRefreshHint: '一部の設定はページ更新後に反映されます',
 	dataExport: 'データ出力',
 	dataImport: 'データ入力',

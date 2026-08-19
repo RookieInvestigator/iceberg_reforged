@@ -31,8 +31,8 @@ const showImport = ref(false);
 const importText = ref('');
 onMounted(() => {
   isMobile.value = window.innerWidth < 1024;
-  // 背景「动态」选项已取消：legacy 用户（已存 dynamic）归一为冰山
-  if (dbg.value === 'dynamic') bgMode.set('static');
+  // 背景「动态」选项已取消：legacy 用户（已存 dynamic）归一为液态（标准模式现为液态）
+  if (dbg.value === 'dynamic') bgMode.set('liquid');
 });
 
 // 数据管理
@@ -96,6 +96,7 @@ function clearData() {
           <button @click="bgMode.set('liquid')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', dbg === 'liquid' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">{{ t('bgLiquid') }}</button>
         </div>
         <p v-if="dbg === 'liquid'" class="setting-hint">{{ t('bgLiquidHint') }}</p>
+        <p v-if="dbg === 'static' || dbg === 'liquid'" class="setting-hint setting-warn">{{ t('bgHeavyHint') }}</p>
       </div>
 
       <div>

@@ -37,7 +37,7 @@ export const filterMode = storedAtom('iceberg-filter-mode', 'hide');
 export const immersiveMode = storedAtom('iceberg-immersive-mode', true);
 export const showRandomBtn = storedAtom('iceberg-show-random-btn', true);
 export const sortMode = storedAtom('iceberg-sort-mode', 'default');
-export const bgMode = storedAtom('iceberg-bg-mode', 'static'); // 'static'(冰山) | 'black' | 'liquid'（legacy 'dynamic' 在设置面板打开时归一为 static）
+export const bgMode = storedAtom('iceberg-bg-mode', 'liquid'); // 'liquid'(标准/液态) | 'static'(冰山) | 'black'(纯黑)（legacy 'dynamic' 在设置面板打开时归一为 liquid）
 export const favorites = storedAtom('iceberg-favorites', [] as string[]);
 export const readItems = storedAtom('iceberg-read-items', [] as string[]);
 export const showReadMark = storedAtom('iceberg-show-read-mark', true);
@@ -51,6 +51,6 @@ export function applySimpleMode() {
 }
 export function applyStandardMode() {
   detailMode.set('modal'); filterMode.set('hide'); immersiveMode.set(true);
-  showRandomBtn.set(true); showReadMark.set(true); showNewMark.set(true); bgMode.set('static'); floatMode.set('static');
+  showRandomBtn.set(true); showReadMark.set(true); showNewMark.set(true); bgMode.set('liquid'); floatMode.set('static');
 }
 

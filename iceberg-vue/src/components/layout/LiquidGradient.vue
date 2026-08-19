@@ -35,7 +35,7 @@ const props = withDefaults(
     darkShift?: number
     /** [项目扩展] CSS filter: brightness()，1 = 不变，<1 整体压暗（含 WebGL 静态回退图），>1 提亮 */
     brightness?: number
-    /** [项目扩展] 渲染帧率上限，默认 30。慢速液态视觉上 24fps 与 30 几乎无差，但 GPU 开销降 20% */
+    /** [项目扩展] 渲染帧率上限，默认 60（60Hz 显示下等同不封顶）。滚动自适应等场景可动态下调 */
     fps?: number
   }>(),
   {
@@ -61,7 +61,7 @@ const props = withDefaults(
     saturation: 0.9,
     darkShift: 0,
     brightness: 1,
-    fps: 30,
+    fps: 60,
   },
 )
 
