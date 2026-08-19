@@ -54,6 +54,8 @@ export interface ShaderCanvas {
   canvas: HTMLCanvasElement
   /** 增量更新 uniform 值（下一帧生效） */
   setUniforms(partial: Record<string, unknown>): void
+  /** [项目扩展] 动态调整帧率上限（0 = 不限）。滚动自适应：滚动时降帧让 GPU 给合成让路 */
+  setFps(fps: number): void
   /** 更新 heightmap 纹理 */
   setHeightmap(heightmap: HeightmapOptions | undefined): void
   /** 暂停渲染循环（keep-alive 失活时调用，节省 GPU/CPU） */
@@ -199,7 +201,7 @@ function updateHeightmapTexture(
 export function createShaderCanvas(container: HTMLElement, options: ShaderCanvasOptions): ShaderCanvas {
   const { fragmentShader, uniforms = {}, heightmap: initialHeightmap } = options
   const resolutionScale = Math.max(0.1, Math.min(options.resolutionScale ?? 1, 1))
-  const minFrameTime = options.fps && options.fps > 0 ? 1000 / options.fps : 0
+  let minFrameTime = options.fps && options.fps > 0 ? 1000 / options.fps : 0
 
   const canvas = document.createElement('canvas')
   canvas.style.cssText = 'display:block;width:100%;height:100%;'
@@ -266,8 +268,19 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
   const resize = () => {
     // backing store = CSS 尺寸 × min(DPR,2) × resolutionScale；CSS 布局尺寸不受影响
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 2) * resolutionScale
-    const width = Math.max(1, Math.floor(canvas.clientWidth * pixelRatio))
-    const height = Math.max(1, Math.floor(canvas.clientHeight * pixelRatio))
+    let width = Math.max(1, Math.floor(canvas.clientWidth * pixelRatio))
+    let height = Math.max(1, Math.floor(canvas.clientHeight * pixelRatio))
+    // [性能] 绝对上限：有机渐变属低频内容，分辨率超过 MAX_BACKING 后等比降采样
+    // （CSS 放大，视觉无损）。注意 resolutionScale 是乘在 dpr 上的，高分屏（dpr≥1.5）
+    // 上"半分辨率"实际退化到接近全分辨率，片元量翻 2~4 倍——此上限兜底，全页面生效。
+    const MAX_BACKING = 1440
+    const longest = Math.max(width, height)
+    if (longest > MAX_BACKING) {
+      const s = MAX_BACKING / longest
+      width = Math.max(1, Math.floor(width * s))
+      height = Math.max(1, Math.floor(height * s))
+    }
+    const actualRatio = canvas.clientWidth > 0 ? width / canvas.clientWidth : 1
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width
       canvas.height = height
@@ -277,7 +290,7 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
     if (sizeDirty) {
       gl.viewport(0, 0, width, height)
       gl.uniform2f(resolution, width, height)
-      gl.uniform1f(pixelRatioLocation, pixelRatio)
+      gl.uniform1f(pixelRatioLocation, actualRatio)
       sizeDirty = false
     }
   }
@@ -372,6 +385,9 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
     setUniforms(partial) {
       Object.assign(values, partial)
       uniformsDirty = true
+    },
+    setFps(fps) {
+      minFrameTime = fps && fps > 0 ? 1000 / fps : 0
     },
     setHeightmap(heightmap) {
       heightmapRef = heightmap

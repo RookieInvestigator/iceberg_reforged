@@ -35,6 +35,8 @@ const props = withDefaults(
     darkShift?: number
     /** [项目扩展] CSS filter: brightness()，1 = 不变，<1 整体压暗（含 WebGL 静态回退图），>1 提亮 */
     brightness?: number
+    /** [项目扩展] 渲染帧率上限，默认 30。慢速液态视觉上 24fps 与 30 几乎无差，但 GPU 开销降 20% */
+    fps?: number
   }>(),
   {
     colorA: '#001220',
@@ -59,13 +61,17 @@ const props = withDefaults(
     saturation: 0.9,
     darkShift: 0,
     brightness: 1,
+    fps: 30,
   },
 )
 
 const containerRef = ref<HTMLElement>()
 const failed = ref(false)
-/** 整体亮度旋钮：CSS filter 包住渲染结果（WebGL canvas 与静态回退图都受控），默认 1 即不变 */
-const liquidFilter = computed(() => ({ filter: `brightness(${props.brightness ?? 1})` }))
+/** 整体亮度旋钮：仅在 brightness ≠ 1 时挂 CSS filter（恒等 filter 也会强制滤镜管线，
+ *  破坏 WebGL canvas 的直接 GPU 合成快路径 → 滚动卡顿，故默认 1 时完全不挂） */
+const liquidFilter = computed(() =>
+  props.brightness === 1 ? {} : { filter: `brightness(${props.brightness})` },
+)
 let engine: ShaderCanvas | null = null
 let pageActive = true
 
@@ -89,9 +95,9 @@ onMounted(() => {
     engine = createShaderCanvas(el, {
       fragmentShader: prepareFragmentShader(fragmentShader, fragmentHeader),
       uniforms: buildUniforms(props),
-      // 性能：backing store 半分辨率（低频渐变视觉无损，片元数 1/4）+ 30fps 封顶（慢速流动无感）
+      // 性能：backing store 半分辨率（低频渐变视觉无损，片元数 1/4）+ fps 封顶（慢速流动无感）
       resolutionScale: 0.5,
-      fps: 30,
+      fps: props.fps,
     })
   } catch {
     failed.value = true
@@ -111,6 +117,8 @@ onDeactivated(() => {
 
 // props 是响应式对象 → watch 深层监听，运行时调参实时生效
 watch(props, syncUniforms)
+// fps 动态调整（滚动自适应降帧等）：只更新引擎帧率上限，无需重建
+watch(() => props.fps, (fps) => engine?.setFps(fps ?? 30))
 
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', onVisibilityChange)

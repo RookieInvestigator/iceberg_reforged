@@ -10,13 +10,20 @@ import LiquidGradient from './LiquidGradient.vue'
 
 // 滚动沉海：色板采样向深色端平移（darkShift），黑色占比随滚动增大
 const scrollDepth = ref(0)
+// 滚动自适应帧率：滚动中液态降到 6fps（GPU 优先合成页面 repaint，治滚动卡顿），
+// 停止滚动 200ms 后恢复 24fps（静止时视觉完整）
+const liquidFps = ref(24)
 let scrollTick = 0
+let scrollStopTimer = 0
 function onScroll() {
   if (scrollTick) return
   scrollTick = requestAnimationFrame(() => {
     scrollTick = 0
     const max = document.documentElement.scrollHeight - window.innerHeight
     scrollDepth.value = max > 0 ? Math.min(window.scrollY / max, 1) : 0
+    if (liquidFps.value !== 6) liquidFps.value = 6
+    if (scrollStopTimer) window.clearTimeout(scrollStopTimer)
+    scrollStopTimer = window.setTimeout(() => { liquidFps.value = 24 }, 200)
   })
 }
 // 线性到 1.0：视觉全黑阈值（此前 1.3/1.8 过早全黑），滚到底时画面全部落入纯黑
@@ -39,13 +46,15 @@ onActivated(() => {
 onUnmounted(() => {
   window.removeEventListener('scroll', onScroll)
   if (scrollTick) cancelAnimationFrame(scrollTick)
+  if (scrollStopTimer) window.clearTimeout(scrollStopTimer)
 })
 </script>
 
 <template>
   <div class="liquid-bg" aria-hidden="true">
-    <!-- colorA 传纯黑：沉海终点为纯黑（色板最深端由深蓝黑 #001220 改为 #000000） -->
-    <LiquidGradient :darkShift="liquidShift" colorA="#000000" :seed="liquidSeed" :turb-iter="7" />
+    <!-- colorA 传纯黑：沉海终点为纯黑（色板最深端由深蓝黑 #001220 改为 #000000）
+         湍流 7 档保留全部形变；fps 由滚动自适应控制（静止 24 / 滚动 6） -->
+    <LiquidGradient :darkShift="liquidShift" colorA="#000000" :seed="liquidSeed" :turb-iter="7" :fps="liquidFps" />
   </div>
 </template>
 
