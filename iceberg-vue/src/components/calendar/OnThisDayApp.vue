@@ -5,8 +5,7 @@ import { useStore } from '@nanostores/vue';
 import { detailMode } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import { url } from '../../lib/baseUrl';
-import LiquidGradient from '../layout/LiquidGradient.vue'
-import { BG_COLORS, BG_TUNING } from '../../lib/bgTheme';
+import FlowBackground from '../layout/FlowBackground.vue'
 
 const props = defineProps({
   allEvents: { type: Array, default: () => [] }
@@ -20,8 +19,6 @@ const { t, lang } = useI18n();
 const router = useRouter();
 const mode = useStore(detailMode);
 
-// 每次进入页面重新随机流体背景，图案不重复
-const bgSeed = ref(Math.floor(Math.random() * 1001));
 const contentScrollRef = ref(null);
 
 function goItem(itemId) {
@@ -124,11 +121,7 @@ onMounted(() => {
 <template>
   <div class="relative h-dvh min-h-screen w-full overflow-hidden bg-surface font-sans text-white-92">
     <!-- 橙蓝黑流体背景：固定铺满视口，纯装饰不拦截交互 -->
-    <div class="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
-      <!-- 流体背景：配色与亮暗/饱和统一在 src/lib/bgTheme.ts 调，勿在此改色值 -->
-      <LiquidGradient v-bind="BG_COLORS" :seed="bgSeed" :turb-iter="7" :brightness="BG_TUNING.brightness" :saturation="BG_TUNING.saturation" :dark-shift="BG_TUNING.darkShift" />
-      <span class="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-black/70"></span>
-    </div>
+    <FlowBackground />
 
     <div class="relative z-10 flex h-full w-full flex-col lg:flex-row">
       <!-- 左侧：日期 + 日历玻璃面板 -->

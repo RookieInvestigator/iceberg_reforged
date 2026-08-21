@@ -11,7 +11,6 @@ interface PipelineOptions {
   resolveId: (id: string | null | undefined) => string
   newCutoff: number
   itemModAt: Map<string, number>
-  t: (key: string) => string
 }
 
 /**
@@ -20,7 +19,7 @@ interface PipelineOptions {
  * 已读/最近更新标记独立于过滤管线（避免开弹窗触发 1400 词条全量重扫）。
  */
 export function useFilterPipeline(allItems: RenderItem[], opts: PipelineOptions) {
-  const { filterVisible, dimItems, searchResults, resolveId, newCutoff, itemModAt, t } = opts
+  const { filterVisible, dimItems, searchResults, resolveId, newCutoff, itemModAt } = opts
 
   const activeCats = useStore(activeCategories);
   const activeT = useStore(activeTags);
@@ -64,17 +63,15 @@ export function useFilterPipeline(allItems: RenderItem[], opts: PipelineOptions)
   }
 
   // Filter（F14：统一快照 + 单一调度器取消旧帧，最后一帧严格对应最新状态）
+  // 仅声明式路径：filterVisible/dimItems 由宿主（IndexView）注入，v-show / :class + v-memo
+  // 批量消费；层空/全空提示同属声明式（宿主模板渲染），此处不再触碰 DOM（双路径已剪除）
   let filterRaf = 0;
   watchEffect(() => {
     if (typeof document === 'undefined') return;
     const snap = filterSnapshot();
     const flt = fltMode.value;
-    const tierEmptyMsg = t('tierEmpty');
-    const noResultsMsg = t('noResults');
     if (filterRaf) cancelAnimationFrame(filterRaf);
     filterRaf = requestAnimationFrame(() => {
-      const c = document.getElementById('items-container');
-      if (!c) return;
       // 纯 JS 数组匹配（替代 DOM querySelectorAll 循环；F15：与随机入口共用 matchesFilter）
       const matched = new Set<string>();
       for (const item of allItems) {
@@ -90,40 +87,6 @@ export function useFilterPipeline(allItems: RenderItem[], opts: PipelineOptions)
           // perf：变暗集合响应式下发（替代 1409 次命令式 classList.toggle；v-memo 只重渲染状态翻转的词条）
           if (dimItems) dimItems.value = new Set(allItems.filter(i => !matched.has(i.id)).map(i => i.id));
         }
-      } else {
-        c.querySelectorAll<HTMLElement>('.iceberg-item').forEach(el => {
-          const id = el.dataset.id || '';
-          if (flt === 'hide') {
-            el.style.display = matched.has(id) ? '' : 'none';
-          } else {
-            el.style.display = '';
-            el.classList.toggle('dimmed', !matched.has(id));
-          }
-        });
-      }
-      // 标记样式已拆到独立 watchEffect（只依赖 rList/sRead/sNew，避免开弹窗触发全量过滤）
-      // 统计可见 + tier-empty（基于 tier 数据，无需 DOM 查询）
-      const total = matched.size;
-      const tierVis = new Map<string, number>();
-      for (const item of allItems) {
-        if (!matched.has(item.id) || !item.tier) continue;
-        tierVis.set(item.tier, (tierVis.get(item.tier) || 0) + 1);
-      }
-      c.querySelectorAll<HTMLElement>('.iceberg-tier').forEach(tier => {
-        const tn = tier.dataset.tier || '';
-        const v = tierVis.get(tn) || 0;
-        let msg = tier.querySelector('.tier-empty');
-        if (v === 0) {
-          if (!msg) { msg = document.createElement('div'); msg.className = 'tier-empty text-center text-white/15 text-sm py-8 italic'; msg.textContent = tierEmptyMsg; tier.appendChild(msg); }
-        } else if (msg) { msg.remove(); }
-      });
-      let globalMsg = document.getElementById('items-empty');
-      if (total === 0) {
-        if (!globalMsg) { globalMsg = document.createElement('div'); globalMsg.id = 'items-empty'; globalMsg.className = 'text-center text-white/20 text-lg py-40 italic'; globalMsg.textContent = noResultsMsg; c.appendChild(globalMsg); }
-        c.querySelectorAll<HTMLElement>('.iceberg-tier').forEach(t => { t.style.display = 'none'; });
-      } else {
-        if (globalMsg) globalMsg.remove();
-        c.querySelectorAll<HTMLElement>('.iceberg-tier').forEach(t => { t.style.display = ''; });
       }
     });
   });

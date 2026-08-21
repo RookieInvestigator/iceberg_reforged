@@ -4,7 +4,7 @@ import { useStore } from '@nanostores/vue';
 import { searchQuery, searchMode, NEW_MARK_WINDOW_DAYS } from '../../lib/filterStore';
 import { floatMode, detailMode, readItems } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
-import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, RELATED_MAP_KEY, ID_ALIASES_KEY, type RenderItem } from '../../lib/injectionKeys';
+import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, RELATED_MAP_KEY, ID_ALIASES_KEY, WALL_ORDER_KEY, type RenderItem } from '../../lib/injectionKeys';
 import { useSearchWorker } from '../../lib/iceberg/useSearchWorker';
 import { useRelatedIndex } from '../../lib/iceberg/useRelatedIndex';
 import { useFilterPipeline } from '../../lib/iceberg/useFilterPipeline';
@@ -24,6 +24,8 @@ const filterVisible = inject(FILTER_VISIBLE_KEY, null)
 const dimItems = inject(DIM_ITEMS_KEY, null)
 // F30：旧 ID → 新 ID 重定向表（标题/层级修订后，分享 hash / 深链 / 收藏旧 id 仍可解析）
 const idAliases = inject(ID_ALIASES_KEY, new Map<string, string>())
+// 词条墙 DOM 文档序（IndexView computed）：弹窗前后导航的数据源，零 DOM 扫描
+const wallOrderRef = inject(WALL_ORDER_KEY, null)
 function resolveId(id: string | null | undefined): string {
   const alias = id ? idAliases.get(id) : undefined;
   return alias || (id || '')
@@ -46,7 +48,7 @@ const itemModAt = new Map(allItems.map(i => [i.id, i.modifiedAt || 0]));
 // ── codeq 拆分：搜索 Worker / 相关词条索引 / 过滤管线 / Tooltip 控制器 ──
 const { searchResults, initSearch } = useSearchWorker(query, sMode)
 const { pickRelated } = useRelatedIndex(itemMap, relatedMap)
-const { filterSnapshot, matchesFilter } = useFilterPipeline(allItems, { filterVisible, dimItems, searchResults, resolveId, newCutoff, itemModAt, t })
+const { filterSnapshot, matchesFilter } = useFilterPipeline(allItems, { filterVisible, dimItems, searchResults, resolveId, newCutoff, itemModAt })
 const { tip, tipRef, onMouseOver, onMouseLeave, showTooltip, hideTooltip, resetCurrentItem } = useTooltip({ t, dm, findItem })
 
 // ── 弹窗 / 抽屉状态 ──
@@ -74,8 +76,19 @@ function markRead(id: string) {
 }
 
 // P1-5: 可见词条前后导航 id（桌面弹窗用；移动抽屉不再展示左右箭头）
+// P-2026-08-21: 数据化文档序（WALL_ORDER_KEY）替代 1400 节点 querySelectorAll 扫描——
+// 与分片挂载兼容（不依赖 DOM 是否已补齐），弹窗导航零 DOM 查询；注入缺失时回退 DOM 扫描
 function navIdsFor(raw: RenderItem) {
   const vis = filterVisible?.value;
+  const order = wallOrderRef?.value;
+  if (order) {
+    const list = vis ? order.filter(id => vis.has(id)) : order;
+    const idx = list.indexOf(raw.id);
+    return {
+      prevId: idx > 0 ? list[idx - 1] : null,
+      nextId: idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null,
+    };
+  }
   const allIds = [...document.querySelectorAll<HTMLElement>('.iceberg-item')].map(el => el.dataset.id).filter((id): id is string => Boolean(id))
     .filter(id => !vis || vis.has(id));
   const idx = allIds.indexOf(raw.id);

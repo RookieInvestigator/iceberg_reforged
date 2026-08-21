@@ -9,7 +9,9 @@ import relatedRaw from '../data/appendix/related.csv?raw'
 import referencesRaw from '../data/appendix/references.csv?raw'
 import { normalizeData, isSafeHttpUrl } from '../lib/data'
 import { parseCSV } from '../lib/csv'
-import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, TIER_ORDER_KEY, CATEGORY_COLORS_KEY, TAG_MAP_KEY, DEFAULT_COLOR_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, HERO_TITLES_KEY, RELATED_MAP_KEY, REFERENCES_MAP_KEY, OPEN_ON_THIS_DAY_KEY, ID_ALIASES_KEY } from '../lib/injectionKeys'
+import { useI18n } from '../lib/useI18n'
+import { initialMountCount, nextMountCount } from '../lib/iceberg/wallMount'
+import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, TIER_ORDER_KEY, CATEGORY_COLORS_KEY, TAG_MAP_KEY, DEFAULT_COLOR_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, HERO_TITLES_KEY, RELATED_MAP_KEY, REFERENCES_MAP_KEY, OPEN_ON_THIS_DAY_KEY, ID_ALIASES_KEY, WALL_ORDER_KEY } from '../lib/injectionKeys'
 import IcebergBg from '../components/layout/IcebergBg.vue'
 import FooterSection from '../components/layout/FooterSection.vue'
 // TEMP：hero 页暂时移除
@@ -83,6 +85,49 @@ provide(HERO_TITLES_KEY, allItemsRaw.map(i => i.title))
 provide(RELATED_MAP_KEY, relatedMap)
 provide(REFERENCES_MAP_KEY, referencesMap)
 
+// 词条墙 DOM 文档序（tierOrder × 层内声明式排序）：弹窗前后导航的数据源，
+// 替代 navIdsFor 的 1400 节点 DOM 扫描，且与分片挂载兼容（不依赖 DOM 补齐状态）
+const wallOrder = computed(() =>
+  data.tierOrder.flatMap(tn => (tierItems.value[tn] || []).map((i: any) => i.id)))
+provide(WALL_ORDER_KEY, wallOrder)
+
+// ═══ 生产性能：词条墙分片挂载（首屏 2 层 + 逐帧补齐，见 lib/iceberg/wallMount.ts）═══
+// 首屏长任务从「一次性创建 1420 节点」拆成 ~6 帧小任务；视口外 paint 本就被
+// content-visibility 跳过，补齐阶段只增 DOM/布局。安全网：任何用户交互/筛选/深链
+// → 立即 flush（pointerdown 先于 click，Vue 微任务刷新保证事件处理时墙已完整）。
+// prerender 为手工快照（src/prerender.ts 不渲染本组件），无 SSR 分支。
+const totalTiers = data.tierOrder.length
+const mountedTiers = ref(initialMountCount(totalTiers, true))
+let mountRaf = 0
+let entranceDoneTimer = 0
+function flushWall() {
+  if (mountedTiers.value >= totalTiers) return
+  mountedTiers.value = totalTiers
+  if (mountRaf) { cancelAnimationFrame(mountRaf); mountRaf = 0 }
+  unbindWallListeners()
+}
+function tickMount() {
+  mountRaf = 0
+  mountedTiers.value = nextMountCount(mountedTiers.value, totalTiers)
+  if (mountedTiers.value < totalTiers) mountRaf = requestAnimationFrame(tickMount)
+}
+function onWallFlushSignal() { flushWall() }
+let wallListenersBound = false
+function bindWallListeners() {
+  if (wallListenersBound) return
+  wallListenersBound = true
+  document.addEventListener('pointerdown', onWallFlushSignal, true)
+  document.addEventListener('keydown', onWallFlushSignal, true)
+  document.addEventListener('open-item-modal', onWallFlushSignal)
+}
+function unbindWallListeners() {
+  if (!wallListenersBound) return
+  wallListenersBound = false
+  document.removeEventListener('pointerdown', onWallFlushSignal, true)
+  document.removeEventListener('keydown', onWallFlushSignal, true)
+  document.removeEventListener('open-item-modal', onWallFlushSignal)
+}
+
 const buildDate = new Date(data.generatedAt * 1000).toLocaleDateString('zh-CN')
 
 // Bulletins
@@ -117,6 +162,18 @@ const dimItems = shallowRef(null as Set<string> | null)
 provide(DIM_ITEMS_KEY, dimItems)
 const dimSet = computed(() => dimItems.value)
 
+// 层空/全空提示（声明式，替代原 useFilterPipeline 命令式 createElement 路径；
+//   仅 hide 模式可见——dim 模式全部词条仍在 DOM，提示会造成误读）
+const { t } = useI18n()
+const tierVisCounts = computed(() => {
+  const fv = filterVisible.value
+  if (!fv) return null
+  const m = new Map<string, number>()
+  for (const it of allItemsRaw) if (fv.has(it.id)) m.set(it.tier, (m.get(it.tier) || 0) + 1)
+  return m
+})
+const hasNoResults = computed(() => filterVisible.value !== null && filterVisible.value.size === 0)
+
 // F30：旧 ID → 新 ID 重定向表（分享 hash / 深链 / 收藏旧 id 解析用）
 provide(ID_ALIASES_KEY, new Map(Object.entries(data.idAliases || {})))
 
@@ -149,6 +206,25 @@ onMounted(() => {
   //     document.addEventListener('hero-exit', () => content.classList.add('content-enter'), { once: true })
   //   }
   // } catch {}
+
+  // 入场动画全部结束（最晚 ~0.3 + 7×0.08 + 0.5 ≈ 1.36s）后移除 content-enter：
+  // 释放 fill-mode:both 动画对 .iceberg-tier 的变换层持有（合成层+估算盒会裁剪 tooltip，
+  // 详见 index.css content-enter 注释；曾用 will-change 提升合成层 → 引入裁剪回归）
+  entranceDoneTimer = window.setTimeout(() => content.classList.remove('content-enter'), 1500)
+
+  // 词条墙分片挂载：深链/弹窗定向需要完整墙 → 直接全量；否则逐帧补齐
+  bindWallListeners()
+  if (route.query.item || window.location.hash) {
+    flushWall()
+  } else if (mountedTiers.value < totalTiers) {
+    mountRaf = requestAnimationFrame(tickMount)
+  }
+})
+onUnmounted(() => {
+  if (mountRaf) cancelAnimationFrame(mountRaf)
+  unbindWallListeners()
+  window.clearTimeout(entranceDoneTimer)
+  clearTimeout(itemTimer)
 })
 </script>
 
@@ -165,35 +241,42 @@ onMounted(() => {
 
       <div id="items-container">
         <template v-if="!scatter">
-          <section
-            v-for="(tierName, tierIndex) in data.tierOrder"
-            :key="tierName"
-            class="iceberg-tier relative bg-transparent min-h-[150px] flex flex-col py-10 overflow-visible z-[1] hover:z-[9999]"
-            :data-tier="tierName"
-            :style="`--tier-stagger: ${tierIndex}`"
-          >
-            <div class="relative z-[2] w-full">
-              <h2 class="text-center font-black text-[length:var(--font-sm)] text-white/40 tracking-[0.12em] mb-10 uppercase">{{ tierName }}</h2>
-              <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 max-sm:gap-x-1.5 max-sm:gap-y-[10px] max-sm:mb-3 px-[var(--header-padding-x)]">
-                <span
-                  v-for="item in tierItems[tierName]"
-                  :key="item.id"
-                  v-show="!filterVisible || filterVisible.has(item.id)"
-                  v-memo="[item.id, dimSet?.has(item.id), filterVisible ? filterVisible.has(item.id) : true]"
-                  tabindex="0"
-                  role="button"
-                  class="iceberg-item inline-flex items-center font-bold cursor-crosshair py-0.5 px-1.5 max-sm:text-[1.05rem]"
-                  :class="{ dimmed: !!dimSet?.has(item.id) }"
-                  :data-id="item.id"
-                  :data-category="item.category"
-                  :style="`font-size: 1.15em; color: ${item.categoryColor}; --item-color: ${item.categoryColor}`"
-                >
-                  <span class="item-title transition-colors duration-200">{{ item.title }}</span>
-                  <span v-for="(e, ei) in item.emojis" :key="ei" class="item-tag text-[0.625em] ml-[0.3em] relative -top-[0.08em] inline-flex items-center justify-center transition-colors duration-200">{{ e }}</span>
-                </span>
+          <!-- 全空（hide 模式 0 命中）：整体提示 + 隐藏层级（等价原命令式路径语义） -->
+          <div v-if="hasNoResults" id="items-empty" class="text-center text-white/20 text-lg py-40 italic">{{ t('noResults') }}</div>
+          <template v-else>
+            <!-- 分片挂载：首屏只出前 mountedTiers 层，其余 rAF 逐帧补齐（flush 信号见 script） -->
+            <section
+              v-for="(tierName, tierIndex) in data.tierOrder.slice(0, mountedTiers)"
+              :key="tierName"
+              class="iceberg-tier relative bg-transparent min-h-[150px] flex flex-col py-10 overflow-visible z-[1]"
+              :data-tier="tierName"
+              :style="`--tier-stagger: ${tierIndex}`"
+            >
+              <div class="relative z-[2] w-full">
+                <h2 class="text-center font-black text-[length:var(--font-sm)] text-white/40 tracking-[0.12em] mb-10 uppercase">{{ tierName }}</h2>
+                <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 max-sm:gap-x-1.5 max-sm:gap-y-[10px] max-sm:mb-3 px-[var(--header-padding-x)]">
+                  <span
+                    v-for="item in tierItems[tierName]"
+                    :key="item.id"
+                    v-show="!filterVisible || filterVisible.has(item.id)"
+                    v-memo="[item.id, dimSet?.has(item.id), filterVisible ? filterVisible.has(item.id) : true]"
+                    tabindex="0"
+                    role="button"
+                    class="iceberg-item inline-flex items-center font-bold cursor-crosshair py-0.5 px-1.5 max-sm:text-[1.05rem]"
+                    :class="{ dimmed: !!dimSet?.has(item.id) }"
+                    :data-id="item.id"
+                    :data-category="item.category"
+                    :style="`font-size: 1.15em; color: ${item.categoryColor}; --item-color: ${item.categoryColor}`"
+                  >
+                    <span class="item-title transition-colors duration-200" :data-text="item.title">{{ item.title }}</span>
+                    <span v-for="(e, ei) in item.emojis" :key="ei" class="item-tag text-[0.625em] ml-[0.3em] relative -top-[0.08em] inline-flex items-center justify-center transition-colors duration-200">{{ e }}</span>
+                  </span>
+                </div>
+                <!-- 层空（hide 模式本层 0 命中，全空时由上方 items-empty 统一提示） -->
+                <div v-if="tierVisCounts && (tierVisCounts.get(tierName) || 0) === 0" class="tier-empty text-center text-white/15 text-sm py-8 italic">{{ t('tierEmpty') }}</div>
               </div>
-            </div>
-          </section>
+            </section>
+          </template>
         </template>
         <!-- 非冰山图模式（实验）：全部词条随机散落 -->
         <ScatterField v-else :items="allItemsRaw" />

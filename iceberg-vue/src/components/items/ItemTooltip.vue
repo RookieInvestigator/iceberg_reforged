@@ -2,7 +2,7 @@
 import { ref, watch, nextTick } from 'vue';
 import { useI18n } from '../../lib/useI18n';
 
-const props = defineProps({ show: Boolean, anchor: null, desc: String, noDesc: Boolean, category: String, color: String, tags: String });
+const props = defineProps({ show: Boolean, floating: Boolean, anchor: null, desc: String, noDesc: Boolean, category: String, color: String, tags: String });
 const emit = defineEmits(['enter', 'leave']);
 
 const { t } = useI18n();
@@ -22,11 +22,14 @@ watch(() => props.show, async (val) => {
 </script>
 
 <template>
-  <Teleport :to="anchor || 'body'" :disabled="!anchor">
+  <!-- floating（生产）：body 级浮动层 + fixed 视口坐标（useTooltip 硬钳制），
+       不依附词条/层级 → 任何祖先合成层/containment/overflow 都无法裁剪；
+       anchor（实验页幽灵锚点等）回退：teleport 进锚点元素走原 CSS 定位 -->
+  <Teleport :to="(floating ? 'body' : anchor) || 'body'" :disabled="!floating && !anchor">
     <div
       ref="rootEl"
       class="tooltip-box"
-      :class="{ show: show && teleported }"
+      :class="{ show: show && teleported, floating }"
       @mouseenter="emit('enter')"
       @mouseleave="emit('leave')"
     >

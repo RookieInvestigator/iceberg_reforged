@@ -1,6 +1,256 @@
 # 更新日志
 
 
+## 2026-08-21 — 描边语义最终拍板：唯一 stroke-glow + 两模式 hover 分离
+
+### 变更（用户拍板，两轮收敛）
+
+- **方案收敛为唯一 stroke-glow**：删除多方案开关（`outlineStyle` storedAtom / 设置面板 UI /
+  `html[data-outline]` 分叉 / i18n 4 key×3 语）。最终形态：`-webkit-text-stroke` 伪元素镜像
+  外描边（每字形 2 次绘制）+ `4px 3px 4px` 光晕单层；`data-text` 属性保留（镜像层依赖）
+- **两模式 hover 语义分离（最终裁定）**：
+  - **tooltip 模式**（hover 有 marker 背景）：黑字**无需描边/阴影** —— 隐藏镜像描边层 +
+    `text-shadow: none`（marker 纯色底承担对比度）；tooltip-active 同语义且带
+    `data-detail` 守卫，不泄漏进 modal
+  - **modal 模式**（hover 无背景，仅 α0.8 反馈）：描边/光晕**保持原样**（不隐藏、不移除）
+  - 过程纠正记录：早前「hover 隐藏描边层」针对 tooltip 模式本就是对的，上一轮误判
+    「描边消失是错误」而撤销；用户澄清后按语义恢复，并补 modal 模式分隔
+
+
+## 2026-08-21 — 描边方案 hover 保留外描边（撤销「hover 隐藏描边层」）
+
+### 修复（用户反馈：hover 后描边错误地消失）
+
+- **stroke / stroke-glow 方案 hover 时不再隐藏镜像描边层**：此前为对齐「阴影换肤」语义
+  （hover 黑字移除 text-shadow）把 `.item-title::after` 在 hover/tooltip-active 时
+  `display: none`——对硬描边而言会在 marker 底上突然消失、产生明显视觉突跳，属错误取舍。
+  已撤销该规则（index.css 注释记录）；黑字 + 外描边在 marker 上常驻是选定观感。
+- 边界说明：阴影（现状）模式维持原设计（hover 移除 text-shadow，多年一致行为）；
+  hover 的 `text-shadow: none` 同时作用于 stroke-glow 的残留光晕（与旧语义一致）；
+  emoji 在描边方案下无描边（既知差异，未变）。
+- 验证：双 typecheck + 85/85 测试 + 生产构建绿
+
+
+## 2026-08-21 — 架构清场：canvas 实验归档 + 移除死掉的层级 hover z 提升
+
+### 移除
+
+- **canvas 实验堆栈整体归档**（用户拍板，方案二）—— `lib/icebergCanvas/`（双引擎/布局/命中/
+  过滤器镜像/精灵缓存 + 3 测试）、`components/experiment/`（ReferenceWall/CanvasWall/ViewportWall
+  + ReferenceWall.test）、`views/ExperimentCanvasView.vue`（893 行）、`scripts/perf-hover-probe.mjs`
+  与 `probe-variants/` 移入 `data/archive/tools-2026-08/canvas-experiment/`（附 README：内容/还原
+  方法/关键决策记录）。原因：已弃用 + 系统性重复（仓库第 4 套 tooltip 实现、双引擎、过滤器/命中
+  镜像）；文件原为 untracked，归档保留可回退。`router/index.ts` 移除 `/experiment-canvas` DEV 路由
+- **层级 hover z 提升（`.iceberg-tier` 的 `hover:z-[9999]`）** —— 为「tooltip 挂词条内、hover
+  层需压过相邻层」设计的层序 hack；body 级浮动 tooltip（z 10000）上线后无消费者，仅剩整层
+  提层的层序搅动。移除（保留 `z-[1]` 层级 stacking context）；chip hover `z-index: 10` 保留
+  （仍承担浮动偏移下压过相邻词条的职责）
+- 验证：双 typecheck + 85/85 测试（归档带走 58 项 canvas 测试，生产侧 0 损失）+ 生产构建绿；
+  `scripts/tooltip-probe.mjs` 保留（生产 tooltip 几何验收仍用）
+
+
+## 2026-08-21 — Tooltip 紧贴词条（0 间距）+ 锚点变化跟随
+
+### 修复（用户反馈：定位没有紧贴）
+
+- **词条间距归零**：`placeTip()` 的 8px 边距此前被误用作词条间距——现改为**与词条 0 间距
+  紧贴**（上置 bottom = chip.top、下置 top = chip.bottom、左/右对齐贴边）；8px 仅作**视口
+  安全边距**（只在将越界时才让出间距）；翻向判定仍用带边距的空间计算
+- **定位类落在浮层盒上**：`tooltip-below/left/right` 现在同时加在 `.tooltip-box` 本体
+  （tooltip 已不在词条内，chip 侧类仅实验页锚点路径用）；补 `.tooltip-box.floating.tooltip-below`
+  零上侵阴影（`0 8px 16px`，此前规则随 tooltip 移出词条而失效，贴靠后 blur 上缘会洒到词条底）
+- **锚点 chip 纳入观测**：ResizeObserver 同时观测 tooltip 与 chip——字体重排/布局变动导致
+  锚点尺寸或位置变化时按最新矩形重定位（此前只观测 tooltip 本体）
+- 实测（`scripts/tooltip-probe.mjs`，CDP 几何）：tier 5 左侧 / tier 2 右侧边缘 chip 两轮
+  独立运行 aboveGap = 0.20px / −0.05px（仅取整误差），debug 定位时刻输入与最终几何逐位一致
+
+
+## 2026-08-21 — Tooltip 架构重做：body 级浮动层（推翻「容器级修补」）
+
+### 重构（用户拍板：不要修修补补，整体重来）
+
+- **tooltip 改为 body 级浮动层**：`ItemTooltip` floating 模式 Teleport 到 `<body>`，
+  `.tooltip-box.floating { position: fixed }`；`useTooltip` 以视口坐标定位 + 8px 硬钳制
+  （x/y 都钳在 [8, vw/vh−8]，边缘自动左/右对齐）——tooltip 不再属于任何可裁剪祖先盒的
+  后代，架构上不存在被截断的路径（tier 合成层 / content-visibility / capture-area
+  overflow / body clip 全部免疫）
+- **定位全量实测驱动**：`placeTip()` 每次执行都重新读取 chip 矩形 + tooltip 尺寸
+  （offsoffetHeight/Width），无跨帧缓存；上/下放置与 maxHeight 夹逼逻辑收敛为单函数
+- **内容/布局变动兜底**：ResizeObserver 监听 tooltip 尺寸（字体加载/换行/宽度变化）→
+  rAF 合并按最新 chip 矩形重定位；隐藏时断开；滚动/窗口 resize（含 Ctrl+/− zoom）关闭
+  tooltip（原滚动防误触语义保留）
+- 明确没有被推翻的：200ms 延迟、fade 过渡、`tooltip-active` 词条高亮、已读/NEW 状态、
+  实验页幽灵锚点路径（非 floating 时原 CSS/行为不变）
+- 验证：`scripts/tooltip-probe.mjs`（CDP 实测定位）——tier2 右侧边缘 chip、tier5 左侧
+  chip 两轮独立运行：定位误差 ≤0.4px（仅取整），debug 快照（定位时刻输入）与最终几何
+  逐位一致、`position: fixed`、parent = BODY、可见；早前「提升一级」容器级方案的
+  +87px 漂移经定位排查为字体/content-visibility 落定期探针伪影，非定位代码缺陷
+
+
+## 2026-08-21 — Tooltip「提升一级」根治（层级容器级绝对定位）
+
+### 改进（用户提议：临时提升 tooltip DOM 等级，放到上一级）
+
+- **生产 tooltip 不再挂在词条内**：`ItemTooltip` Teleport 目标改为 `#items-container`
+  （所有层级的父容器，「上一级」），`useTooltip.showTooltip` 以容器坐标 JS 绝对定位
+  （left/right/transform 按 左/中/右 对齐，top 按上/下放置，maxHeight 夹逼不变）；
+  `#items-container` 补 `position: relative` 作为定位坐标系
+- **结构性免疫**：tooltip 从此与任意层级合成层/containment 无关（content-visibility、
+  入场动画提升层、未来任何 will-change/transform）—— 2026-08-21「层级边缘截断」事故的根治，
+  不再依赖「层级恰好不裁剪」这一脆弱前提
+- **z-index 1000 → 10000**：容器级 tooltip 需压过 `.iceberg-tier` 的 hover:z-[9999]
+  （原 1000 仅在词条内层上下文有效）；实验页幽灵锚点用法不变（其 z 受 ghost z:60 上下文约束，
+  全局提升无影响）
+- 隐藏时清理 inline 定位（ positioned 标志防残留）；滚动隐藏链路不变；实验页工具提示走
+  原 anchor 路径不受影响（实验页 `#items-container` 自身带 relative + pt-6，幽灵锚点 CSS 原样）
+
+
+## 2026-08-21 — 修复：入场合成层裁剪 tooltip（层级边缘截断）
+
+### 修复
+
+- **tooltip 被层级边缘截断** —— 根因：`will-change: transform, opacity`（为入场动画提升合成层）
+  与 `.iceberg-tier` 的 `content-visibility: auto`（paint containment + 估算盒）叠加，导致
+  合成层按边框盒裁剪溢出的 tooltip（tooltip 挂在 chip 内、可越过层级上/下边缘）。移除
+  will-change，保留入场动画本身；同时保留 1.5s 后移除 `content-enter` 的逻辑（顺带释放
+  `animation-fill-mode: both` 对 tier 变换层的持有）。index.css 注释记录该禁令，防回归。
+- 历史对照：2026-08-16 曾记录「content-visibility 导致 tooltip/高亮失效」同族问题；
+  本次为 will-change 引入的回归，移除即恢复（结构与视觉均不变）
+
+
+## 2026-08-21 — 词条描边方案实验开关（text-shadow → -webkit-text-stroke）
+
+### 新增
+
+- **描边方案三档开关**（`outlineStyle` storedAtom + 设置面板实验区，默认「阴影」零风险回滚）：
+  - `shadow` 现状：5 层 text-shadow 模拟描边（4×1px 对角 + 4px 3px 4px 大阴影 = 每字形 **5 次绘制**）
+  - `stroke-glow`：`-webkit-text-stroke: 1px` 硬描边 + 保留大阴影（**2 次绘制**，观感最接近现状）
+  - `stroke`：纯描边（**1 次绘制**；hover 换肤 5 层 → 0~1 层，重栅格成本降为现状 ~20%）
+- 接线：`html[data-outline]` 属性（ItemInteractivity watchEffect，仿 `data-detail` 模式）驱动
+  `index.css` 分叉；hover 黑字同语义清除描边；`--shadow-color` 令牌复用于描边色
+- 视觉对照：`outputs/outline-compare.html`（真实分类色 × 三方案 × hover 态 × 2.4× 放大镜，
+  headless Chrome 截图已生成）；观感差异（stroke 硬边 vs 阴影光晕、描边吃字形程度）由用户看图拍板
+- 兼容：`-webkit-text-stroke` Chromium/Firefox 全支持；tooltip CSS 早已使用 `-webkit-text-stroke: 0`
+  防御性重置（先例存在）；i18n 3 语各 +4 key
+
+### 修复（用户反馈：居中描边吃字形 → 改为真·外部描边）
+
+- **镜像外描边（pseudo-mirror）** —— `-webkit-text-stroke` 语义是**居中**描边（内外各 0.5px，
+  吃字形），无法推出纯外描；改用「伪元素镜像」：`.item-title::after` 以 `attr(data-text)` 复制
+  同文 + 绝对定位叠于原字之下（同字体同基线），镜像层画 2px 居中描边，原字 fill 天然盖住
+  内半圈 → 可见部分 = **纯外圈 1px，真·外部描边**；每字形 2 次绘制（现状 5 层阴影的 40%），
+  hover 换肤从 5 层重栅格降到 1 层。`data-text` 属性已加到 IndexView / ScatterField /
+  ReferenceWall 的 `.item-title`；已知差异：emoji（.item-tag）在新方案下无描边（现状阴影会波及）
+- 对照图 `outputs/outline-compare.html` 同步更新为镜像实现（B/C/放大镜行）；观感（外圈厚度、
+  镜像对齐）由用户真机目检拍板
+
+
+## 2026-08-21 — 生产词条墙抖动治理：分片挂载 / 数据化导航 / 背景与入场合成让位
+
+### 新增
+
+- **production**：**词条墙分片挂载**（`src/lib/iceberg/wallMount.ts` + `IndexView.vue`）——首屏只挂前 2 层（视口 + 缓冲），其余层级每 rAF 补齐一层（~6 帧内全量），首屏长任务从「一次性创建 1420 节点」拆碎；安全网：`pointerdown`/`keydown`（capture）或深链（`?item=`/`#hash`）/`open-item-modal` 立即 flush 全量（pointerdown 先于 click + Vue 微任务刷新保证事件时序内墙已完整），flush 后自动解绑；prerender 为手工快照零影响；`wallMount` 纯函数单测 5 项
+- **production**：**弹窗前后导航数据化**（`WALL_ORDER_KEY` 注入键 + `ItemInteractivity.navIdsFor`）——替代每次开弹窗的 1400 节点 `querySelectorAll` 扫描；文档序 = tierOrder × 层内声明式排序（computed），与分片挂载兼容；注入缺失回退原 DOM 扫描
+- **production**：**液态背景交互感知三档帧率**（`LiquidBg.vue`）——静止 60→24fps（历史设计意图回归，肉眼无差）、鼠标停在词条墙降 **12fps**（近静止，把合成器让位给 hover 记号笔/tooltip）、滚动 30fps（沉海跟随）；`pointerover` 委托判定进出墙区，离开 150ms 后才升档防跳档。归因：CDP 探针（`scripts/perf-hover-probe.mjs`，headless Chrome + longtask 观察，FLOOR 变体零交互仍见显著长任务、纯黑背景显著更低）佐证「全屏 shader 60fps 常驻与交互抢合成」——与 2026-08-19「冰山页卡顿、纯黑页不卡」历史归因同源
+- **production**：**入场动画合成化**（`index.css` + `IndexView`）——`.content-enter .iceberg-tier` 加 `will-change: transform, opacity`（大层级动画走合成器不再霸占主线程），动画全部结束后定时移除 content-enter，释放 8 个巨型过渡层的 GPU 内存
+
+### 指标（headless SwiftShader 软光栅，同环境 A/B；真机待复测）
+
+- 液态背景 FLOOR（零交互）长任务账单 586-844ms/3s 窗口 → 三档降频后同窗口 343-563ms 且任务数减半；真机 GPU 路径的合成争抢削减大于该值（软光栅掩盖 GPU 差异）
+- 分片挂载：首屏挂载从单任务（1420 节点）拆为 ~6 帧；数据化导航：弹窗打开零 DOM 扫描
+
+
+## 2026-08-21 — 视口带渲染（变体 C）：实验页第三种模式
+
+### 新增
+
+- **视口带 canvas 引擎 `viewport.ts`（第三种模式 `?mode=viewport`）** —— 与全墙位图对偶的渲染路径：位图只覆盖「视口 ± overscan」一条带（可见 sticky canvas + 可选离屏带缓存），内存 O(视口) 恒定（实测 dpr2 桌面 ≈ 72MB = 可见 24 + 带 48，较全墙 dpr2 250MB 降 71%），任意 zoom 恒 1:1 物理像素（内存不随 zoom² 膨胀，DOM 级「任意放大清晰」的唯一 canvas 路径）
+  - **几何一锤定音**：`drawY = w - max(0, scrollY - anchor)`，sticky canvas 吸附前后同一公式；命中 `wallY = clientY + scrollY - anchor` 与画布盒位置无关；anchor 挂载/窗口 resize/**`anchorTick`**（标签折叠/隐藏行/筛选摘要高度变化，页面传组件仅重测锚点）时刷新
+  - **带内增量滚动**：重叠区从带缓存 blit + 新露条带重绘（纯函数 `bandWindow`/`bandMove` 决定，y 二分 `chipsInRange` 裁剪，每帧几十 chip）；跃出带（快滚/瞬移）整带重绘；`?band=0` / 控制台「band 缓存」复选框关闭带缓存 → 纯视口重绘（A/B 对照滚动成本与内存）
+  - **交互/视觉等价**：tooltip 幽灵锚点/随机/深链/键盘全部沿用 layout2 像素网格 + hits 索引；hover 记号笔动画/hover/modal/recent/read/dim/空态/层级名带内自绘，状态翻转走区域修复（无整墙 clear）；探针读可见画布（首屏带不透明像素比，与全墙模式同口径）；stats 新增 `bandH`（当前带高）与 `paintMs`（带重绘耗时）
+- **共享精灵缓存 `sprites.ts`** —— 精灵 LRU/字节预算/尺寸校验从 `engine.ts` 提取为独立 `SpriteCache`，全墙与视口带双引擎共用（内容键一致，滚动/重排零重复 measureText）；engine.ts 行为等价重构，28 项引擎测试全量回归
+- **视口带测试 17 项** —— 纯函数（effectiveScroll/bandWindow/bandMove/chipsInRange/headersInRange/capViewportDpr）+ 引擎冒烟（首绘带内裁剪、带内滚动 blit vs 跃出整带重绘、anchor 前零重绘、hover 区域修复、read 增量、band 开关背板重建、精灵复用、mem/bandH 账本、destroy 防御）
+- **测试类型收敛** —— `engine.test.ts` 既有漂移修复（chip 助手添加 `tagFont ?? null` 显式补位、`mountWall` 参数放宽 `ChipMeta[] | WallLayout`），`npm run typecheck:test` 恢复全绿（app/test 双 typecheck 通过，139 测试通过）
+
+### 性能（dev headless 软渲染实测；真机待复测）
+
+- 视口带账本与全墙对照见引擎头注释与 `docs/plans/CANVAS_HYBRID_PLAN.md §5.3`：全墙 = 滚动零重绘、内存 O(墙)；视口带 = 内存恒定、滚动每帧仅视口 chip 重绘（带缓存时重叠区零重绘）
+
+
+## 2026-08-21 — Canvas 独立渲染引擎 P1+P2（方向切换：不再强求像素一致）
+
+### 新增
+
+- **独立布局引擎 `layout2.ts`（P1）** —— 纯函数 flex-wrap 推算（measureText 注入式、零 DOM 度量）：层级名行/词条行排/emoji 单元/超宽截断省略/float 哈希/基线预计算；单测 7 项（行排居中/换行/截断/scatter/float/emoji/byId）
+- **层级名进 canvas（P1）** —— 层级标题由引擎自绘（近似 h2 样式 + letterSpacing），空态提示（层空/全空）也由 canvas 自绘；scatter 无层级名
+- **渲染提速（P2）** —— ① 精灵缓存（chip 离屏精灵 LRU 3000，布局变化自动清空）；② 全量重绘统一 rAF 分片（8ms 时间片 + 重绘提示，首帧也渐进）；③ 画布高度分段（单段 ≤30000px，移动端超高墙自动多段，滚动仍零重绘）；④ 统计/probe 延迟到分片完成回调
+- **交互坐标迁移（P1）** —— tooltip 幽灵锚点/随机/深链滚动全部读布局矩形；命中/键盘绑宿主容器（多段 canvas 时代单点坐标）；卡片/抽屉/搜索/收藏等 Store 链路零改动
+- **模式收敛** —— `?mode=canvas|ref`（默认 canvas），移除 DOM+canvas 重叠（both）与 hideChips；canvas 模式**零 `.iceberg-item` DOM 节点**（冒烟实测 domItems=0）
+- **过滤重排 + 过渡动画（morph）** —— hide 模式过滤后布局按可见集合**紧凑重建**（与生产 v-show 移除流内一致，不再留空洞；墙高随结果收缩，实测 11183→944）；重排带**位置插值过渡**（ease 300ms，剩余词条漂移到新位；freeze/reduced-motion 瞬移）；配套：文本测量缓存（重排复用，首次后不再 500ms 级 measureText）、精灵改**内容键缓存**（重排复用精灵，尺寸校验自动重建）、带 visible 集合的 `layoutWall2` 单测 + morph 冒烟（动画窗口捕获 ✓）
+
+### 修复
+
+- **recent 文字色回归** —— layout2 时代 recentText 置 null 后回退 #1a1a1a；生产 `.recently-updated{color:#1a1a1a}` 压不过模板 inline 分类色 → **recent 文字恒分类色**（视觉差异仅白底），断言收紧
+- **首帧空白** —— CanvasWall 基线视图未补传（immediate watch 早于 engine 创建）→ paintSync 因 view null 早退；显式 `setView(基线, onSettled)` + 首帧分片渐进
+- **「筛选未生效」排查** —— CDP 实测分类点击 1420→179、搜索"公交车"→2、引擎 visible Set 与画布像素联动；链路全通（疑似旧 server 代码缓存，已记录待用户复验）
+- **筛选→恢复版面乱掉 / 无限重排风暴** —— CanvasWall 布局失效 watch 误用 `watch(() => [layoutKey, width])`：数组 getter 每次求值返回新引用 → 父组件任何渲染都触发 remeasure；改回两个按值 watch。实测：搜索 1420→4 → 恢复 1420、布局引用 600ms 稳定、无风暴
+- **OOM 防护（dpr 封顶 + 精灵字节预算）** —— 墙位图内存 = 面积×dpr²×4：dpr2 桌面墙 250MB、移动 dpr3 墙 700MB+。新增 `capDpr(wallW, wallH, desired, budgetMB)`：桌面预算 128MB / 移动 64MB，dpr 自动降级（实测 --force-device-scale-factor=2：dpr 250MB→1×72MB，canvas.width 2800→1400）；精灵缓存新增字节预算 24MB LRU（此前只有张数上限）；stats 显示 `mem + spr`（精灵实时占用）；`effectiveDpr` 暴露真实封顶值
+- **hover 黑边修复** —— hover/read 翻转的局部重绘此前「clear 带（+margin）后只重画 chip 自己」，浮动偏移让邻词条间距可 < margin → 邻 chip 的描边/阴影被擦成黑底一圈。新增 `repaintChipArea`：clear 影响带后**重画 chip + 与带相交的所有可见 chip**（y 二分取候选，开销 O(log n + 带内)），hover/restore/read 翻转统一走此入口；RESTORE_MARGIN 8→6（描边外扩 ~5px 足够，误擦面更小）；回归单测 +1（相交邻 chip 重画、不相交不动）
+- **tooltip 彻底重写（按生产 useTooltip 结构）** —— ① 幽灵锚点**常驻**（display:none 隐藏替代 v-if 动态挂载）：Teleport 目标恒可解析，杜绝时序性 ghost 缺失；② 定位自适应延后到「teleport 完成 + 渲染一帧」（rAF×2）并高度兜底（h=0 时不再静默走错方向）；③ **基准修正**：`#items-container` 的 pt-6（24px）使 ghost（相对 padding 边缘）比画布（content 区）高 24px → tooltip 上方留 ~20px 空隙、下方遮盖词条——ghostStyle 动态补偿 `paddingTop`；④ 下方场景阴影零上侵（`0 8px 16px`——默认 `0 10px 30px` 的 blur 上缘会洒 5px 到词条底）；⑤ scrollBusy 竞态（滚动事件懒派发→滚动后 300ms 窗口内 hover 被吞）：窗口内只关 tooltip 保留锚点（微动即恢复）、时长 300→120ms；⑥ 下方判定 CDP 实测生效（y=95 hit-test 命中 canvas、below=true、tipTop=chipBottom 精确对齐）
+- **像素网格统一（词条↔tooltip 黑线根治，底层方案）** —— 词条视觉（canvas 位图）与 tooltip 锚点（DOM ghost）本是**两个独立亚像素体系**，浮点尾数随词条不同 → 有的对齐有的留一条黑线（且粗细漂移）。根治：**取整下沉到布局唯一真相源** `layout2`——chip 的 x/y/w/h、float 偏移、层级名、wallH 全部产出整数像素网格；绘制/hit/幽灵锚点/tooltip 共用同一坐标，两个体系共享同一网格，缝在数学上闭合（无补丁逻辑）。`layout2.test` 新增「像素网格自洽」单测（float 开关双实例全整数断言），浮点断言放行至网格容差；CDP 多词条交叉验证：below 场景 tipTop=chipBottom、above 场景 tipBottom=chipTop 全部一致
+- **词条↔tooltip 清晰度一致（dpr 档位化 + zoom 感知）** —— 词条是 canvas 位图、tooltip 是 DOM：此前位图 dpr 被预算压到 1.4/1，在 dpr2/zoom 屏幕上被放大渲染 → 词条边缘发虚。修复三件套：① `capDpr` 档位化 `[2, 1.5, 1.25, 1]`（优先贴近设备 dpr）；② **zoom 感知**——浏览器缩放会改 `devicePixelRatio` 但 computed 不追踪 → 新增 `dprTick`（resize 时递增，view.dpr 依赖它）+ layoutKey 并入 dpr，zoom 后强制按新分辨率重建位图；③ 桌面预算 128→320MB（1400×11183@dpr2=250MB / zoom200% 700×27000@dpr2=302MB 均可 2 档 1:1 物理像素）；移动 64MB 不变。测试：capDpr 单测重写 + zoom 场景用例
+- **「像 DOM 一样任意放大清晰」的架构权衡（记录）** —— 全墙单张位图内存按 zoom² 增长（200%=4×、300%=9×），预算再大也追不上；DOM 永远清晰是因为浏览器只光栅化视口内的元素（内置虚拟化）。若要「任意放大永远清晰」，唯一底层路径是 **视口带渲染**（位图只覆盖视口 ±margin，滚动重绘视口带，每帧仅几十 chip）：任意 zoom 均可 1:1 物理像素，内存大幅下降；代价是放弃「滚动零重绘」特性。待用户拍板是否切换（P5 集成方向决策）
+- **P1/P2 性能优化（morph 增量帧 / 公共绘制循环 / 命中行桶 / rAF 减半）** ——
+  - morph 动画帧只重画「移动 chip + 新旧路径包围盒相交的静止 chip」：帧成本从全墙 ~10ms 降到 <1ms（受影响面 >4 且 >30% 才回退全墙帧；终帧全量收尾保干净）；MorphAnim 持 chip 引用，`clearRegion` 跨段任意矩形
+  - 三条全量绘制循环收敛为公共 `paintChipsFor(pos)`（paintSync/分片/插值统一入口，防回归）
+  - 命中检测行桶：chips 按 y 单调（layout2 保证），`pointToId` 二分定位 ±90px 邻域（O(log n + 带内）替代全量线性扫描）；新增 `clearRegion`/`paintChipsFor` 等其附带重构均经全量回归
+  - withPaintHint 双 rAF → 单 rAF（重排响应延迟减半）；view resize 监听改为具名 handler 并在 onUnmounted 清理（防泄漏）
+- 验证：117/117 测试（+morph 增量帧单测：无整墙 clear、移动插值位移、波及静止重画、不相交不动、终帧全量）；CDP 真实墙：命中→弹窗、搜索 1420→4、恢复→1420 且 wallH 初始=恢复（13555.2，无漂移）
+
+### 性能（dev headless 软渲染实测；真机待复测）
+
+- 全量重绘分片后：paint 10.6ms（精灵热身后）；首帧/布局重排 total ~500ms 大头是 CJK measureText ×5700 次（软光栅），下一步做文本测量缓存
+- 背板：1400×11183 @dpr1 → 59.7MB（较 DOM 度量版 72MB 下降，布局更紧凑）
+
+
+## 2026-08-21 — Canvas 混合渲染实验页（DEV-only · P0+P1+P2）
+
+### 新增
+
+- **`/experiment-canvas` 实验页（仅 DEV，生产 tree-shake，零改动现有方案）** —— 词条墙 Canvas 混合渲染实验（`docs/plans/CANVAS_HYBRID_PLAN.md` / `CANVAS_PARITY.md`）：
+  - `src/lib/icebergCanvas/`：DOM 度量权威布局（char-step 换行、行盒基线、emoji 坐标）、6 重 text-shadow 描边复刻、hover 叠加层（marker+黑字）、命中检测、过滤纯函数镜像（同 Store 同判定）、像素探针；引擎 9 项单测全绿
+  - P2 交互等价（实验页内自建，生产组件只复用不改）：幽灵锚点 Tooltip（复用 `.tooltip-box` 全部 CSS）、桌面弹窗/移动抽屉（异步组件 + 空闲预取）、随机入口、`#hash`/`?item=` 深链、前后导航（`navOrder` 文档序）、Enter/Space 键盘、scatter 变体、perf 中间账本（measure/paint/背板/可见数）
+  - headless 差分探针实证：画布首屏 2400px 带不透明像素 34.14%，ref/canvas 对照图同级（~1.1MB）
+
+### 修复
+
+- **Canvas `ctx.font` 引号** —— computed font-family 含 `-apple-system` 等裸 token 时 canvas 整串拒绝字体，`fillText` 静默不画；新增 `quoteFontFamily()` 逐项加引号
+- **首绘基线** —— CanvasWall 重测后显式基线绘制（深度 watcher 非 immediate，不能依赖它触发首次绘制）
+- **点击弹窗延迟** —— 每次点击 `markRead` 会让 readSet 变化 → 引擎此前同步整墙 1420 芯片重绘，挡在弹窗首帧前；改为：引擎按芯片 diff 增量重绘（变化面 <40% 走单芯片局部 restore），状态重绘合并到 rAF（同 tick 多次变更只画一次）；新增 2 项单测覆盖增量/回退路径
+- **P3 视觉复刻逐项收敛** ——
+  - hover 记号笔：scaleX 0.25s 缓出动画（freeze/reduced-motion 直接终态）、recent 芯片层序修正（marker 实色在下 + `--white-80` 白底 80% 透出 20% 分类色）、modal 模式改为整体 α.8 无记号笔（生产 `html[data-detail=modal]` 分支）、hover 黑字去描边全宽
+  - tag emoji：字号/字族从 `.item-tag` computed font 度量（此前用行盒高取整、差 0.5px），色恒 `tagColor`（生产 `.item-tag` 规则后声明，recent 芯片 emoji 不变黑，此前错误画成 #1a1a1a）
+  - recent 白底补 `border-radius: 4px`（无 roundRect 环境降级直角）
+  - dim 芯片命中排除（生产 `pointer-events:none`）
+  - 焦点环（canvas `:focus-visible`，去掉误加的 `outline-none`）；cursor 按 detailMode（crosshair/pointer）
+  - URL 参数新增 `?detail=modal|tooltip`；引擎测试新增 modal hover / recent 圆角+emoji 色 / dim 排除 / 整墙绘制恢复共 4 项（全量 96 通过）
+  - **modal hover 移开不恢复**（回归修复）—— `paintHoverBand` modal 分支无视 progress 参数，leave 帧仍画 α.8；改为按 `enter` 标志分支（enter=0.8 / leave=常态 alpha），新增回归测试（97 通过）
+  - **recent 文字描边缺失** —— 引擎此前对 recently-updated 芯片关闭 text-shadow（想当然）；生产 `.iceberg-item` 基类六重描边并未被 `.recently-updated` 覆盖，黑字#1a1a1a+黑描边在白底上可见；恢复为恒画 `SHADOW_COLOR`，测试断言描边填充出现
+- **层级标题在 canvas 模式缺失** —— 层标题保持 DOM（决策 D，零复刻成本），把隐藏范围从"整个 reference 墙"收窄为"词条容器"（`hideChips` prop，visibility 保留布局，度量不受影响）；顺带修复 canvas 模式缺层级名
+- **重绘加载提示** —— 全量 measure+paint（初次进入/切换字号/过滤）是同步阻塞；`withPaintHint` 先渲染指示器帧（nextTick + 双 rAF）再执行，CSS 转圈由合成器驱动阻塞期仍可动；墙右上角"重绘中…"胶囊（hover 单芯片/增量重绘不触发）
+- **cursor 状态修正** —— canvas 是大单元素，静态 cursor 会让整墙（含空白）恒显点击手势；改为命中检测驱动：悬停词条才显示（tooltip=crosshair / modal=pointer），空白与离开恢复默认箭头，与生产元素级表现一致
+- **hover 动画并发 + 恢复漂移修复** —— ① 退场动画改为「每 chip 独立动画 Map」：A 退场中切 B，A 继续回缩到常态（此前单例状态机 cancel 掉 A 的动画，progress 停在半路卡死）；② **leave 帧重放原常态**（`paintChip` 全量：alphaFor 标定 read/dim、圆角白底、阴影、emoji 色与常态完全一致，此前自组装常态会漂移成全亮/直角）；③ `cancelHoverAnims` 中断时先把进行中的 chip 收敛常态（全量重绘/布局变更不留中间态帧）；④ enter 帧白底改圆角 `fillChipBg`；⑤ hover enter 关闭文字阴影（生产元素级 `text-shadow:none`）且 emoji 同黑，leave 恢复阴影。测试 +4（并发/无阴影/α 重放/中断收敛），CDP 像素实测：常态 0 → hover 100 → leave 520ms 复原 0 ✓
+- **全墙点击失效（层叠修复）** —— 根因 P1 遗留：`.iceberg-tier` 的 `z-[1]`（hover:z-[9999]）把 canvas（`absolute; z-index:auto`）压在 reference 词条之下，指针事件全部落在 DOM 词条上，hover/点击从未真正生效（P2 冒烟靠 `?item=` URL 驱动，未覆盖事件路径）。修复：canvas `zIndex:50` + 实验页 `:deep(.iceberg-tier){z-index:0!important}`（z 不影响绘制像素，hover 视觉由 canvas 自身承担）。CDP 实测双模式：both/canvas 点击→弹窗、tooltip 模式 hover→ghost+tooltip 全部恢复
+- **完整搜索与筛选（实验页此前搜索无 UI 入口、筛选缺大半）** ——
+  - 搜索输入框（150ms 防抖、`/` 快捷键聚焦）、全文/标题模式切换——搜索管线端到端验证：`?q=公交车` → visible=4，`?q=无匹配` → visible=0 + items-empty/tier-empty
+  - 标签筛选 68 个（折叠区 + 右键隐藏）、AND/OR 切换、已隐藏分类/标签恢复行、当前筛选摘要 chips（含"可见 N/1420"）
+  - 特殊筛选四档（有链接/有描述/最新/需补充）、收藏筛选、分类按钮右键隐藏
+  - 层空提示复刻进 ReferenceWall 模板（`tierEmpty()` helper，生产为 useFilterPipeline 动态插入 DOM）；组件测试 +2（99 通过）
+- **ReferenceWall 复刻错落排布** —— 此前实验墙从未应用生产 id 哈希 translate（生产默认 floatMode=static，默认态对照即偏离）；按 ItemInteractivity 同公式套用（含 `& 0xffffffff` 有符号 32 位行为，负哈希偏移区间实测 (-4.49,1.49]/(-8.99,2.99]），canvas 度量 DOM 自动继承；watch 依赖 `[fm, rootEl]` 保证就绪即套用（生产 immediate 在兄弟容器挂载前会静默跳过）
+- **控制台补齐选项** —— 点击模式（tooltip/modal，切换时清残留 tooltip）、错落（static/none）、排序（默认/标题 A→Z/Z→A/分类）、已读标记、NEW 标记；顺带修复 parity 偏差：`showReadMark=false` 时画布此前恒变暗已读条，现与生产门控一致
+- 新增 ReferenceWall 组件测试 2 项（错落偏移公式/清零）
+
+
 ## v4.5.5 — 2026-08-19 — 标准模式=液态 · 帧率上调 · 耗性能提示
 
 ### 改进

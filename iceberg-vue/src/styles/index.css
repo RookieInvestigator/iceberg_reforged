@@ -42,8 +42,23 @@
     padding: 0.125rem 0.375rem; font-weight: 700;
     line-height: 1.5; /* 行距 1.5 倍（用户指定） */
     contain: layout style;
-    text-shadow: 1px 1px 1px var(--shadow-color, rgba(0,0,0,.6)), 1px -1px 1px var(--shadow-color, rgba(0,0,0,.6)), -1px -1px 1px var(--shadow-color, rgba(0,0,0,.6)), -1px 1px 1px var(--shadow-color, rgba(0,0,0,.6)), 4px 3px 4px var(--shadow-color, rgba(0,0,0,.6));
+    /* 唯一描边方案（stroke-glow，2026-08-21 拍板）：光晕仅保留大阴影一层
+       （4px 3px 4px）；外描边由 .item-title::after 镜像层承担（见下） */
+    text-shadow: 4px 3px 4px var(--shadow-color, rgba(0,0,0,.6));
     cursor: pointer;
+  }
+  /* 外描边（伪元素镜像）：.item-title::after 以 attr(data-text) 复制同文、绝对定位
+     叠在原字之下（同字体同基线），镜像层画 2px 居中 -webkit-text-stroke，
+     原字 fill 天然盖住内半圈 → 可见部分 = 纯外圈 1px，真·外部描边（每字形 2 次绘制）。
+     hover 语义见下方两模式分离块：tooltip 模式隐藏（marker 背景承担对比度）、
+     modal 模式保留。已知差异：emoji（.item-tag）无描边（仅光晕）。 */
+  .item-title { position: relative; }
+  .item-title::after {
+    content: attr(data-text);
+    position: absolute; inset: 0;
+    -webkit-text-stroke: 2px var(--shadow-color, rgba(0,0,0,.6));
+    z-index: -1;
+    pointer-events: none;
   }
   .iceberg-item.dimmed { opacity: 0.15; pointer-events: none; transition: opacity 0.2s ease; }
   /* P1-6/7: 键盘焦点环（仅 :focus-visible，鼠标点击不出现） */
@@ -58,12 +73,26 @@
     transform: scaleX(0); transform-origin: left; z-index: -1;
     transition: transform 0.25s var(--ease-out);
   }
-  /* 桌面端 hover 记号笔效果 */
+  /* ===== 桌面端 hover —— 两模式语义分离（2026-08-21 拍板）=====
+     tooltip 模式：hover 有 marker 背景承担对比度 → 黑字**无需描边/阴影**
+     （隐藏镜像描边层 + text-shadow 移除）；tooltip-active 同语义（data-detail 守卫不泄漏）。
+     modal 模式：hover 无 marker 背景，仅透明度反馈 → 描边/光晕**保持原样**。 */
   @media (min-width: 1024px) {
-    html:not([data-detail="modal"]) .iceberg-item:hover, .iceberg-item.tooltip-active { z-index: 10; text-shadow: none !important; }
-    html:not([data-detail="modal"]) .iceberg-item:hover::before, .iceberg-item.tooltip-active::before { transform: scaleX(1); }
-    html:not([data-detail="modal"]) .iceberg-item:hover .item-title, .iceberg-item.tooltip-active .item-title,
-    html:not([data-detail="modal"]) .iceberg-item:hover .item-tag, .iceberg-item.tooltip-active .item-tag { color: #000 !important; }
+    /* —— tooltip 模式 —— */
+    html:not([data-detail="modal"]) .iceberg-item:hover,
+    html:not([data-detail="modal"]) .iceberg-item.tooltip-active {
+      z-index: 10;
+      text-shadow: none !important; /* marker 底承担对比度，光晕让位 */
+    }
+    html:not([data-detail="modal"]) .iceberg-item:hover .item-title::after,
+    html:not([data-detail="modal"]) .iceberg-item.tooltip-active .item-title::after { display: none; } /* 镜像外描边让位 */
+    html:not([data-detail="modal"]) .iceberg-item:hover::before,
+    html:not([data-detail="modal"]) .iceberg-item.tooltip-active::before { transform: scaleX(1); }
+    html:not([data-detail="modal"]) .iceberg-item:hover .item-title,
+    html:not([data-detail="modal"]) .iceberg-item.tooltip-active .item-title,
+    html:not([data-detail="modal"]) .iceberg-item:hover .item-tag,
+    html:not([data-detail="modal"]) .iceberg-item.tooltip-active .item-tag { color: #000 !important; }
+    /* —— modal 模式：描边/光晕保持原样 —— */
     html[data-detail="modal"] .iceberg-item { cursor: pointer; }
     html[data-detail="modal"] .iceberg-item:hover { opacity: 0.8; }
   }
@@ -83,7 +112,13 @@
   .filter-chip { padding: 2px 8px; font-size: var(--font-xs); min-height: 40px; }
 }
 
-  /* ===== Tooltip — position: absolute 相对词条，native 跟随滚动 ===== */
+  /* ===== Tooltip =====
+   两种模式：
+   ① .tooltip-box.floating（生产，ItemTooltip floating=true）：body 级浮动层，
+      position: fixed + 视口坐标（useTooltip 8px 硬钳制）——不属于任何可裁剪祖先盒的
+      后代（tier 合成层 / content-visibility / capture-area overflow / body clip 免疫）；
+      z-index 必须压过 .iceberg-tier 的 hover:z-[9999]。
+   ② 词条内锚点模式（实验页幽灵锚点等）：绝对定位相对词条，见下方 left/right/below 规则。 */
   .tooltip-box {
     position: absolute;
     bottom: 100%;
@@ -111,6 +146,17 @@
     visibility: visible;
     transition: opacity 0.4s ease, visibility 0s 0s;
     pointer-events: auto;
+  }
+  /* 生产浮动层：fixed 视口坐标（left/top 由 useTooltip 内联设置）+ 压过 hover 层级的 z */
+  .tooltip-box.floating {
+    position: fixed;
+    bottom: auto;
+    z-index: 10000;
+  }
+  /* 下置场景阴影零上侵（floating 模式定位类在盒上；词条内锚点模式走 chip 侧规则）：
+     默认 0 10px 30px 的 blur 上缘会洒到词条底，贴靠时影响明显 */
+  .tooltip-box.floating.tooltip-below {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.45);
   }
   .tooltip-box::-webkit-scrollbar { width: 6px; }
   .tooltip-box::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 3px; }
@@ -141,6 +187,10 @@
   /* 下方仅保留入场动画，不重复定义按钮本体 */
 
   /* ===== Content enter animations ===== */
+  /* 入场动画。NOTICE：不能给 .iceberg-tier 加 will-change/transform 提升合成层——
+     content-visibility:auto 的 paint containment + 估算盒会让合成层按边框盒裁剪溢出的
+     tooltip（tooltip 挂在 chip 内、可越过层级边缘，2026-08-21 实测被层级边缘截断）；
+     IndexView 在动画全部结束后移除 content-enter（释放 fill-mode:both 的变换层持有） */
   .content-enter .iceberg-tier { animation: fade-in-up 0.5s var(--ease-out) both; animation-delay: calc(0.3s + var(--tier-stagger, 0s) * 0.08s); }
   /* fill 用 backwards 而非 both：content-enter 挂载后不移除，both 会让 to{opacity:1} 永久生效、
      压掉沉浸模式 FAB 的 .immersive-group .fab-btn { opacity: 0 }（CSS 动画优先于普通声明） */
