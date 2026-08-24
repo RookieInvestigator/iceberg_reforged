@@ -41,3 +41,26 @@ export function hideTag(tag: string) {
 
 // NEW 标记窗口（天）— 主表 modifiedAt 距当前时间在此窗口内视为「最近更新」
 export const NEW_MARK_WINDOW_DAYS = 30;
+
+export interface ActiveFilterSnapshot {
+  query: string
+  cats: readonly string[]
+  tags: readonly string[]
+  hCats: readonly string[]
+  hTags: readonly string[]
+  spl: string
+  favF: boolean
+}
+
+/** 是否存在生效筛选（IndexView / IcebergApp 唯一判定源，替代两处手写同义 computed） */
+export function hasActiveFilter(s: ActiveFilterSnapshot): boolean {
+  return !!(
+    s.query ||
+    s.cats.length > 0 ||
+    s.tags.length > 0 ||
+    s.hCats.length > 0 ||
+    s.hTags.length > 0 ||
+    s.spl !== 'all' ||
+    s.favF
+  )
+}

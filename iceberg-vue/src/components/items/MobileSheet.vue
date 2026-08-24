@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch, inject, toRef, onMounted, onUnmounted, nextTick } from 'vue';
-import { Star, Heart, MessageCircle, Copy } from '@lucide/vue';
+import { Star, Heart, MessageCircle, Copy, Check } from '@lucide/vue';
 import { useI18n } from '../../lib/useI18n';
 import { lockOverlay } from '../../lib/overlayLock';
 import { REFERENCES_MAP_KEY, type ReferenceLink } from '../../lib/injectionKeys';
@@ -18,7 +18,7 @@ const open = computed(() => !!props.item);
 // P2-14：交互逻辑收敛至 useEntryInteractions（收藏/点赞/评论计数/复制/评论区开关）
 const commentSectionEl = ref<HTMLElement | null>(null)
 const itemId = toRef(() => (props.item as { id?: string } | null | undefined)?.id)
-const { favs, copied, liked, likeCount, commentCount, updatingLike, commentsOpen, supabaseReady, toggleItemLike, toggleFav, copyShareLink, openComments } = useEntryInteractions(itemId, commentSectionEl)
+const { favs, copied, titleCopied, liked, likeCount, commentCount, updatingLike, commentsOpen, supabaseReady, toggleItemLike, toggleFav, copyShareLink, copyTitle, openComments } = useEntryInteractions(itemId, commentSectionEl)
 
 const panelRef = ref<HTMLElement | null>(null);
 let sheetUnlock: (() => void) | null = null; // F20：overlay 滚动锁 token 释放函数
@@ -206,9 +206,9 @@ const tagList = computed<string[]>(() => {
       <template v-if="item">
         <div ref="bodyEl" class="sheet-body no-scrollbar flex-1 min-h-0 overflow-y-auto pb-6 [-webkit-overflow-scrolling:touch]" @scroll="onBodyScroll">
           <div class="mt-0.5 mb-2">
-            <button type="button" class="block w-full py-1.5 bg-transparent border-none text-text-primary text-left cursor-pointer touch-manipulation" @click="copyShareLink(item.id)"
-              :aria-label="copied ? t('linkCopied') : t('copyLink')">
-              <span class="block text-xl font-black leading-[1.3] tracking-[0.01em] [overflow-wrap:anywhere]">{{ copied ? t('linkCopied') : item.title }}</span>
+            <button type="button" class="block w-full py-1.5 bg-transparent border-none text-text-primary text-left cursor-pointer touch-manipulation" @click="copyTitle(item.title)"
+              :aria-label="titleCopied ? t('titleCopied') : t('copyTitle')">
+              <span class="block text-xl font-black leading-[1.3] tracking-[0.01em] [overflow-wrap:anywhere]">{{ titleCopied ? t('titleCopied') : item.title }}</span>
             </button>
           </div>
 
@@ -267,8 +267,10 @@ const tagList = computed<string[]>(() => {
             <button type="button" class="min-w-11 min-h-11 inline-flex items-center justify-center gap-1 px-1.5 text-white-45 bg-transparent border-none rounded-lg cursor-pointer touch-manipulation transition-colors duration-150 enabled:hover:bg-white-05 enabled:active:bg-white-08 disabled:opacity-40 disabled:cursor-default" @click="copyShareLink(item.id)"
               :title="copied ? t('linkCopied') : t('copyLink')"
               :aria-label="copied ? t('linkCopied') : t('copyLink')"
-              :class="copied ? 'text-white-90' : ''">
-              <Copy :size="16" :stroke-width="1.7" />
+              :class="copied ? 'text-white-90 bg-white/10' : ''">
+              <Check v-if="copied" :size="16" :stroke-width="2.2" />
+              <Copy v-else :size="16" :stroke-width="1.7" />
+              <span v-if="copied" class="text-[length:var(--font-tiny)] font-medium whitespace-nowrap">{{ t('linkCopied') }}</span>
             </button>
           </div>
         </div>

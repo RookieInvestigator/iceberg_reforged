@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Heart, Star, Copy, MessageCircle, ChevronLeft, ChevronRight, ExternalLink } from '@lucide/vue';
+import { Heart, Star, Copy, Check, MessageCircle, ChevronLeft, ChevronRight, ExternalLink } from '@lucide/vue';
 import BaseModal from '../modals/BaseModal.vue';
 import CommentPanel from './CommentPanel.vue';
 import EntryMetaBadges from './EntryMetaBadges.vue';
@@ -47,7 +47,7 @@ const { t } = useI18n();
 // P2-14：交互逻辑收敛至 useEntryInteractions（收藏/点赞/评论计数/复制/评论区开关）
 const commentSectionEl = ref<HTMLElement | null>(null)
 const itemId = toRef(() => props.item?.id)
-const { favs, copied, liked, likeCount, commentCount, updatingLike, commentsOpen, supabaseReady, toggleItemLike, toggleFav, copyShareLink, openComments } = useEntryInteractions(itemId, commentSectionEl)
+const { favs, copied, titleCopied, liked, likeCount, commentCount, updatingLike, commentsOpen, supabaseReady, toggleItemLike, toggleFav, copyShareLink, copyTitle, openComments } = useEntryInteractions(itemId, commentSectionEl)
 
 // 参考链接：显式 references 优先，否则回退副表 referencesMap（同 ItemModal）
 const referencesMap = inject<Map<string, EntryDetailCardLink[]>>('referencesMap', new Map())
@@ -76,7 +76,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <BaseModal v-if="item" :title="copied ? t('linkCopied') : item.title" :titleClick="() => copyShareLink(item.id)" size="lg" titleClass="!text-[1.25rem] font-semibold tracking-wide" @close="$emit('close')">
+  <BaseModal v-if="item" :title="titleCopied ? t('titleCopied') : item.title" :titleClick="() => copyTitle(item.title)" size="lg" titleClass="!text-[1.25rem] font-semibold tracking-wide" @close="$emit('close')">
 
     <!-- ── 描述区：核心（阅读）；-mt-3 抵消 modal-body 顶部 padding，压缩头部下方留白 ── -->
     <div class="-mt-3">
@@ -146,9 +146,13 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 
           <button @click="copyShareLink(item.id)"
             class="entry-action-btn max-sm:min-w-[40px] max-sm:min-h-[40px] transition-colors cursor-pointer"
-            :class="copied ? 'text-white/80' : 'text-white/60 hover:text-white/90'"
-            :title="copied ? t('linkCopied') : t('copyLink')">
-            <Copy :size="16" :stroke-width="1.7" />
+            :class="copied ? 'text-white-90 bg-white/10' : 'text-white/60 hover:text-white/90'"
+            :title="copied ? t('linkCopied') : t('copyLink')"
+            :aria-label="copied ? t('linkCopied') : t('copyLink')">
+            <Check v-if="copied" :size="16" :stroke-width="2.2" />
+            <Copy v-else :size="16" :stroke-width="1.7" />
+            <!-- 显式反馈：复制成功即显示「已复制链接」（原生 title 提示太弱） -->
+            <span v-if="copied" class="text-[length:var(--font-tiny)] font-medium whitespace-nowrap">{{ t('linkCopied') }}</span>
           </button>
         </div>
 

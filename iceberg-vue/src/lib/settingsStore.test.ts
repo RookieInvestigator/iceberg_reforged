@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { storedAtom } from './settingsStore'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { storedAtom, flushPersistedWrites, cancelPersistedWrites } from './settingsStore'
 
 describe('storedAtom', () => {
   beforeEach(() => localStorage.clear())
@@ -38,10 +38,68 @@ describe('storedAtom', () => {
     const a = storedAtom('test-arr-ok', [] as string[])
     expect(a.get()).toEqual(['x'])
   })
+})
 
-  it('set 时写入 localStorage', () => {
+describe('storedAtom 持久化写入节流', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    flushPersistedWrites()
+    vi.useRealTimers()
+  })
+
+  it('set 后防抖期内不立即写盘；防抖到期才写入', () => {
     const a = storedAtom('test-write', 'md')
     a.set('xl')
+    expect(localStorage.getItem('test-write')).toBeNull()
+    vi.advanceTimersByTime(499)
+    expect(localStorage.getItem('test-write')).toBeNull()
+    vi.advanceTimersByTime(1)
     expect(JSON.parse(localStorage.getItem('test-write')!)).toBe('xl')
+  })
+
+  it('防抖期内连续 set：只写最后一次（latest-wins，单次写盘）', () => {
+    const a = storedAtom('test-latest', 'md')
+    a.set('sm')
+    a.set('lg')
+    vi.advanceTimersByTime(250)
+    a.set('xl')
+    vi.advanceTimersByTime(499)
+    expect(localStorage.getItem('test-latest')).toBeNull()
+    vi.advanceTimersByTime(1)
+    expect(JSON.parse(localStorage.getItem('test-latest')!)).toBe('xl')
+  })
+
+  it('flushPersistedWrites：立即落盘未写入值并清空待写队列', () => {
+    const a = storedAtom('test-flush', 'md')
+    a.set('lg')
+    flushPersistedWrites()
+    expect(JSON.parse(localStorage.getItem('test-flush')!)).toBe('lg')
+    // 队列已清空：推进计时器不应再次写入
+    vi.advanceTimersByTime(600)
+  })
+
+  it('cancelPersistedWrites：丢弃待写入，后续不再落盘', () => {
+    const a = storedAtom('test-cancel', 'md')
+    a.set('xl')
+    cancelPersistedWrites()
+    vi.advanceTimersByTime(600)
+    expect(localStorage.getItem('test-cancel')).toBeNull()
+  })
+
+  it('pagehide：自动 flush 未落盘的最后值', () => {
+    const a = storedAtom('test-hide', 'md')
+    a.set('lg')
+    window.dispatchEvent(new Event('pagehide'))
+    expect(JSON.parse(localStorage.getItem('test-hide')!)).toBe('lg')
+  })
+
+  it('visibilitychange：自动 flush（隐藏前后事件都可能预示页面退出）', () => {
+    const a = storedAtom('test-vis', 'md')
+    a.set('xl')
+    window.dispatchEvent(new Event('visibilitychange'))
+    expect(JSON.parse(localStorage.getItem('test-vis')!)).toBe('xl')
   })
 })

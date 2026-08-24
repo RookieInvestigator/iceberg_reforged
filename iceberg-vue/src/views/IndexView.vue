@@ -11,7 +11,9 @@ import { normalizeData, isSafeHttpUrl } from '../lib/data'
 import { parseCSV } from '../lib/csv'
 import { useI18n } from '../lib/useI18n'
 import { initialMountCount, nextMountCount } from '../lib/iceberg/wallMount'
-import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, TIER_ORDER_KEY, CATEGORY_COLORS_KEY, TAG_MAP_KEY, DEFAULT_COLOR_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, HERO_TITLES_KEY, RELATED_MAP_KEY, REFERENCES_MAP_KEY, OPEN_ON_THIS_DAY_KEY, ID_ALIASES_KEY, WALL_ORDER_KEY } from '../lib/injectionKeys'
+import { tierVisibleCounts } from '../lib/iceberg/wallCounts'
+import { docOrder } from '../lib/iceberg/wallState'
+import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, TIER_ORDER_KEY, CATEGORY_COLORS_KEY, TAG_MAP_KEY, DEFAULT_COLOR_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, HERO_TITLES_KEY, RELATED_MAP_KEY, REFERENCES_MAP_KEY, OPEN_ON_THIS_DAY_KEY, ID_ALIASES_KEY } from '../lib/injectionKeys'
 import IcebergBg from '../components/layout/IcebergBg.vue'
 import FooterSection from '../components/layout/FooterSection.vue'
 // TEMP：hero 页暂时移除
@@ -85,11 +87,16 @@ provide(HERO_TITLES_KEY, allItemsRaw.map(i => i.title))
 provide(RELATED_MAP_KEY, relatedMap)
 provide(REFERENCES_MAP_KEY, referencesMap)
 
-// 词条墙 DOM 文档序（tierOrder × 层内声明式排序）：弹窗前后导航的数据源，
-// 替代 navIdsFor 的 1400 节点 DOM 扫描，且与分片挂载兼容（不依赖 DOM 补齐状态）
-const wallOrder = computed(() =>
-  data.tierOrder.flatMap(tn => (tierItems.value[tn] || []).map((i: any) => i.id)))
-provide(WALL_ORDER_KEY, wallOrder)
+// 词条墙 DOM 文档序（tierOrder × 层内声明式排序）→ wallState.docOrder（单一事实源）：
+// 导航索引/随机池均由模块消费，与分片挂载兼容（不依赖 DOM 补齐状态）；sortMode 变化才重建
+watch(tierItems, (ti) => {
+  const out: string[] = []
+  for (const tn of data.tierOrder) {
+    const arr = ti[tn]
+    if (arr) for (const it of arr) out.push((it as any).id)
+  }
+  docOrder.value = out
+}, { immediate: true })
 
 // ═══ 生产性能：词条墙分片挂载（首屏 2 层 + 逐帧补齐，见 lib/iceberg/wallMount.ts）═══
 // 首屏长任务从「一次性创建 1420 节点」拆成 ~6 帧小任务；视口外 paint 本就被
@@ -164,14 +171,8 @@ const dimSet = computed(() => dimItems.value)
 
 // 层空/全空提示（声明式，替代原 useFilterPipeline 命令式 createElement 路径；
 //   仅 hide 模式可见——dim 模式全部词条仍在 DOM，提示会造成误读）
+// 层可见数由过滤管线单遍产出（wallCounts——不再单独扫 1420 词条）
 const { t } = useI18n()
-const tierVisCounts = computed(() => {
-  const fv = filterVisible.value
-  if (!fv) return null
-  const m = new Map<string, number>()
-  for (const it of allItemsRaw) if (fv.has(it.id)) m.set(it.tier, (m.get(it.tier) || 0) + 1)
-  return m
-})
 const hasNoResults = computed(() => filterVisible.value !== null && filterVisible.value.size === 0)
 
 // F30：旧 ID → 新 ID 重定向表（分享 hash / 深链 / 收藏旧 id 解析用）
@@ -272,8 +273,8 @@ onUnmounted(() => {
                     <span v-for="(e, ei) in item.emojis" :key="ei" class="item-tag text-[0.625em] ml-[0.3em] relative -top-[0.08em] inline-flex items-center justify-center transition-colors duration-200">{{ e }}</span>
                   </span>
                 </div>
-                <!-- 层空（hide 模式本层 0 命中，全空时由上方 items-empty 统一提示） -->
-                <div v-if="tierVisCounts && (tierVisCounts.get(tierName) || 0) === 0" class="tier-empty text-center text-white/15 text-sm py-8 italic">{{ t('tierEmpty') }}</div>
+                <!-- 层空（hide 模式本层 0 命中，全空时由上方 items-empty 统一提示；管线单遍产出的层可见数） -->
+                <div v-if="tierVisibleCounts && (tierVisibleCounts.get(tierName) || 0) === 0" class="tier-empty text-center text-white/15 text-sm py-8 italic">{{ t('tierEmpty') }}</div>
               </div>
             </section>
           </template>

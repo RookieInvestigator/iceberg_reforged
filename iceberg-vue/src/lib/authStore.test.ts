@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // F13 验收：收藏同步冲突矩阵（本地新增 / 云端新增 / 两端删除 / 首次登录 / 同步失败）
 
@@ -28,12 +28,15 @@ vi.mock('./supabaseData', () => ({
 
 import { syncFavoritesWithCloud } from './authStore'
 import { fetchMyFavorites, syncFavorites } from './supabaseData'
-import { favorites } from './settingsStore'
+import { favorites, flushPersistedWrites } from './settingsStore'
 
 const mockFetch = vi.mocked(fetchMyFavorites)
 const mockSync = vi.mocked(syncFavorites)
 
 function setLocal(ids: string[]) {
+  // 先落盘调度中的待写入（如 beforeEach 的 favorites.set([])），再直写种子——
+  // 否则 runFavoritesSync 内部 flush 会把旧 atom 值盖掉种子
+  flushPersistedWrites()
   localStorage.setItem('iceberg-favorites', JSON.stringify(ids))
 }
 
@@ -43,6 +46,8 @@ beforeEach(() => {
   mockFetch.mockReset()
   mockSync.mockReset().mockResolvedValue(undefined)
 })
+// 持久化写入节流（settingsStore 防抖）：用例间落盘待写入，防前一用例残留定时器污染 storage
+afterEach(() => flushPersistedWrites())
 
 describe('syncFavoritesWithCloud（F13 冲突矩阵）', () => {
   it('首次登录（本地为空，云端有收藏）：仅合并显示，不传播删除', async () => {

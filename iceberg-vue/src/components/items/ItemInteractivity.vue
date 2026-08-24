@@ -2,13 +2,14 @@
 import { ref, watch, watchEffect, onMounted, onUnmounted, nextTick, markRaw, inject, defineAsyncComponent } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { searchQuery, searchMode, NEW_MARK_WINDOW_DAYS } from '../../lib/filterStore';
-import { floatMode, detailMode, readItems } from '../../lib/settingsStore';
+import { floatMode, detailMode, readItems, showReadMark } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
-import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, RELATED_MAP_KEY, ID_ALIASES_KEY, WALL_ORDER_KEY, type RenderItem } from '../../lib/injectionKeys';
+import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, RELATED_MAP_KEY, ID_ALIASES_KEY, type RenderItem } from '../../lib/injectionKeys';
 import { useSearchWorker } from '../../lib/iceberg/useSearchWorker';
 import { useRelatedIndex } from '../../lib/iceberg/useRelatedIndex';
 import { useFilterPipeline } from '../../lib/iceberg/useFilterPipeline';
 import { useTooltip } from '../../lib/iceberg/useTooltip';
+import { navIndex, wallMatched } from '../../lib/iceberg/wallState';
 import ItemTooltip from './ItemTooltip.vue';
 // P1-10: 详情弹窗/抽屉懒加载 —— EntryDetailCardNext / MobileSheet 静态引入会把
 // @supabase/supabase-js（~62KB gz）拖进首屏 chunk；改为异步组件 + 空闲预取
@@ -24,8 +25,6 @@ const filterVisible = inject(FILTER_VISIBLE_KEY, null)
 const dimItems = inject(DIM_ITEMS_KEY, null)
 // F30：旧 ID → 新 ID 重定向表（标题/层级修订后，分享 hash / 深链 / 收藏旧 id 仍可解析）
 const idAliases = inject(ID_ALIASES_KEY, new Map<string, string>())
-// 词条墙 DOM 文档序（IndexView computed）：弹窗前后导航的数据源，零 DOM 扫描
-const wallOrderRef = inject(WALL_ORDER_KEY, null)
 function resolveId(id: string | null | undefined): string {
   const alias = id ? idAliases.get(id) : undefined;
   return alias || (id || '')
@@ -48,7 +47,9 @@ const itemModAt = new Map(allItems.map(i => [i.id, i.modifiedAt || 0]));
 // ── codeq 拆分：搜索 Worker / 相关词条索引 / 过滤管线 / Tooltip 控制器 ──
 const { searchResults, initSearch } = useSearchWorker(query, sMode)
 const { pickRelated } = useRelatedIndex(itemMap, relatedMap)
-const { filterSnapshot, matchesFilter } = useFilterPipeline(allItems, { filterVisible, dimItems, searchResults, resolveId, newCutoff, itemModAt })
+useFilterPipeline(allItems, { filterVisible, dimItems, searchResults, resolveId, newCutoff, itemModAt })
+// 可见文档序索引 / 匹配集（wallState 单遍维护）：前后导航 O(1) 查表、随机池 O(1)
+const navIdx = navIndex
 const { tip, tipRef, onMouseOver, onMouseLeave, showTooltip, hideTooltip, resetCurrentItem } = useTooltip({ t, dm, findItem })
 
 // ── 弹窗 / 抽屉状态 ──
@@ -73,28 +74,23 @@ function markRead(id: string) {
   const cur = readItems.get();
   // perf：上限 2000（约 16KB），超出丢弃最早记录，防 localStorage 无界增长
   if (!cur.includes(id)) readItems.set([...cur, id].slice(-2000));
+  // O(1) 定向标记：管线不再监听 readItems 全量重扫（O(1400) → O(1)），
+  // 与 applyItemMarks 的 read 判定同语义（元素 data-id 即当前 id）
+  if (!showReadMark.get()) return;
+  const el = document.querySelector<HTMLElement>(`.iceberg-item[data-id="${CSS.escape(id)}"]`);
+  if (el) el.classList.add('read');
 }
 
 // P1-5: 可见词条前后导航 id（桌面弹窗用；移动抽屉不再展示左右箭头）
-// P-2026-08-21: 数据化文档序（WALL_ORDER_KEY）替代 1400 节点 querySelectorAll 扫描——
-// 与分片挂载兼容（不依赖 DOM 是否已补齐），弹窗导航零 DOM 查询；注入缺失时回退 DOM 扫描
+// 2026-08-21: wallState.navIndex 单遍维护的可见文档序位置索引 → O(1) 查表，
+// 与分片挂载兼容（不依赖 DOM 补齐状态），弹窗打开零过滤零 DOM 查询
 function navIdsFor(raw: RenderItem) {
-  const vis = filterVisible?.value;
-  const order = wallOrderRef?.value;
-  if (order) {
-    const list = vis ? order.filter(id => vis.has(id)) : order;
-    const idx = list.indexOf(raw.id);
-    return {
-      prevId: idx > 0 ? list[idx - 1] : null,
-      nextId: idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null,
-    };
-  }
-  const allIds = [...document.querySelectorAll<HTMLElement>('.iceberg-item')].map(el => el.dataset.id).filter((id): id is string => Boolean(id))
-    .filter(id => !vis || vis.has(id));
-  const idx = allIds.indexOf(raw.id);
+  const idx = navIdx.value.map.get(raw.id);
+  if (idx == null) return { prevId: null, nextId: null };
+  const order = navIdx.value.order;
   return {
-    prevId: idx > 0 ? allIds[idx - 1] : null,
-    nextId: idx < allIds.length - 1 ? allIds[idx + 1] : null,
+    prevId: idx > 0 ? order[idx - 1] : null,
+    nextId: idx < navIdx.value.length - 1 ? order[idx + 1] : null,
   };
 }
 
@@ -143,17 +139,22 @@ watch(fm, (mode) => {
   });
 }, { immediate: true });
 
-// Random entry（F15：随机池 = 当前筛选下的可见集合；无命中时不做随机，避免抽到不符合条件的词条）
+// Random entry（F15：随机池 = 当前筛选下的匹配集合；无命中时不做随机，
+// 避免抽到不符合条件的词条）。2026-08-21: 走 wallState.wallMatched（管线单遍产出，
+// hide/dim 皆有效），替代每次点击的 1420 词条 matchesFilter 全量扫描
 let randomTooltipTimer = 0
 function showRandom() {
-  const pool = allItems.filter(item => matchesFilter(item, filterSnapshot()));
+  const matched = wallMatched.value;
+  const pool = matched && matched.size ? [...matched] : (matched ? [] : allItems.map(i => i.id));
   if (pool.length === 0) return;
-  const item = pool[Math.floor(Math.random() * pool.length)];
+  const id = pool[Math.floor(Math.random() * pool.length)];
+  const item = itemMap.get(id);
+  if (!item) return;
   if (dm.value === 'modal') {
     setModalItem(item);
     return;
   }
-  const el = document.querySelector<HTMLElement>(`.iceberg-item[data-id="${item.id}"]`);
+  const el = document.querySelector<HTMLElement>(`.iceberg-item[data-id="${CSS.escape(id)}"]`);
   if (!el) return;
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   // F18：保存 tooltip 延时 id，卸载时取消（避免访问已卸载状态）

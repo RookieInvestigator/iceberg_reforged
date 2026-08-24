@@ -196,6 +196,8 @@ export default {
 	referenceLinks: 'Reference links',
 	linkCopied: 'Link copied',
 	copyLink: 'Copy link',
+	titleCopied: 'Title copied',
+	copyTitle: 'Copy title',
 	mobileOnlyHint: 'Mobile only supports the bottom sheet; this setting does not apply on mobile',
 	data: 'Data',
 	pasteJsonHint: 'Paste JSON data...',

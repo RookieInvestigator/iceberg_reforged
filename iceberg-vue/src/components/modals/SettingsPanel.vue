@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useStore } from '@nanostores/vue';
 import BaseModal from './BaseModal.vue';
-import { fontSize, floatMode, filterMode, showRandomBtn, bgMode, sortMode, detailMode, showReadMark, showNewMark, immersiveMode, scatterMode, applySimpleMode, applyStandardMode } from '../../lib/settingsStore';
+import { fontSize, floatMode, filterMode, showRandomBtn, bgMode, sortMode, detailMode, showReadMark, showNewMark, immersiveMode, scatterMode, applySimpleMode, applyStandardMode, flushPersistedWrites, cancelPersistedWrites } from '../../lib/settingsStore';
 import { lang as langAtom } from '../../lib/i18nStore';
 import { useI18n } from '../../lib/useI18n';
 
@@ -37,6 +37,8 @@ onMounted(() => {
 
 // 数据管理
 function exportData() {
+  // 先落盘防抖期内的待写入，导出的数据包含最新值
+  flushPersistedWrites();
   const keys = [];
   for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
   const data: Record<string, string> = {};
@@ -52,6 +54,8 @@ function doImport() {
 }
 function clearData() {
   if (!confirm(t('clearConfirm'))) return;
+  // 丢弃防抖待写入，防清除后旧值被定时器写回
+  cancelPersistedWrites();
   const keys = [];
   for (let i = 0; i < localStorage.length; i++) keys.push(localStorage.key(i));
   keys.filter((k): k is string => !!k && k.startsWith('iceberg-')).forEach(k => localStorage.removeItem(k));

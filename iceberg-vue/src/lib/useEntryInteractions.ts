@@ -23,6 +23,7 @@ export function useEntryInteractions(
   const supabaseReady = isSupabaseReady()
 
   const copied = ref(false)
+  const titleCopied = ref(false)
   const liked = ref(false)
   const likeCount = ref(0)
   const commentCount = ref(0)
@@ -78,7 +79,7 @@ export function useEntryInteractions(
     }
   }
 
-  // 复制分享链接（标题点击，反馈切换标题文案；失败静默）
+  // 复制分享链接（底部动作条；页面 hash 定位），反馈切换按钮文案；失败静默
   let copyTimer: number | null = null
   async function copyShareLink(id: string) {
     if (!id) return
@@ -91,6 +92,20 @@ export function useEntryInteractions(
     } catch {
       // 剪贴板不可用时静默失败
       copied.value = false
+    }
+  }
+
+  // 复制标题文字（点击弹窗/抽屉标题行；与链接复制状态互不干扰），反馈切换标题文案
+  let titleCopyTimer: number | null = null
+  async function copyTitle(title: string) {
+    if (!title) return
+    try {
+      await navigator.clipboard.writeText(title)
+      titleCopied.value = true
+      if (titleCopyTimer) window.clearTimeout(titleCopyTimer)
+      titleCopyTimer = window.setTimeout(() => { titleCopied.value = false }, 1500)
+    } catch {
+      titleCopied.value = false
     }
   }
 
@@ -107,10 +122,11 @@ export function useEntryInteractions(
   // 组件卸载时清理复制反馈定时器
   onScopeDispose(() => {
     if (copyTimer) window.clearTimeout(copyTimer)
+    if (titleCopyTimer) window.clearTimeout(titleCopyTimer)
   })
 
   return {
-    favs, copied, liked, likeCount, commentCount, updatingLike, commentsOpen, supabaseReady,
-    toggleItemLike, toggleFav, copyShareLink, openComments,
+    favs, copied, titleCopied, liked, likeCount, commentCount, updatingLike, commentsOpen, supabaseReady,
+    toggleItemLike, toggleFav, copyShareLink, copyTitle, openComments,
   }
 }

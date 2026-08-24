@@ -1,4 +1,4 @@
-import type { InjectionKey, Ref, ShallowRef } from 'vue'
+import type { InjectionKey, ShallowRef } from 'vue'
 import type { IcebergItem } from './data'
 
 /**
@@ -32,10 +32,3 @@ export const REFERENCES_MAP_KEY: InjectionKey<Map<string, ReferenceLink[]>> = Sy
 
 export const OPEN_ON_THIS_DAY_KEY: InjectionKey<() => void> = Symbol('openOnThisDay')
 export const ID_ALIASES_KEY: InjectionKey<Map<string, string>> = Symbol('idAliases')
-
-/**
- * 词条墙 DOM 文档序 id（tierOrder × tierItems 声明式排序；IndexView 计算）。
- * 弹窗前后导航的数据源：替代 navIdsFor 的 1400 节点 querySelectorAll 扫描，
- * 且与分片挂载（wallMount）兼容——不依赖 DOM 是否已补齐。
- */
-export const WALL_ORDER_KEY: InjectionKey<Ref<string[]>> = Symbol('wallOrder')

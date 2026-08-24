@@ -198,6 +198,8 @@ export default {
 	referenceLinks: '参考リンク',
 	linkCopied: 'リンクをコピーしました',
 	copyLink: 'リンクをコピー',
+	titleCopied: 'タイトルをコピーしました',
+	copyTitle: 'タイトルをコピー',
 	mobileOnlyHint: 'モバイルではボトムシートのみ対応。この設定はモバイルに影響しません',
 	data: 'データ',
 	pasteJsonHint: 'JSONデータを貼り付け...',

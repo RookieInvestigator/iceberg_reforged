@@ -2,7 +2,7 @@
 // Single Vue island: FilterSidebar + ActiveFilters + Search + ItemInteractivity share one instance
 import { computed, ref, onMounted, onUnmounted, watchEffect, inject } from 'vue';
 import { useStore } from '@nanostores/vue';
-import { activeCategories, activeTags, searchQuery, toggleCategory, toggleTag, tagFilterMode, searchMode, hiddenCategories, hiddenTags, specialFilter, favFilter, hideCategory, hideTag } from '../../lib/filterStore';
+import { activeCategories, activeTags, searchQuery, toggleCategory, toggleTag, tagFilterMode, searchMode, hiddenCategories, hiddenTags, specialFilter, favFilter, hideCategory, hideTag, hasActiveFilter } from '../../lib/filterStore';
 import { fontSize } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import ItemInteractivity from '../items/ItemInteractivity.vue';
@@ -58,7 +58,15 @@ const hiddenCats = useStore(hiddenCategories);
 const hiddenT = useStore(hiddenTags);
 const splFilter = useStore(specialFilter);
 const favF = useStore(favFilter);
-const hasActive = computed(() => query.value || activeCats.value.length > 0 || activeT.value.length > 0 || hiddenCats.value.length > 0 || hiddenT.value.length > 0 || splFilter.value !== 'all' || favF.value);
+const hasActive = computed(() => hasActiveFilter({
+  query: query.value,
+  cats: activeCats.value,
+  tags: activeT.value,
+  hCats: hiddenCats.value,
+  hTags: hiddenT.value,
+  spl: splFilter.value,
+  favF: favF.value,
+}));
 function clearAll() { searchQuery.set(''); activeCategories.set([]); activeTags.set([]); hiddenCategories.set([]); hiddenTags.set([]); specialFilter.set('all'); favFilter.set(false); }
 
 // Debounced search — delay store writes by 150ms

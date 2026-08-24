@@ -1,6 +1,70 @@
 # 更新日志
 
 
+## 2026-08-21 — 词条弹窗复制交互调整 + 复制反馈可视化
+
+### 改进 / 修复
+
+- **点击标题 = 复制标题文字**（桌面弹窗 + 移动抽屉一致）：`useEntryInteractions` 新增
+  `copyTitle`/`titleCopied`（独立于链接复制状态，1.5s 自动复原）；标题文本临时切换为
+  「已复制标题」；底部动作条复制按钮保持**复制链接**（原语义不动）
+- **「已复制链接」反馈可视化**（反馈太弱修复）：此前仅原生 `title` 悬浮 + 微变色，几乎
+  不可见；改为复制成功时按钮**图标变勾 + 左侧出现「已复制链接」小字 + 背景提亮**，
+  1.5s 复原（桌面/移动两处同步）；i18n 新增 `titleCopied`/`copyTitle` 两键 ×3 语
+
+
+## 2026-08-21 — 持久化写入节流（storedAtom 防抖落盘）
+
+### 改进
+
+- **`storedAtom` 写盘防抖（500ms）**：热路径写入（已读/收藏/设置切换）合并为批量落盘——
+  每次 markRead / 收藏切换不再同步 JSON.stringify + localStorage.setItem；latest-wins
+  （防抖期内连续 set 只写最后一次）；页面隐藏/卸载（pagehide / visibilitychange /
+  beforeunload）统一 flush，丢失上限 = 最后一批（无跨标签同步语义，可接受）
+- **外部直读护栏**：`flushPersistedWrites()` 导出——`SettingsPanel.exportData`（导出含最新值）
+  与 `authStore.runFavoritesSync`（收藏直读前落盘）接入；`cancelPersistedWrites()`——`clearData`
+  清除前丢弃待写入，防防抖定时器把旧值写回
+- **测试**：settingsStore 新增 6 项（防抖期不写/到期写入/latest-wins/flush/cancel/pagehide 与
+  visibilitychange 自动 flush）；authStore 冲突矩阵按新语义适配（直写种子前 flush 待写入 +
+  afterEach 落盘，防跨用例残留定时器污染）；全套件 97/97
+
+
+## 2026-08-21 — 词条墙派生状态单一化完成（研究一 P2+P3）
+
+### 改进
+
+- **`lib/iceberg/wallState.ts`（单一事实源）**：`docOrder`（IndexView 按 sortMode 重建写入）、
+  `navIndex`（可见文档序位置索引，管线 watchEffect 线性重建）、`wallMatched`（匹配集，
+  hide/dim 皆产出）；生产点仅 IndexView + 管线两处，消费方零计算
+- **弹窗前后导航 O(1)**：`navIdsFor` 改查 `navIndex` 位置表（id→index + 顺序数组），
+  替代每次打开弹窗的可见过滤；`WALL_ORDER_KEY` 注入键删除（链条收敛为模块）
+- **随机入口 O(1)**：`showRandom` 走 `wallMatched`（管线单遍产出），移除每次点击的
+  1420 词条 matchesFilter 全量扫描；语义与管线判定同源（F15 保证不变）
+- **测试**：`buildNavIndex` 4 项纯函数单测（无过滤/hide 过滤/全空/空序防御）；全套件 92/92
+- 研究文档 `docs/plans/WALL_STATE_UNIFICATION.md` 收尾：P1-P3 完成，P4（marks 并入
+  reactive 派生链）评估结论**不做**——定向 classList 通道是正确设计，避免 1420 chips
+  绑定 readItems 响应性
+
+
+## 2026-08-21 — 词条墙派生状态收敛（研究一 · P1）与交互热路径去 O(n)
+
+### 改进
+
+- **层可见数收敛**（`lib/iceberg/wallCounts.ts`）：IndexView 独立的 1420 词条扫描删除，
+  层空/全空提示改消费管线**单遍产出**（hide 模式 Map / dim 模式 null）——每次筛选少一次
+  全量遍历
+- **dim 集合单遍构建**：`useFilterPipeline` 匹配循环内顺手收集未命中 id，删除二次全量过滤
+- **`hasActiveFilter` 单一判定源**（`filterStore.ts`）：替代 IcebergApp 手写同义 computed；
+  新增 3 项纯函数单测（全套件 88/88）
+- **已读/NEW 标记热路径去 O(n)**：`markRead` 改为**定向翻转**（有元素即 `classList.add('read')`，
+  O(1)），管线不再监听 readItems（每次开弹窗不再 1400 节点全量重扫）；管线仅对「开关变化」
+  全量扫描，且开关全关时零扫描（关闭瞬间清理一次残留类）
+- 研究文档：`docs/plans/WALL_STATE_UNIFICATION.md`（单一事实源设计 + P1 已完成 / P2-P4 候选
+  与不做项：chips 不得响应式绑定 readItems）
+- 顺带修复：上一轮 `Set-Content -Encoding utf8` 给 package.json/lock 写入 **BOM**，
+  导致 PostCSS 配置探测解析失败（vitest 2 套件加载崩溃）；已重写为无 BOM（首字节 EF BB BF → `{`）
+
+
 ## 2026-08-21 — 描边语义最终拍板：唯一 stroke-glow + 两模式 hover 分离
 
 ### 变更（用户拍板，两轮收敛）

@@ -1,5 +1,58 @@
 import { atom } from 'nanostores';
 
+// ── 持久化写入节流（2026-08-21）──
+// 热路径写入（已读 / 收藏 / 设置切换）合并为防抖写盘（500ms）：每次 markRead / 收藏切换
+// 不再同步 JSON.stringify + 写盘；页面隐藏 / 卸载时统一 flush，丢失上限 = 最后一批
+// （本应用无跨标签同步语义，可接受）。直读 localStorage 的外部方须先 flushPersistedWrites()。
+const PERSIST_DEBOUNCE_MS = 500;
+interface PendingWrite { key: string; timer: number; value: unknown }
+const pendingWrites: PendingWrite[] = [];
+let flushBound = false;
+
+function storageSet(key: string, value: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* 隐私模式/配额：静默 */ }
+}
+
+/** 立即落盘所有待写入（导出 / 直读 localStorage 前调用） */
+export function flushPersistedWrites() {
+  for (const p of pendingWrites) {
+    window.clearTimeout(p.timer);
+    storageSet(p.key, p.value);
+  }
+  pendingWrites.length = 0;
+}
+
+/** 丢弃所有待写入（数据清除前调用，防防抖定时器把旧值写回） */
+export function cancelPersistedWrites() {
+  for (const p of pendingWrites) window.clearTimeout(p.timer);
+  pendingWrites.length = 0;
+}
+
+function bindPageFlush() {
+  if (flushBound || typeof window === 'undefined') return;
+  flushBound = true;
+  window.addEventListener('pagehide', flushPersistedWrites);
+  window.addEventListener('visibilitychange', flushPersistedWrites);
+  window.addEventListener('beforeunload', flushPersistedWrites);
+}
+
+function schedulePersist(key: string, value: unknown) {
+  bindPageFlush();
+  let p = pendingWrites.find((x) => x.key === key);
+  if (!p) {
+    p = { key, timer: 0, value };
+    pendingWrites.push(p);
+  } else {
+    window.clearTimeout(p.timer);
+    p.value = value; // latest-wins
+  }
+  p.timer = window.setTimeout(() => {
+    storageSet(key, p.value);
+    const i = pendingWrites.indexOf(p);
+    if (i > -1) pendingWrites.splice(i, 1);
+  }, PERSIST_DEBOUNCE_MS);
+}
+
 export function storedAtom<T>(key: string, fallback: T) {
   let val = fallback;
   try {
@@ -26,7 +79,7 @@ export function storedAtom<T>(key: string, fallback: T) {
     }
   } catch {}
   const a = atom<T>(val);
-  a.listen((v) => { try { localStorage.setItem(key, JSON.stringify(v)); } catch {} });
+  a.listen((v) => schedulePersist(key, v));
   return a;
 }
 

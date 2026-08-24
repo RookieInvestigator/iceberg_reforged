@@ -90,10 +90,12 @@ export function syncFavoritesWithCloud() {
  * 4. tombstone/updated_at 需要数据库 schema 支持，当前以「本地优先 + 同步成功才校正显示」近似。
  */
 async function runFavoritesSync() {
-  const [{ fetchMyFavorites, syncFavorites }, { favorites }] = await Promise.all([
+  const [{ fetchMyFavorites, syncFavorites }, { favorites, flushPersistedWrites }] = await Promise.all([
     import('./supabaseData'),
     import('./settingsStore'),
   ])
+  // 直读 localStorage 前先落盘防抖期内的待写入（收藏是热路径写入，可能尚未持久化）
+  flushPersistedWrites()
   let local: string[] = []
   try { local = JSON.parse(localStorage.getItem('iceberg-favorites') || '[]') } catch {}
   const cloud = await fetchMyFavorites()

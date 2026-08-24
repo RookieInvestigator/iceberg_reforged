@@ -196,6 +196,8 @@ export default {
 	referenceLinks: '参考链接',
 	linkCopied: '已复制链接',
 	copyLink: '复制链接',
+	titleCopied: '已复制标题',
+	copyTitle: '复制标题',
 	mobileOnlyHint: '手机端仅支持底部抽屉，此设置不影响手机',
 	data: '数据',
 	pasteJsonHint: '粘贴 JSON 数据...',
