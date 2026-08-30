@@ -17,6 +17,19 @@ const scrollDepth = ref(0)
 const SCROLL_FPS = 30
 const HOVER_WALL_FPS = 12
 const IDLE_FPS = 24
+/**
+ * 性能实测旋钮：URL 参数可覆盖上面三档帧率，便于在不重新构建的情况下 A/B 对比。
+ * 例：?scrollFps=60  /  ?idleFps=60&scrollFps=15
+ * 不带参数时行为与默认值完全一致（带 scripts/scroll-probe.mjs 一起用）。
+ */
+function fpsOverride(key: string, fallback: number): number {
+  try {
+    const v = Number(new URLSearchParams(window.location.search).get(key))
+    return Number.isFinite(v) && v > 0 ? Math.min(v, 120) : fallback
+  } catch {
+    return fallback
+  }
+}
 const liquidFps = ref(IDLE_FPS)
 let scrolling = false
 let wallHover = false
@@ -24,7 +37,10 @@ let scrollTick = 0
 let scrollStopTimer = 0
 let hoverStopTimer = 0
 function refreshFps() {
-  liquidFps.value = scrolling ? SCROLL_FPS : wallHover ? HOVER_WALL_FPS : IDLE_FPS
+  const scrollFps = fpsOverride('scrollFps', SCROLL_FPS)
+  const hoverFps = fpsOverride('hoverFps', HOVER_WALL_FPS)
+  const idleFps = fpsOverride('idleFps', IDLE_FPS)
+  liquidFps.value = scrolling ? scrollFps : wallHover ? hoverFps : idleFps
 }
 function onScroll() {
   if (scrollTick) return
