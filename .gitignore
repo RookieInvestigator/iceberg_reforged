@@ -30,9 +30,10 @@ docs/plans/
 # ── 根目录原始素材（已归档 / 可再抓取） ──────────
 /*.html
 /*.webp
+/iceberg.txt
 
-# ── 已废弃/待清理素材（沙箱环境无法删除，仅本机暂存） ──
-iceberg-vue/public/assets/_unused/
+# ── 工具产物（临时对比/导出，不入库） ────────────
+/outputs/
 
 # ── 历史项目（已压缩归档至 data/archive/legacy-2026-08/） ──
 iceberg-astro/

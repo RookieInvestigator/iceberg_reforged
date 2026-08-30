@@ -224,34 +224,49 @@ function featureDetailHtml(slug: string): string {
   </div>`
 }
 
+/**
+ * 静态壳渲染**全年档案**（按 MM-DD 分组的全部记录），而不是「今天」的记录。
+ *
+ * 原因：此前用构建期的 new Date() 取 MM-DD，静态 HTML 的「今天」会被冻结在构建日，
+ * 除非每天部署，否则页面内容长期是错的，且与客户端 hydrate 后的结果不一致。
+ * 改为渲染全量档案后：内容永不过期、205 条记录全部可被索引，无 JS 用户也能查阅任意日期。
+ * 客户端接管后仍是「日历 + 默认选中今天」的交互，语义不受影响。
+ */
 function onThisDayHtml(): string {
-  const mmdd = `${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getDate()).padStart(2, '0')}`
-  const rows = parseCSV(onThisDayRaw).filter((r) => r.date === mmdd)
-  const groups = new Map<string, typeof rows>()
+  const rows = parseCSV(onThisDayRaw)
+  // 按 MM-DD 分组，日期升序；同一天内按年份倒序（未知年份排最后）
+  const byDate = new Map<string, typeof rows>()
   for (const r of rows) {
-    const y = r.year || '未知'
-    if (!groups.has(y)) groups.set(y, [])
-    groups.get(y)!.push(r)
+    const key = r.date || ''
+    if (!byDate.has(key)) byDate.set(key, [])
+    byDate.get(key)!.push(r)
   }
-  const body = [...groups.entries()]
-    .sort((a, b) => (b[0] === '未知' ? -1 : a[0] === '未知' ? 1 : Number(b[0]) - Number(a[0])))
-    .map(
-      ([year, list]) => `<section class="py-4 border-t border-white/5">
-        <h2 class="text-sm font-bold text-gray-100">${esc(year)}</h2>
-        ${list
+  const body = [...byDate.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([mmdd, list]) => {
+      const sorted = [...list].sort((a, b) => {
+        if (a.year === b.year) return 0
+        if (!a.year) return 1
+        if (!b.year) return -1
+        return Number(b.year) - Number(a.year)
+      })
+      return `<section class="py-4 border-t border-white/5">
+        <h2 class="text-sm font-bold text-gray-100">${esc(mmdd)}</h2>
+        ${sorted
           .map(
             (r) => `<article class="mt-2">
-              <h3 class="text-sm text-gray-200">${esc(r.title || '')}</h3>
+              <h3 class="text-sm text-gray-200">${esc(r.year || '未知')} · ${esc(r.title || '')}</h3>
               <p class="mt-1 text-xs leading-6 text-gray-400">${esc(r.desc || '')}</p>
             </article>`,
           )
           .join('')}
-      </section>`,
-    )
+      </section>`
+    })
     .join('')
   return `<div class="max-w-3xl mx-auto px-6 py-10 text-white">
-    <h1 class="text-2xl font-black tracking-wider">历史上的今天 · ${mmdd}</h1>
-    <div class="mt-6">${body || '<p class="text-sm text-gray-500">这一天暂无记录。</p>'}</div>
+    <h1 class="text-2xl font-black tracking-wider">历史上的今天</h1>
+    <p class="mt-3 text-sm leading-7 text-gray-400">共 ${rows.length} 条档案，覆盖 ${byDate.size} 个日期。启用 JavaScript 后可用日历选择任意日期查看。</p>
+    <div class="mt-6">${body || '<p class="text-sm text-gray-500">暂无记录。</p>'}</div>
     ${nav()}
   </div>`
 }

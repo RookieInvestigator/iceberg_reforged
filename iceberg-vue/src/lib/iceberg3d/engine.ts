@@ -4,7 +4,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js'
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js'
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js'
-import gsap from 'gsap'
+import { fromTo, isTweening, killAllTweens, killTweensOf, to } from './tween'
 import type { IcebergData, IcebergItem } from '../data'
 import { NEW_MARK_WINDOW_DAYS } from '../filterStore'
 import { mulberry32, ValueNoise3D, fbm } from './prng'
@@ -174,7 +174,7 @@ export class Iceberg3DEngine {
     // 入场镜头：从更远的深空缓慢推近到主体，增强电影感；reduced-motion 下直接到位
     if (!prefersReducedMotion()) {
       const introFrom = new THREE.Vector3(18, 11, 26)
-      gsap.fromTo(this.camera.position,
+      fromTo(this.camera.position,
         { x: introFrom.x, y: introFrom.y, z: introFrom.z },
         { x: 12, y: 7, z: 18, duration: 2.2, ease: 'power2.out' })
     }
@@ -679,12 +679,12 @@ export class Iceberg3DEngine {
 
     const targetScale = baseScale * 4
 
-    gsap.killTweensOf(this.ringPosObj)
+    killTweensOf(this.ringPosObj)
     this.ringPosObj.x = oldPos.x
     this.ringPosObj.y = oldPos.y
     this.ringPosObj.z = oldPos.z
     this.ringPosAnimating = true
-    gsap.to(this.ringPosObj, {
+    to(this.ringPosObj, {
       x: worldPos.x,
       y: worldPos.y,
       z: worldPos.z,
@@ -694,9 +694,9 @@ export class Iceberg3DEngine {
       onComplete: () => { this.ringPosAnimating = false },
     })
 
-    gsap.killTweensOf(this.ringScaleObj)
+    killTweensOf(this.ringScaleObj)
     this.ringScaleObj.s = wasVisible ? this.focusRing.scale.x : 0
-    gsap.to(this.ringScaleObj, {
+    to(this.ringScaleObj, {
       s: targetScale,
       duration: wasVisible ? 0.35 : 0.55,
       ease: wasVisible ? 'power2.out' : 'back.out(1.4)',
@@ -715,11 +715,11 @@ export class Iceberg3DEngine {
       this.setInstanceHoverColor(previousFocus, false)
     }
 
-    gsap.killTweensOf(this.ringPosObj)
+    killTweensOf(this.ringPosObj)
     this.ringPosAnimating = false
-    gsap.killTweensOf(this.ringScaleObj)
+    killTweensOf(this.ringScaleObj)
     this.ringScaleObj.s = this.focusRing.scale.x
-    gsap.to(this.ringScaleObj, {
+    to(this.ringScaleObj, {
       s: 0,
       duration: 0.3,
       ease: 'power2.in',
@@ -894,7 +894,7 @@ export class Iceberg3DEngine {
     // 聚焦光环持续追踪宝石世界坐标（GSAP 未接管时）
     const target = this.focusTargetMesh
     if (this.focusRing.visible && target) {
-      if (!this.ringPosAnimating && !gsap.isTweening(this.ringPosObj)) {
+      if (!this.ringPosAnimating && !isTweening(this.ringPosObj)) {
         const mapData = this.rings.find((r) => r.hitMesh === target.mesh)
         if (mapData) {
           mapData.group.updateMatrixWorld(true)
@@ -902,7 +902,7 @@ export class Iceberg3DEngine {
         }
       }
       this.focusRing.quaternion.copy(this.camera.quaternion)
-      if (!gsap.isTweening(this.ringScaleObj)) {
+      if (!isTweening(this.ringScaleObj)) {
         this.focusRing.scale.setScalar(((this.focusRing.userData.baseScale as number) || 0.07) * 4)
       }
     }
@@ -967,8 +967,8 @@ export class Iceberg3DEngine {
     this.disposed = true
     cancelAnimationFrame(this.animationId)
     this.flight?.kill()
-    gsap.killTweensOf(this.ringPosObj)
-    gsap.killTweensOf(this.ringScaleObj)
+    // 停止全部补间（含 flight 的相机 tween）并释放 rAF 循环
+    killAllTweens()
     this.ringPosAnimating = false
     window.removeEventListener('resize', this.onResize)
 

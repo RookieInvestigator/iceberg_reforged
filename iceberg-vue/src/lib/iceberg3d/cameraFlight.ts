@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import gsap from 'gsap'
+import { isTweening, killTweensOf, to } from './tween'
 import type { IcebergItem } from '../data'
 
 /** reduced-motion：镜头飞行动画改为瞬移（style 审计动效覆盖） */
@@ -79,9 +79,9 @@ export class CameraFlight {
       .normalize()
     const arcRadius = dir.length() * 0.18
 
-    gsap.killTweensOf(this.tweenObj)
+    killTweensOf(this.tweenObj)
     this.tweenObj.p = 0
-    gsap.to(this.tweenObj, {
+    to(this.tweenObj, {
       p: 1,
       duration: prefersReducedMotion() ? 0.01 : 1.25,
       ease: 'power3.inOut',
@@ -127,9 +127,9 @@ export class CameraFlight {
     const endTarget = this.preFocusTarget.clone()
     const { width, height } = this.container.getBoundingClientRect()
 
-    gsap.killTweensOf(this.tweenObj)
+    killTweensOf(this.tweenObj)
     this.tweenObj.p = 0
-    gsap.to(this.tweenObj, {
+    to(this.tweenObj, {
       p: 1,
       duration: prefersReducedMotion() ? 0.01 : 1.05,
       ease: 'power3.inOut',
@@ -170,12 +170,12 @@ export class CameraFlight {
   }
 
   isFlying(): boolean {
-    return gsap.isTweening(this.tweenObj)
+    return isTweening(this.tweenObj)
   }
 
   /** 清理：杀 tween、清偏移、恢复水平镜头与控制器。 */
   kill() {
-    gsap.killTweensOf(this.tweenObj)
+    killTweensOf(this.tweenObj)
     this.currentRoll = 0
     this.focusRoll = 0
     this.camera.clearViewOffset()

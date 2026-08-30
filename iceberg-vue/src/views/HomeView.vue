@@ -5,10 +5,12 @@ import { useStore } from '@nanostores/vue'
 import { lang } from '../lib/i18nStore'
 import { user as userAtom, isSupabaseReady } from '../lib/userState'
 import { useI18n } from '../lib/useI18n'
-import raw from '../data/iceberg.json'
+// 首页只展示统计数字（词条数 / 层级数 / 分类数 / 生成时间）—— 走轻量 meta.json（~3.5KB）。
+// 不导入 iceberg.json：那会拉下 ~800KB 的词条数据 chunk 并进入首屏关键路径。
+import meta from '../data/meta.json'
+import type { IcebergMeta } from '../lib/data'
 import csvRaw from '../data/on-this-day.csv?raw'
 import { parseCSV } from '../lib/csv'
-import { normalizeData } from '../lib/data'
 import LiquidGradient from '../components/layout/LiquidGradient.vue'
 import { BG_COLORS, BG_TUNING } from '../lib/bgTheme'
 import IcebergParticles from '../components/home/IcebergParticles.vue'
@@ -62,10 +64,10 @@ function rerollSeed() { bgSeed.value = Math.floor(Math.random() * 1001) }
 
 onActivated(() => { rerollSeed() })
 
-// 数据统计
-const data = normalizeData(raw)
+// 数据统计（来源 meta.json，无需全量词条数据）
+const data = meta as IcebergMeta
 const buildDate = new Date(data.generatedAt * 1000).toLocaleDateString('zh-CN')
-const entryCount = computed(() => Object.values(data.tiers).flat().length)
+const entryCount = computed(() => data.total)
 const tierCount = computed(() => data.tierOrder.length)
 const categoryCount = computed(() => Object.keys(data.categoryColors).length)
 const statsText = computed(() =>

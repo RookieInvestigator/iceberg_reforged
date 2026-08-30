@@ -24,6 +24,23 @@ export interface IcebergData {
   idAliases?: Record<string, string>;
 }
 
+/**
+ * 轻量元数据（meta.json，约 3.5KB）—— 由 build_data_api.py 与 iceberg.json 同批产出。
+ *
+ * 只需统计口径的视图（首页 / 术语表）导入它即可，不要导入 iceberg.json：
+ * 后者会被打包成 ~800KB 的 chunk 并进入首屏关键路径，而这几个视图实际只用到
+ * 词条总数、层级数、分类色、标签表这几个字段。
+ */
+export interface IcebergMeta {
+  generatedAt: number;
+  tierOrder: string[];
+  categoryColors: Record<string, string>;
+  tagMap: Record<string, string>;
+  /** 层级名 → 该层词条数（与 tierOrder 同序） */
+  tierCounts: Record<string, number>;
+  total: number;
+}
+
 // 中文排版规范化（合并正则减少扫描遍数）
 const DASH_RE = /[‐‑‒–—―]|--+/g;
 const ELLIPSIS_RE = /\.{3,}|…\.{0,}/g;

@@ -1,16 +1,17 @@
 <script setup lang="ts">
 // 术语表 — 页首标签切换 + A-Z 快速跳转，词条采用百科式排版（不装卡片）
 import { computed, nextTick, ref } from 'vue'
-import { normalizeData } from '../lib/data'
-import rawData from '../data/iceberg.json'
+import type { IcebergMeta } from '../lib/data'
+// 术语表只用到分类色 / 标签表 / 生成时间 / 词条总数 —— 走轻量 meta.json（~3.5KB），
+// 不导入 iceberg.json（否则会拉下 ~800KB 的词条数据 chunk，而这些内容本页面一条都不显示）
+import meta from '../data/meta.json'
 import rawMd from '../data/handbook.md?raw'
 import { getFirstInitial } from '../lib/pinyin'
 import { useI18n } from '../lib/useI18n'
 import FlowBackground from '../components/layout/FlowBackground.vue'
 
 const { t } = useI18n()
-const data = normalizeData(rawData)
-const allItems = Object.values(data.tiers).flat()
+const data = meta as IcebergMeta
 const buildDate = new Date(data.generatedAt * 1000).toLocaleDateString('zh-CN')
 
 const LETTER_ORDER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('')
@@ -149,7 +150,7 @@ const letters = computed(() => LETTER_ORDER.map(letter => ({
 
 const statsText = computed(() =>
   t('handbookStats')
-    .replace('{total}', String(allItems.length))
+    .replace('{total}', String(data.total))
     .replace('{shown}', String(activeTab.value?.entries.length || 0)))
 
 function selectTab(key: string) {

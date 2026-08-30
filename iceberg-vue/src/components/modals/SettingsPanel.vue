@@ -176,7 +176,7 @@ function clearData() {
           <button @click="clearData" class="flex-1 py-1.5 rounded-md text-xs font-medium text-red-400/80 hover:text-red-400 hover:bg-red-400/5 transition-colors">{{ t('dataClear') }}</button>
         </div>
         <div v-if="showImport" class="mt-2">
-          <textarea v-model="importText" :placeholder="t('pasteJsonHint')" class="w-full h-16 text-xs max-sm:text-base rounded-md p-2 bg-white/5 border border-white/10 text-white/70 resize-none" style="outline:none"></textarea>
+          <textarea v-model="importText" :placeholder="t('pasteJsonHint')" class="w-full h-16 text-xs max-sm:text-base rounded-md p-2 bg-white/5 border border-white/10 text-white/70 resize-none"></textarea>
           <button @click="doImport" class="mt-1.5 w-full py-1 rounded-md text-xs font-medium bg-white/10 text-white hover:bg-white/20 transition-colors">{{ t('confirmImport') }}</button>
         </div>
       </div>

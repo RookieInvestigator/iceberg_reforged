@@ -34,6 +34,12 @@ API_URL = "https://icebergthreads.com/api/iceberg/fel4BTCqlMAGSa2gelRJ"
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_DIR = ROOT / "iceberg-vue/src/data"
 ID_HISTORY_PATH = os.path.join(OUTPUT_DIR, "id_history.json")
+# 轻量元数据（约 3.5KB）：只需统计口径的视图（首页 / 术语表）导入它，
+# 避免为 4 个数字拉下 ~800KB 的全量 iceberg.json。与 iceberg.json 同批原子写入。
+META_PATH = os.path.join(OUTPUT_DIR, "meta.json")
+# 精简索引（约 106KB）：id → 标题 + 分类。供用户面板等只需「按 id 查标题/分类」的场景使用，
+# 避免为此载入全量词条正文（~800KB）。同样与 iceberg.json 同批原子写入。
+ID_INDEX_PATH = os.path.join(OUTPUT_DIR, "id-index.json")
 SKIP_TIERS = {"说明", "说明 / Notes"}  # 跳过的层级（不是真正的冰山数据）
 
 NOW = int(time.time())
@@ -438,6 +444,33 @@ def compile_output(data: dict, output_dir: str):
     total = sum(len(v) for v in data['tiers'].values())
     print(f"  输出: {json_path} ({total} items, {len(data['tierOrder'])} tiers)")
     print(f"  {len(data['categoryColors'])} categories, {len(data['tagMap'])} tags")
+
+    # 轻量元数据：仅统计口径，供首页 / 术语表使用（不含任何词条正文）
+    tier_counts = {name: len(data['tiers'].get(name, [])) for name in data['tierOrder']}
+    meta = {
+        'generatedAt': data.get('generatedAt'),
+        'tierOrder': data.get('tierOrder', []),
+        'categoryColors': data.get('categoryColors', {}),
+        'tagMap': data.get('tagMap', {}),
+        'tierCounts': tier_counts,
+        'total': total,
+    }
+    meta_tmp = META_PATH + '.tmp'
+    with open(meta_tmp, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2)
+    os.replace(meta_tmp, META_PATH)  # 原子替换
+    print(f"  输出: {META_PATH} ({os.path.getsize(META_PATH)} bytes, 轻量元数据)")
+
+    # 精简索引：id → 标题 + 分类（不含正文，不含链接）
+    id_index = {
+        it['id']: {'t': it['title'], 'c': it.get('category', '')}
+        for items in data['tiers'].values() for it in items
+    }
+    idx_tmp = ID_INDEX_PATH + '.tmp'
+    with open(idx_tmp, 'w', encoding='utf-8') as f:
+        json.dump(id_index, f, ensure_ascii=False, separators=(',', ':'))
+    os.replace(idx_tmp, ID_INDEX_PATH)  # 原子替换
+    print(f"  输出: {ID_INDEX_PATH} ({os.path.getsize(ID_INDEX_PATH)} bytes, {len(id_index)} 条精简索引)")
 
 
 # ==========================================

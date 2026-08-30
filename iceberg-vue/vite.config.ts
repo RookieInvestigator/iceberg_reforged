@@ -9,46 +9,84 @@ import path from 'node:path'
 
 const MAX_APPENDIX_BODY = 2 * 1024 * 1024 // JSON body 大小限制：2MB
 
+/** first-screen-preload 的注入幂等标记：已注入的入口 HTML 相对路径（closeBundle 每次构建会触发多次） */
+const preloadInjected = new Set<string>()
+
 export default defineConfig({
   plugins: [
     vue(),
     tailwindcss(),
     compression(),
     {
-      // perf：首屏关键 chunk（IndexView 路由懒加载 + 其静态依赖）不在 index.html 自动预载序列中，
-      // 构建后解析入口静态图注入 <link rel="modulepreload">，消除首屏串行瀑布（index → IndexView → 依赖链）
+      // perf：路由 chunk 与其静态依赖不在各入口 HTML 的自动预载序列中，
+      // 构建后按入口解析静态依赖图注入 <link rel="modulepreload">，消除首屏串行瀑布
+      // （index → 路由 chunk → 依赖链）。此前只处理根 index.html，其余预渲染入口
+      // （/home /handbook /features /on-this-day）仍有瀑布，现按入口逐一处理。
       name: 'first-screen-preload',
       closeBundle() {
         try {
           const dist = path.resolve(__dirname, 'dist')
-          const htmlPath = path.join(dist, 'index.html')
-          if (!fs.existsSync(htmlPath)) return
           const assetsDir = path.join(dist, 'assets')
-          const entry = fs.readdirSync(assetsDir).find(f => f.startsWith('index-') && f.endsWith('.js'))
-          if (!entry) return
-          // 首屏路由 chunk：直接按文件名取（免解析入口代码）
-          const viewChunk = fs.readdirSync(assetsDir).find(f => f.startsWith('IndexView-') && f.endsWith('.js'))
-          const seen = new Set<string>()
-          const depRe = new RegExp('from"[.]/([^"]+[.]js)"', 'g')
-          const collect = (name: string) => {
-            if (seen.has(name)) return
-            seen.add(name)
-            let code = ''
-            try { code = fs.readFileSync(path.join(assetsDir, name), 'utf-8') } catch { return }
-            for (const m of code.matchAll(depRe)) collect(m[1])
-          }
-          if (viewChunk) collect(viewChunk)
+          if (!fs.existsSync(assetsDir)) return
           const base = process.env.CF_PAGES_BRANCH ? '/' : '/iceberg_reforged/'
-          const tags = [...seen]
-            .filter(n => !n.startsWith('vue-') && !n.startsWith('index-')) // vue 已有 Vite 自动预载
-            .map(n => '<link rel="modulepreload" crossorigin href="' + base + 'assets/' + n + '">')
-            .join('\n    ')
-          const cssFile = fs.readdirSync(assetsDir).find(f => f.startsWith('IndexView-') && f.endsWith('.css'))
-          const cssTag = cssFile ? '\n    <link rel="preload" as="style" crossorigin href="' + base + 'assets/' + cssFile + '">' : ''
-          if (!tags && !cssTag) return
-          let html = fs.readFileSync(htmlPath, 'utf-8')
-          html = html.replace('<script type="module"', tags + cssTag + '\n    <script type="module"')
-          fs.writeFileSync(htmlPath, html)
+
+          // 入口 HTML → 该路由首屏 chunk 前缀（与 prerender 的路由一一对应）
+          const ENTRIES: Array<[html: string, chunkPrefix: string]> = [
+            ['index.html', 'IndexView-'],
+            ['home/index.html', 'HomeView-'],
+            ['handbook/index.html', 'HandbookView-'],
+            ['features/index.html', 'FeaturesView-'],
+            ['on-this-day/index.html', 'OnThisDayView-'],
+          ]
+          // /features/:slug 详情页目录（slug 名不固定，按目录扫描）
+          const featuresDir = path.join(dist, 'features')
+          if (fs.existsSync(featuresDir)) {
+            for (const d of fs.readdirSync(featuresDir, { withFileTypes: true })) {
+              if (d.isDirectory()) ENTRIES.push([`features/${d.name}/index.html`, 'FeatureDetailView-'])
+            }
+          }
+
+          const findAsset = (prefix: string, ext: string) =>
+            fs.readdirSync(assetsDir).find(f => f.startsWith(prefix) && f.endsWith(ext))
+          const depRe = new RegExp('from"[.]/([^"]+[.]js)"', 'g')
+          const collectDeps = (root: string) => {
+            const seen = new Set<string>()
+            const walk = (name: string) => {
+              if (seen.has(name)) return
+              seen.add(name)
+              let code = ''
+              try { code = fs.readFileSync(path.join(assetsDir, name), 'utf-8') } catch { return }
+              for (const m of code.matchAll(depRe)) walk(m[1])
+            }
+            walk(root)
+            return seen
+          }
+
+          for (const [relHtml, prefix] of ENTRIES) {
+            const htmlPath = path.join(dist, relHtml)
+            if (!fs.existsSync(htmlPath)) continue
+            if (preloadInjected.has(relHtml)) continue // 幂等：closeBundle 每次构建会触发多次
+            const viewChunk = findAsset(prefix, '.js')
+            if (!viewChunk) continue
+
+            const seen = collectDeps(viewChunk)
+            const tags = [...seen]
+              .filter(n => !n.startsWith('vue-') && !n.startsWith('index-')) // vue 已有 Vite 自动预载
+              .map(n => '<link rel="modulepreload" crossorigin href="' + base + 'assets/' + n + '">')
+              .join('\n    ')
+            const cssFile = findAsset(prefix, '.css')
+            const cssTag = cssFile
+              ? '\n    <link rel="preload" as="style" crossorigin href="' + base + 'assets/' + cssFile + '">'
+              : ''
+            if (!tags && !cssTag) { preloadInjected.add(relHtml); continue }
+
+            const html = fs.readFileSync(htmlPath, 'utf-8')
+            // 二次保险：内容里已有首个标签则视为已注入，不再重复写入
+            const firstTag = `<link rel="modulepreload" crossorigin href="${base}assets/${[...seen][0]}">`
+            if (html.includes(firstTag)) { preloadInjected.add(relHtml); continue }
+            fs.writeFileSync(htmlPath, html.replace('<script type="module"', tags + cssTag + '\n    <script type="module"'))
+            preloadInjected.add(relHtml)
+          }
         } catch (e) {
           console.warn('[first-screen-preload] skipped:', e)
         }

@@ -1,7 +1,7 @@
 {
   "name": "iceberg-vue",
   "private": true,
-  "version": "4.5.6",
+  "version": "4.5.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,8 +16,8 @@
     "@nanostores/vue": "^1.1.0",
     "@supabase/supabase-js": "^2.110.8",
     "@tailwindcss/vite": "^4.3.0",
+    "@tweenjs/tween.js": "^25.0.0",
     "fuse.js": "^7.3.0",
-    "gsap": "^3.15.0",
     "nanostores": "^0.11.3",
     "tailwindcss": "^4.3.0",
     "three": "^0.185.0",

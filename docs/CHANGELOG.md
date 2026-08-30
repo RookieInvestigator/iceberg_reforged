@@ -1,6 +1,120 @@
 # 更新日志
 
 
+## 2026-08-30 — 路由级数据分层：meta.json / id-index.json
+
+### 改进
+
+- **问题**：`iceberg.json`（~1MB）被 7 个模块静态导入，Rollup 合并为 ~788KB（gzip 325KB）的
+  chunk，并被 `first-screen-preload` 注入根 `index.html` 首屏关键路径。但其中 `HomeView`
+  只用到 4 个标量、`HandbookView` 只用到分类色与标签表 —— 为约 3.5KB 的内容下载了 800KB。
+- **`build_data_api.py` 增产出两份派生数据**（与 `iceberg.json` 同批原子写入）：
+  - `meta.json`（3.5KB）：`generatedAt` / `tierOrder` / `categoryColors` / `tagMap` /
+    `tierCounts` / `total`
+  - `id-index.json`（106KB）：`id → { t: 标题, c: 分类 }`
+- **消费方改造**：`HomeView.vue`、`HandbookView.vue` 改导入 `meta.json`；`UserModal.vue`
+  改导入 `id-index.json`（原为查收藏分类而建全量 id→item 的 Map）
+- **收益**（gzip 传输量）：`/home` 首屏 JS 约 372KB → 约 49KB（-87%）；
+  `/handbook` 约 432KB → 约 109KB（-75%）；`/home` 打开用户面板 约 339KB → 45KB（-87%）
+- **导入纪律**（已写入 CLAUDE.md）：统计口径 → `meta.json`；按 id 查标题/分类 →
+  `id-index.json`；只有需要正文（`desc`/`link`/`related`）才导入 `iceberg.json`
+
+### 修复
+
+- **`first-screen-preload` 重复注入**：`vite.config.ts` 该插件的 `closeBundle` 在一次构建中
+  被触发多次（预渲染插件每写一个路由 HTML 触发一次），缺少幂等守卫导致 9 个
+  `modulepreload` 标签被重复注入 4 次（37 个标签 / 仅 10 个唯一）。加 `preloadInjected`
+  标记 + 内容二次校验；现为 9 个标签 9 个唯一
+- **`SettingsPanel.vue` 焦点环**：移除 textarea 上的内联 `style="outline:none"`
+  （违反项目「不得裸写 outline:none」约定），回归全局 `:focus-visible` 焦点环
+
+### 移除
+
+- **死重资源 1.88MB**：`public/assets/annie-spratt-*.webp`（1.44MB，唯一引用在已下线的
+  `HeroSection.vue`）、`中文兔子洞冰山图-oc.png`（0.59MB，与 `og-cover.png` 字节完全相同、
+  零引用）。`public/assets/` 由 2.6MB 降至 612KB，`dist/` 由 5.96MB 降至 4.08MB（-32%）
+  ⚠️ 恢复 Hero 前需 `git restore` 取回 `annie-spratt-*.webp`（已记入 CLAUDE.md）
+- 清理空的 `public/assets/_unused/` 及其 `.gitignore` 条目
+
+### 测试
+
+- 新增 `src/data/meta.test.ts`（6 项）：守卫两份派生数据与 `iceberg.json` 一致
+  （total / tierOrder / tierCounts / categoryColors / tagMap / generatedAt，以及
+  id-index 全覆盖且标题分类匹配）。全套件 17 文件 / 103 用例通过，双 typecheck 通过
+
+### 其他
+
+- `.gitignore` 新增 `/iceberg.txt`、`/outputs/`（此前长期占据 `git status` 未跟踪噪音）
+- 注：`HandbookView` chunk 仍有 65KB（gzip），主要由 `lib/pinyin.ts`（2728 行）贡献，
+  与本次数据分层无关，留作后续优化项
+
+
+## 2026-08-30 — GSAP 替换为 @tweenjs/tween.js（/3d 省 23.2KB）
+
+### 改进
+
+- **背景**：GSAP 在生产构建里占 70KB / **27.4KB gzip**，但 `iceberg3d` 只用到
+  `to` / `fromTo` / `killTweensOf` / `isTweening` 四个方法和 4 条缓动曲线
+  （`power2.out` / `power2.in` / `power3.inOut` / `back.out(1.4)`），
+  没有时间轴、插件、SVG、ScrollTrigger
+- **新增 `src/lib/iceberg3d/tween.ts`**：基于 `@tweenjs/tween.js`（3.6KB gzip）的薄封装，
+  对外暴露与 GSAP 同名的 4 个 API，语义逐条对齐：
+  - `duration` / `delay` 用**秒**（tween.js 原生毫秒，封装层统一换算）
+  - `killTweensOf()` **不触发** onComplete（GSAP 语义；若误触发会让聚焦环退出时被重新点亮）
+  - `to()` 不自动 kill 同目标旧 tween（GSAP 3 默认 `overwrite: false`），调用侧显式先 kill
+  - 自带 rAF 循环且空闲自动停止（等同 GSAP 自有 ticker 的懒启动行为）
+  - `back.out(1.4)` 手写：tween.js 内置 `Back.Out` 的 overshoot 固定为 1.70158，
+    与 GSAP 的 1.4 不同，为保持视觉一致单独实现
+- **收益**：`/3d` 路由 JS 传输量 215.9KB → **192.6KB gzip（-23.2KB，-10.8%）**；
+  `dist/` 3.98MB → 3.90MB
+- **依赖**：移除 `gsap`，新增 `@tweenjs/tween.js@^25`
+
+### 测试
+
+- 新增 `src/lib/iceberg3d/tween.test.ts`（13 项，用 fake timers 驱动）：锁住
+  duration/delay 单位、onUpdate/onComplete 触发次数、`killTweensOf` 不触发 onComplete、
+  `isTweening` 完成后归零、`fromTo` 同步写入初值、缓动映射（power1/2/3 对应二/三/四次，
+  `back.out(1.4)` 锚点 1.0704 且与内置 1.70158 可区分）
+- 全套件 19 文件 / 159 用例通过，双 typecheck 通过，生产构建通过
+
+
+## 2026-08-30 — 拼音表压缩 · 静态壳日期冻结修复 · i18n 死词条清理
+
+### 改进
+
+- **`lib/pinyin.ts` 表压缩 218KB → 25.8KB**：原为 20,901 条对象字面量，是 `HandbookView`
+  chunk 体积的主要来源。改为**定长字符串查表**（索引 = 码点 − 0x4E00，`'-'` 表示码点空位）。
+  转换脚本 `scripts/compact_pinyin.py`（幂等，任意 cwd 可运行，含重新导出说明）。
+  `HandbookView` chunk **gzip 64KB → 17.4KB（-73%）**；`/handbook` 首屏 JS 传输量
+  约 432KB → 约 61KB（-86%，含上一节的数据分层收益）
+- 转换正确性：与转换前的对象字面量表做 **20,901 条全量比对，0 处不一致、0 处越界**
+
+### 修复
+
+- **`/on-this-day` 静态壳日期冻结**：`prerender.ts` 原用构建期 `new Date()` 取 MM-DD，
+  静态 HTML 的「今天」被冻结在构建日，非每日部署即长期错误且与 hydrate 结果不一致。
+  改为渲染**全年档案**（205 条 / 163 个日期，按 MM-DD 升序、同一天按年份倒序）——
+  内容永不过期、全部记录可被索引、无 JS 用户可查任意日期。
+  客户端仍是「日历 + 默认选中今天」，交互语义不变。该页 HTML 8.5KB → 92KB（gzip 20KB）
+- **`i18n` 死词条清理 66 条**：三语各 230 → 208 key，仍完全对齐（无缺失/多余）。
+  含 `bgDynamic`/`bgDynamicWarn`（液态背景重构遗留）、`fullMode`/`ancientBook`/
+  `backToIceberg`/`edition`/`monthYearFmt`（古籍模式重构遗留）、`homeCta1Title`/
+  `footerExplore`/`recordsFound`/`noRecordsToday`/`foldComments` 等
+  ⚠️ `fontXs`/`fontLg`/`sortDefault`/`sortTitleAsc` 等 11 个**不是死 key**——
+  它们在 `SettingsPanel.vue` 通过 `t('font'+…)` / `t('sort'+…)` 动态拼接调用，已保留
+
+### 测试
+
+- 新增 `src/lib/pinyin.test.ts`（43 项）：抽样校验拼音表（覆盖全表首尾与 A–Z 各区段）、
+  边界行为（拉丁字母/数字/空值/表外码点）、`getFirstInitial` 的装饰符跳过与名称级覆盖。
+  防止定长字符串错位/截断导致术语表 A-Z 分组静默错乱
+- 全套件 18 文件 / 146 用例通过，双 typecheck 通过，生产构建通过
+
+### 其他
+
+- `dist/` 累计 5.96MB → **3.98MB（-33%）**
+
+
 ## 2026-08-21 — 词条弹窗复制交互调整 + 复制反馈可视化
 
 ### 改进 / 修复

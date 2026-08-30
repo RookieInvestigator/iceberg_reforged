@@ -6,7 +6,9 @@ import { fetchUserStats } from '../../lib/supabaseData'
 import { isSupabaseReady } from '../../lib/supabase'
 import { useI18n } from '../../lib/useI18n'
 import type { UserStats } from '../../lib/supabaseData'
-import raw from '../../data/iceberg.json'
+// 只需按 id 查「标题 + 分类」→ 用精简索引（~106KB），不导入 iceberg.json（~800KB）。
+// 本组件是 async 懒加载的，但一旦在 /home 打开用户面板就会触发拉取，体积差 7 倍。
+import idIndex from '../../data/id-index.json'
 import BaseModal from './BaseModal.vue'
 import GeoAvatar from './GeoAvatar.vue'
 
@@ -129,11 +131,7 @@ try {
   viewedCount.value = JSON.parse(localStorage.getItem('iceberg-read-items') || '[]').length
 } catch {}
 
-const icebergItems = (raw as any).tiers as Record<string, any[]>
-const itemMap = new Map<string, any>()
-for (const items of Object.values(icebergItems)) {
-  for (const it of items) itemMap.set(it.id, it)
-}
+const itemMap = idIndex as Record<string, { t: string; c: string }>
 
 async function doSync() {
   await syncFavoritesWithCloud()
@@ -147,9 +145,9 @@ function favCategory(): string | null {
   if (!stats.value) return null
   const cats: Record<string, number> = {}
   for (const id of stats.value.favoriteIds) {
-    const it = itemMap.get(id)
+    const it = itemMap[id]
     if (it) {
-      const c = it.category
+      const c = it.c
       cats[c] = (cats[c] || 0) + 1
     }
   }
