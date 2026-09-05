@@ -27,10 +27,13 @@ if (import.meta.env.DEV) {
 // 非法/空 r 仅清理参数、停留在当前路径，不产生跳转循环。
 router.beforeEach(redirectGuard)
 
-// P1-2：canonical / og:url 跟随当前路由（双部署 base 自动带上 GH Pages 前缀）。
+// P1-2：canonical / og:url 跟随当前路由，但 origin 强制指向主站（主从镜像策略）。
+// 无论用户访问 Cloudflare（主站）还是 GitHub Pages（镜像），canonical 都指向主站，
+// 让搜索引擎把权重归并到主站。镜像通过构建期 noindex meta 做双保险。
 // 模板不写死这两个标签：构建期预渲染按路由注入，浏览器端不存在时由这里创建。
+const MASTER_ORIGIN = 'https://iceberg-reforged.pages.dev'
 router.afterEach((to) => {
-  const url = new URL(to.fullPath, window.location.origin + import.meta.env.BASE_URL).href
+  const url = new URL(to.fullPath, MASTER_ORIGIN).href
   let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')
   if (!canonical) {
     canonical = document.createElement('link')

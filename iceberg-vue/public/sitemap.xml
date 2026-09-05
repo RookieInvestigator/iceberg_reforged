@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://RookieInvestigator.github.io/iceberg_reforged/</loc>
+    <loc>https://iceberg-reforged.pages.dev/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://RookieInvestigator.github.io/iceberg_reforged/home</loc>
+    <loc>https://iceberg-reforged.pages.dev/home</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://RookieInvestigator.github.io/iceberg_reforged/handbook</loc>
+    <loc>https://iceberg-reforged.pages.dev/handbook</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://RookieInvestigator.github.io/iceberg_reforged/features</loc>
+    <loc>https://iceberg-reforged.pages.dev/features</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://RookieInvestigator.github.io/iceberg_reforged/on-this-day</loc>
+    <loc>https://iceberg-reforged.pages.dev/on-this-day</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://RookieInvestigator.github.io/iceberg_reforged/ancient-book</loc>
+    <loc>https://iceberg-reforged.pages.dev/ancient-book</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://RookieInvestigator.github.io/iceberg_reforged/3d</loc>
+    <loc>https://iceberg-reforged.pages.dev/3d</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>

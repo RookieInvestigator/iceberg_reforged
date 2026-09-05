@@ -30,13 +30,15 @@ Iceberg/                  ← git 仓库根
 
 ## 项目概述
 
-"中文兔子洞冰山图" — 社区共建的冰山图，将中文互联网怪谈、都市传说等条目按冷门程度分层排列。
+"中文兔子洞冰山图" — 社区共建的中文互联网怪谈、都市传说等条目档案，由参与者共同搭建与维护。
 
 `iceberg-vue` 是 Vue 3 重写版，替代旧 React 版本，当前活跃开发中。astro版本和react版本都是历史内容，无需参考。
 
 ### 技术栈
 
-Vue 3.5 + Vite 7 + Vue Router 4 + Tailwind CSS v4 + TypeScript 5.7 (strict) + Nano Stores + Fuse.js + GSAP + Three.js
+Vue 3.5 + Vite 7 + Vue Router 4 + Tailwind CSS v4 + TypeScript 5.7 (strict) + Nano Stores + Fuse.js + @tweenjs/tween.js + Three.js
+
+> 补间动画一律走 `src/lib/iceberg3d/tween.ts`（tween.js 薄封装），**不要再引入 GSAP**。
 
 ### 开发命令
 

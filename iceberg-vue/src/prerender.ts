@@ -29,7 +29,11 @@ interface IcebergData {
 const data = raw as IcebergData
 const base = import.meta.env.BASE_URL
 const SITE = '中文兔子洞冰山图'
-const ORIGIN = 'https://RookieInvestigator.github.io/iceberg_reforged'
+// 主站 origin（主从镜像策略 2026-09-05 拍板）：
+// 主站 = Cloudflare Pages（iceberg-reforged.pages.dev），镜像 = GitHub Pages。
+// 两个环境的 canonical / og:url 都指向主站，让 Google 把权重归并到主站。
+// 镜像通过 vite.config.ts 的 seo-master-mirror 插件注入 noindex 做双保险。
+const ORIGIN = 'https://iceberg-reforged.pages.dev'
 
 const featureModules = import.meta.glob('./data/features/*.md', {
   query: '?raw',

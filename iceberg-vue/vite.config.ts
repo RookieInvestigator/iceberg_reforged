@@ -104,6 +104,77 @@ export default defineConfig({
       },
     },
     {
+      // 为 sitemap.xml 注入 <lastmod>。
+      // 为什么不在 public/sitemap.xml 里手写日期：静态 lastmod 会立刻过期，反而误导
+      // 搜索引擎。所有预渲染页共用 index.html 模板，每次构建全部页面内容都会变，
+      // 所以 lastmod = 构建日期 对全部 URL 都是准确的。
+      // 策略：public/sitemap.xml 继续手工维护（loc / changefreq / priority）；
+      // 本插件在 public 拷贝完成后覆盖 dist 版本，只补 lastmod。
+      // 失败时 dist 里仍留有 Vite 复制的静态副本，不会丢 sitemap。
+      name: 'sitemap-lastmod',
+      closeBundle() {
+        try {
+          const dist = path.resolve(__dirname, 'dist')
+          const src = path.resolve(__dirname, 'public/sitemap.xml')
+          if (!fs.existsSync(src)) return
+          const today = new Date().toISOString().slice(0, 10)
+          const xml = fs
+            .readFileSync(src, 'utf-8')
+            .replace(/\s*<lastmod>[^<]*<\/lastmod>/g, '')
+            .replace(/(<loc>[^<]*<\/loc>)/g, `$1\n    <lastmod>${today}</lastmod>`)
+          fs.writeFileSync(path.join(dist, 'sitemap.xml'), xml)
+          console.log(`[sitemap-lastmod] 已注入 lastmod=${today}`)
+        } catch (e) {
+          console.warn('[sitemap-lastmod] skipped:', e)
+        }
+      },
+    },
+    {
+      // 主从镜像 SEO 策略（2026-09-05 拍板）：
+      // 主站 = Cloudflare Pages（iceberg-reforged.pages.dev），镜像 = GitHub Pages。
+      // 主站：index,follow + google-site-verification（让 Search Console 验证通过）。
+      // 镜像：noindex,follow，无验证码 —— canonical 已指向主站，noindex 做双保险。
+      // dev 模式：不注入任何标签，保持干净。
+      // 同时在 closeBundle 时覆盖镜像的 robots.txt（不声明 Sitemap）并删除镜像的 sitemap.xml。
+      name: 'seo-master-mirror',
+      transformIndexHtml(html) {
+        const isDev = process.env.NODE_ENV === 'development' || !!process.env.VITE_DEV_SERVER
+        if (isDev) return html
+        const isMaster = !!process.env.CF_PAGES_BRANCH
+        const VERIFICATION_CODE = 'vh0DrM7cFOmicWG2VcUwv1vxGhH_pzuq7OxUW3hF584'
+        const tags = isMaster
+          ? `  <meta name="robots" content="index, follow" />\n  <meta name="google-site-verification" content="${VERIFICATION_CODE}" />\n`
+          : `  <meta name="robots" content="noindex, follow" />\n`
+        return html.replace('</head>', `${tags}</head>`)
+      },
+      closeBundle() {
+        const isDev = process.env.NODE_ENV === 'development' || !!process.env.VITE_DEV_SERVER
+        if (isDev) return
+        const isMaster = !!process.env.CF_PAGES_BRANCH
+        if (isMaster) {
+          console.log('[seo-master-mirror] 主站模式（Cloudflare）：index,follow + 验证码')
+          return
+        }
+        // 镜像模式（GitHub Pages）：覆盖 robots.txt，不声明 Sitemap（省爬取预算）。
+        // 不用 Disallow: / —— 需要爬虫能抓到页面才能读到 canonical（指向主站）和 noindex。
+        try {
+          const dist = path.resolve(__dirname, 'dist')
+          const robotsPath = path.join(dist, 'robots.txt')
+          const sitemapPath = path.join(dist, 'sitemap.xml')
+          if (fs.existsSync(robotsPath)) {
+            fs.writeFileSync(robotsPath, 'User-agent: *\nAllow: /\n\n# 镜像站（主站：iceberg-reforged.pages.dev）\n# 不声明 Sitemap：镜像不需要被独立索引\n')
+            console.log('[seo-master-mirror] 镜像模式：robots.txt Allow（无 Sitemap 声明）')
+          }
+          if (fs.existsSync(sitemapPath)) {
+            fs.unlinkSync(sitemapPath)
+            console.log('[seo-master-mirror] 镜像模式：已删除 sitemap.xml')
+          }
+        } catch (e) {
+          console.warn('[seo-master-mirror] skipped:', e)
+        }
+      },
+    },
+    {
       name: 'appendix-save',
       configureServer(server) {
         // POST /__appendix-save  →  直接写 src/data/appendix/<file>
