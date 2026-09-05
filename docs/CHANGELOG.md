@@ -1,6 +1,70 @@
 # 更新日志
 
 
+## v4.5.8 — 2026-09-06 — SEO 主从镜像回补 · 数据 1420→1432 · 预渲染/文档一致性修复
+
+### 新增
+
+- **预渲染补齐 `/ancient-book` 与 `/3d`**：此前 `additionalPrerenderRoutes` / `first-screen-preload` 只有 5 个入口，而 `sitemap.xml` 承诺了 7 个 URL，古籍/3D 页对爬虫与无 JS 用户是空壳。现 `prerender.ts` 新增目录摘要壳（古籍：分卷 + 每卷条目数）与 WebGL 占位说明壳（3D：总数 + 返回 2D 入口），未知路由回最小 404 壳且 canonical 跟随请求 URL（不再误用首页 canonical）；`vite.config.ts` 两处路由表与 sitemap 对齐，静态壳导航补上古籍/3D 入口
+- **`formatUnixDate()` 统一时间戳入口**（`lib/data.ts`）：管线秒级戳此前在 `HomeView` / `HandbookView` / `IndexView` / `AppendixEditView` 各自手写 `*1000`，毫秒/秒易混淆，现收敛为唯一函数（空值返回空串），四视图已切换；`CLAUDE.md` 数据流章节同步记录该纪律
+
+### 改进
+
+- **SEO 主从镜像策略**（回补 2026-09-06 提交）：主站 CF Pages `index,follow` + `google-site-verification`，镜像 GH Pages `noindex,follow`；`router.afterEach` 的 canonical / og:url 强制指向主站归并权重；`sitemap.xml` 构建期注入 `lastmod=构建日`，镜像构建删除 sitemap 且 robots 不声明 Sitemap
+- **`og:image` 恒指主站系有意**（注释落盘）：社交卡片权重归并主站，镜像不分流
+- **CSP 双源注释**：`frame-ancestors` 仅 `public/_headers` 可下发（`<meta>` 不支持该指令），`index.html` 内联注释已注明两处同步
+- **文档常量对齐现实**（`CLAUDE.md`）：词条 1432 / 8层15分类68标签 / `iceberg.json` ~969KB / `id_history` ~156KB / i18n 208×3；构建配置去掉已不存在的 gsap chunk；SEO/预渲染路由表更新为 7 路由；`<noscript>` 1400+ → 1432；`IndexView` 注释 1420 节点 → 1432
+- **`docs/TODO.md` 去腐**：contact 已有入口改为 ✅；删除 5 组重复条目（搜索建议/最近浏览/URL 筛选/随机收藏/导出 PNG 各 ×2 合一）；`/entries` 1371→1432、历史上的今天 150+→205 条（163 日期）、标签 80+→68
+
+### 数据
+
+- **API 同步 1420 → 1432（+12）**（回补 2026-09-06 提交）：T1 153→154、T2 298→301、T3 301→305、T4 267→269、T5 199→200、T7 53→54，T6/T8 不变；`meta.json` / `id-index.json` / `id_history.json` 同批原子更新
+
+### 修复
+
+- **`tagMap` 脏 key `" 🎲"`**：上游 `superscript` 带前导空格，`build_data_api.py` 现 strip 后再入库 + `validate_data` 新增首尾空白校验（`build_data.py` 的 HTML 路径本就 `strip=True`，不受影响）；`meta.json` / `iceberg.json` 存量脏 key 已修正；`meta.test.ts` 新增回归用例（6→7 项）
+- **`public/404.html`**：`lang="zh"` → `zh-CN`（与全站一致）；`getElementById('home')` 移到 `location.replace` 之前并加空守卫（此前跳转后语句不可达）
+
+### 移除
+
+- **`manualChunks` 的 `gsap` 分包**：GSAP 已于 2026-08-30 移除，残留分支永远走不到，已删除
+- **`public/_redirects` 澄清**：Netlify 遗留语法，CF/GH 均忽略，头注释注明实际回退靠 `404.html ?r=` + `redirectGuard`
+
+### 测试
+
+- 双 typecheck 通过；全套件 19 文件 / 160 用例通过（含 `meta.test.ts` 新增脏 key 回归项）；生产构建通过，预渲染 8 页（含新增 `/ancient-book` 目录摘要壳与 `/3d` 占位壳，canonical / title / modulepreload 逐页实测正确）
+
+
+## 2026-09-06 — 修复：参与创作者名单排序回退 Unicode 序（pypinyin 依赖移除）
+
+### 修复（用户反馈：名单又不按首字母排序）
+
+- **根因**：`build_data.py` / `build_data_api.py` 的创作者排序依赖可选 `pypinyin`
+  （全拼 key），生成环境缺失时静默回退**原始字符串** → Python 字节序
+  （数字 < 大写 < 小写 < 汉字码点），产出看起来完全乱序的名单；且与「数据脚本零外部
+  依赖」约束矛盾
+- **方案**：新增 `scripts/pinyin_sort.py` —— 读取仓库既有事实源
+  `iceberg-vue/src/lib/pinyin.ts` 汉字→拼音**首字母**定长表（HandbookView A-Z 同款，
+  表长 20974 断言校验），key = 逐字「首字母/原字符」拼接小写：ASCII 名字等价全小写
+  （大小写不敏感穿插），汉字按首字母序列与英文名自然混排，表外字符（假名等）保原字符
+  —— **确定性、零外部依赖、与站点 A-Z 语义一致**
+- 两构建脚本切换共享 key（删除 pypinyin try/except 路径）；`--fix-iceberg` 单行内定点
+  重排当前 `iceberg.json`（diff 仅 1 行内容；名单不假设以句号结尾——早前文本级实现以
+  `find('。')` 切段误命中后续 desc 句号导致名单截断注入，已 git restore + 行内法修复，
+  幂等验证「无需改动」）
+- 文档同步：`docs/DATA_WORKFLOW.md` / `CLAUDE.md`（移除 pypinyin 可选描述、脚本计数 8→9）
+- 排序语义说明：与旧 pypinyin 全拼序在**同首字母组内**的次序可能不同（仓库只有首字母表，
+  无全拼数据），但整体「按首字母」分组与穿插是确定性且正确的
+
+
+## 2026-08-31 — 滚动探针 + 液态背景帧率实测旋钮（回补遗漏条目）
+
+### 新增
+
+- **`scripts/scroll-probe.mjs`**：滚动性能探针（CDP 实测），量化液态背景不同帧率档下的合成争抢
+- **`LiquidBg.vue` 实测旋钮**：液态背景帧率可调，用同一探针做 A/B 对照，为静止 24fps / 墙上 12fps / 滚动 30fps 三档提供数据支撑
+
+
 ## 2026-08-30 — 路由级数据分层：meta.json / id-index.json
 
 ### 改进

@@ -102,6 +102,17 @@ export function isSafeHttpUrl(url: string): boolean {
   }
 }
 
+/**
+ * 秒级 Unix 时间戳 → 本地日期字符串。
+ *
+ * 管线输出的 `generatedAt` / `createdAt` / `modifiedAt` 均为秒（见 build_data_api.py），
+ * 此前各视图手写 `new Date(x * 1000)`，毫秒/秒极易混淆，收敛为唯一入口。
+ */
+export function formatUnixDate(sec: number | undefined | null): string {
+  if (!sec) return ''
+  return new Date(sec * 1000).toLocaleDateString('zh-CN')
+}
+
 // 归一化：解析颜色、emoji 标签
 // perf：同一静态 JSON 在多个路由入口（IndexView/3D/副表等）重复 normalize —— 模块级 WeakMap 缓存
 const normalizeCache = new WeakMap<object, IcebergData>()

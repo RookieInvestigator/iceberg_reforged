@@ -30,13 +30,17 @@ export default defineConfig({
           if (!fs.existsSync(assetsDir)) return
           const base = process.env.CF_PAGES_BRANCH ? '/' : '/iceberg_reforged/'
 
-          // 入口 HTML → 该路由首屏 chunk 前缀（与 prerender 的路由一一对应）
+          // 入口 HTML → 该路由首屏 chunk 前缀（与 prerender 的路由一一对应；
+          // /ancient-book 与 /3d 同样在列：前者自带古籍样式 chunk，后者 three.js 最重，
+          // 缺了它们首屏瀑布优化会被 sitemap 承诺落空）
           const ENTRIES: Array<[html: string, chunkPrefix: string]> = [
             ['index.html', 'IndexView-'],
             ['home/index.html', 'HomeView-'],
             ['handbook/index.html', 'HandbookView-'],
             ['features/index.html', 'FeaturesView-'],
             ['on-this-day/index.html', 'OnThisDayView-'],
+            ['ancient-book/index.html', 'AncientBookView-'],
+            ['3d/index.html', 'Iceberg3DView-'],
           ]
           // /features/:slug 详情页目录（slug 名不固定，按目录扫描）
           const featuresDir = path.join(dist, 'features')
@@ -218,10 +222,12 @@ export default defineConfig({
     },
     // 构建期预渲染：Node 内运行 src/prerender.ts，为每个路由生成静态内容快照写入产物 HTML
     // （解决 SPA 首帧无内容问题，爬虫/无 JS 用户直接可见，Vue 启动后接管）。
+    // 路由表与 sitemap.xml 保持一致：/ancient-book 与 /3d 同样预渲染静态壳
+    //（3D 为 WebGL 交互页，静态壳仅为可索引的占位说明，客户端接管后才是完整场景）。
     vitePrerenderPlugin({
       renderTarget: '#app',
       prerenderScript: path.resolve(__dirname, 'src/prerender.ts'),
-      additionalPrerenderRoutes: ['/home', '/handbook', '/features', '/on-this-day'],
+      additionalPrerenderRoutes: ['/home', '/handbook', '/features', '/on-this-day', '/ancient-book', '/3d'],
     }),
   ],
   base: process.env.CF_PAGES_BRANCH ? '/' : '/iceberg_reforged/',
@@ -245,7 +251,6 @@ export default defineConfig({
           // ⚠️ 注意：项目目录名 iceberg-vue 含 "vue"，不能用裸 includes('vue') 匹配，
           // 必须按路径段（/vue/、/@vue/）判断，否则会把所有 node_modules 模块吸进 vue chunk
           if (!id.includes('node_modules')) return
-          if (id.includes('gsap')) return 'gsap'
           if (id.includes('/three/examples/jsm/')) return 'three-examples'
           if (id.includes('/three/')) return 'three'
           if (id.includes('vue-router')) return 'vue'

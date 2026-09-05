@@ -7,7 +7,7 @@ import { bgMode, sortMode, scatterMode } from '../lib/settingsStore'
 import raw from '../data/iceberg.json'
 import relatedRaw from '../data/appendix/related.csv?raw'
 import referencesRaw from '../data/appendix/references.csv?raw'
-import { normalizeData, isSafeHttpUrl } from '../lib/data'
+import { normalizeData, isSafeHttpUrl, formatUnixDate } from '../lib/data'
 import { parseCSV } from '../lib/csv'
 import { useI18n } from '../lib/useI18n'
 import { initialMountCount, nextMountCount } from '../lib/iceberg/wallMount'
@@ -99,7 +99,7 @@ watch(tierItems, (ti) => {
 }, { immediate: true })
 
 // ═══ 生产性能：词条墙分片挂载（首屏 2 层 + 逐帧补齐，见 lib/iceberg/wallMount.ts）═══
-// 首屏长任务从「一次性创建 1420 节点」拆成 ~6 帧小任务；视口外 paint 本就被
+// 首屏长任务从「一次性创建 1432 节点」拆成 ~6 帧小任务；视口外 paint 本就被
 // content-visibility 跳过，补齐阶段只增 DOM/布局。安全网：任何用户交互/筛选/深链
 // → 立即 flush（pointerdown 先于 click，Vue 微任务刷新保证事件处理时墙已完整）。
 // prerender 为手工快照（src/prerender.ts 不渲染本组件），无 SSR 分支。
@@ -135,7 +135,7 @@ function unbindWallListeners() {
   document.removeEventListener('open-item-modal', onWallFlushSignal)
 }
 
-const buildDate = new Date(data.generatedAt * 1000).toLocaleDateString('zh-CN')
+const buildDate = formatUnixDate(data.generatedAt)
 
 // Bulletins
 const bulletinModules = import.meta.glob('../data/bulletins/*.md', { query: '?raw', import: 'default', eager: true })

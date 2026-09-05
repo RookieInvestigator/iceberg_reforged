@@ -11,7 +11,7 @@ Iceberg/                  ← git 仓库根
 ├── .github/workflows/deploy.yml   ← CI（working-directory: iceberg-vue）
 ├── package.json          ← 根构建 shim（CF Pages：构建 iceberg-vue 并镜像 dist 到根）
 ├── CLAUDE.md / docs/     ← 协作指引 + 文档（docs/plans/ 规划、docs/audits/ 巡检为内部文档，git 忽略）
-├── scripts/              ← 数据管线脚本（8 个 Python + build-cf.mjs；Python 路径基于脚本位置推导，任意 cwd 可运行）
+├── scripts/              ← 数据管线脚本（9 个 Python + build-cf.mjs；Python 路径基于脚本位置推导，任意 cwd 可运行）
 ├── data/                 ← 数据工作区（git 忽略）
 │   ├── work/             ← 词条工作文件（config.json + items/*.md）
 │   ├── archive/          ← 历史快照 + legacy-2026-08 + tools-2026-08 归档
@@ -74,18 +74,18 @@ python scripts/build_data_api.py --input /path/to/api.json
 python scripts/build_data.py [html_file]   # 默认 iceberg.html
 ```
 
-依赖 `beautifulsoup4`，`pypinyin` 可选（缺失时排序回退 Unicode 序）。适用于 API 不可用时的手动回退方案（「相关词条」交叉引用解析已移除，由副表 related.csv 承担）。工作流：SingleFile 浏览器插件保存页面 → 运行脚本。
+依赖 `beautifulsoup4`（排序不再依赖 pypinyin：参与创作者按首字母排序走 `scripts/pinyin_sort.py`，读取前端 `lib/pinyin.ts` 汉字首字母表，确定性且零外部依赖）。适用于 API 不可用时的手动回退方案（「相关词条」交叉引用解析已移除，由副表 related.csv 承担）。工作流：SingleFile 浏览器插件保存页面 → 运行脚本。
 
 **输出文件**（两种方式一致）：
 
 | 文件 | 体积 | 用途 |
 | ---- | ---- | ---- |
-| `iceberg-vue/src/data/iceberg.json` | ~1.0MB | Vue 前端主数据源（构建时静态导入） |
-| `iceberg-vue/src/data/id_history.json` | ~159KB | ID 持久化历史（API uuid → 8 位 ID 锚点，标题/层级修订不换 ID，见 F30） |
+| `iceberg-vue/src/data/iceberg.json` | ~969KB | Vue 前端主数据源（构建时静态导入） |
+| `iceberg-vue/src/data/id_history.json` | ~156KB | ID 持久化历史（API uuid → 8 位 ID 锚点，标题/层级修订不换 ID，见 F30） |
 | `iceberg-vue/src/data/meta.json` | ~3.5KB | 轻量元数据：generatedAt / tierOrder / categoryColors / tagMap / tierCounts / total |
 | `iceberg-vue/src/data/id-index.json` | ~106KB | 精简索引：`id → { t: 标题, c: 分类 }` |
 
-**分层导入（重要）**：`iceberg.json` 会被 Rollup 打成约 800KB（gzip 320KB）的 chunk，并进入首屏关键路径。**只需统计或按 id 查标题/分类的模块不得导入它**：
+**分层导入（重要）**：`iceberg.json`（~969KB）会被 Rollup 打成约 800KB（gzip 320KB）的 chunk，并进入首屏关键路径。**只需统计或按 id 查标题/分类的模块不得导入它**：
 
 - 统计口径（词条数 / 层级数 / 分类色 / 标签表 / 生成时间）→ 导入 `meta.json`
 - 按 id 查标题或分类（用户面板的收藏统计等）→ 导入 `id-index.json`
@@ -102,7 +102,7 @@ python scripts/build_data.py [html_file]   # 默认 iceberg.html
 ```text
 iceberg-vue/
 ├── index.html / vite.config.ts / tsconfig{,.base,.app,.test}.json
-├── public/                         # 静态资源 + 404.html（SPA 回退）+ _headers（CF Pages 安全头）+ robots.txt / sitemap.xml / og-cover.png
+├── public/                         # 静态资源 + 404.html（SPA 回退，`?r=` 深链）+ _headers（CF Pages 安全头，含 frame-ancestors）+ _redirects（Netlify 遗留，见文件头注释）+ robots.txt / sitemap.xml / og-cover.png
 └── src/
     ├── main.ts / App.vue
     ├── prerender.ts                 # 构建期预渲染脚本（vite-prerender-plugin 调用，Node 内生成各路由静态快照）
@@ -116,7 +116,7 @@ iceberg-vue/
     ├── lib/ancient-book/           # 古籍模式（types / engine / layout / render + SpreadView/SpreadPage）
     ├── lib/iceberg/                # 冰山图 composables（搜索 Worker / 相关索引 / 筛选管线 / tooltip）
     ├── lib/iceberg3d/              # 3D 引擎（engine / picking / materials / cameraFlight / prng）
-    ├── lib/i18n/                   # 翻译字典（zh / en / ja，222×3 key）
+    ├── lib/i18n/                   # 翻译字典（zh / en / ja，208×3 key）
     ├── styles/                     # global.css, index.css, bg.css, modal.css, ancient-book.css, themes/
     ├── views/                      # IndexView, HomeView, HandbookView, FeaturesView, FeatureDetailView,
     │                               # OnThisDayView, AncientBookView, Iceberg3DView,
@@ -159,7 +159,7 @@ iceberg-vue/
 
 ## 数据流
 
-`IndexView.vue` 构建时静态导入 `iceberg.json`（~900KB），经 `normalizeData()`（层级重命名、标点规范化、emoji/颜色注入）后通过 `provide/inject` 下发。`desc` 字段与 `renderItems` 分离存入 `Map`，降低 `v-memo` diff 开销。
+`IndexView.vue` 构建时静态导入 `iceberg.json`（~969KB），经 `normalizeData()`（层级重命名、标点规范化、emoji/颜色注入）后通过 `provide/inject` 下发。`desc` 字段与 `renderItems` 分离存入 `Map`，降低 `v-memo` diff 开销。秒级 Unix 时间戳统一走 `lib/data.ts` 的 `formatUnixDate()`，禁止各视图手写 `*1000`。
 
 `IcebergApp.vue` 注入数据，通过 filterStore / settingsStore 管理筛选与设置，Web Worker（Fuse.js）异步搜索，`ItemInteractivity.vue` 统一处理 tooltip / modal。
 
@@ -196,7 +196,7 @@ function storedAtom<T>(key: string, fallback: T) {
 - **搜索**：Web Worker Fuse.js，双索引（标题/全文），threshold 0.3，防抖 150ms
 - **Tooltip**：200ms 悬停延迟，滚动时阻止误触发
 - **NEW 标记**：`modifiedAt` 距最新 30 天内
-- **SEO**：`index.html` 含 description / robots / OG / Twitter 与 WebSite JSON-LD（CSP 按 `sha256-…` 哈希放行数据块）；构建期预渲染（`src/prerender.ts`）为 `/ /home /handbook /features /features/:slug /on-this-day` 注入静态内容快照与 per-route title/canonical/og:url；`router.afterEach` 浏览器端动态更新 canonical 与 og:url；favicon 使用 `%BASE_URL%` 前缀；`public/` 提供 robots.txt / sitemap.xml / og-cover.png
+- **SEO**：`index.html` 含 description / robots / OG / Twitter 与 WebSite JSON-LD（CSP 按 `sha256-…` 哈希放行数据块，`frame-ancestors` 仅 `public/_headers` 可下发，改 CSP 时两处同步；`og:image` 恒指主站系有意归并权重）；构建期预渲染（`src/prerender.ts`）为 `/ /home /handbook /features /features/:slug /on-this-day /ancient-book /3d` 注入静态内容快照与 per-route title/canonical/og:url（`/3d` 为 WebGL 占位说明壳，`/ancient-book` 为目录摘要壳，未知路由回最小 404 壳且 canonical 跟随请求 URL）；`router.afterEach` 浏览器端动态更新 canonical 与 og:url；favicon 使用 `%BASE_URL%` 前缀；`public/` 提供 robots.txt / sitemap.xml / og-cover.png（sitemap 路由表与预渲染路由表保持一致）
 - **加载页（#app-shield）**：视觉由 `index.html` 内联样式负责（网站 icon + 标题 + 副标题 + 三点），AppShell 只负责生命周期——路由 path 变化显示、afterEach+nextTick 淡出、`vue-ready` 幂等确认、2500ms 兜底、bfcache 恢复；`<noscript>` 提供无 JS 静态说明
 
 ## 关键常量
@@ -204,10 +204,10 @@ function storedAtom<T>(key: string, fallback: T) {
 | 常量 | 值 |
 | ---- | ---- |
 | 站点路径 | `/iceberg_reforged/`（GH Pages）；CF Pages 为根路径（`CF_PAGES_BRANCH` 自动切换） |
-| 词条总数 | 1400（API 实时同步） |
-| 层级 / 分类 / tagMap | 8 / 15 / 67 |
-| iceberg.json 体积 | ~960KB |
-| i18n 字典 | 222 key × 3 语言 |
+| 词条总数 | 1432（API 实时同步，见 `meta.json` / `CHANGELOG` 数据条目） |
+| 层级 / 分类 / tagMap | 8 / 15 / 68 |
+| iceberg.json 体积 | ~969KB |
+| i18n 字典 | 208 key × 3 语言 |
 | 搜索防抖 / 阈值 | 150ms / 0.3 |
 | Tooltip 延迟 | 200ms |
 
@@ -219,7 +219,7 @@ base: process.env.CF_PAGES_BRANCH ? '/' : '/iceberg_reforged/'
 alias: { '@': '/src' }
 esbuild: { drop: ['debugger'], pure: ['console.log', 'console.info', 'console.debug'] }  // 构建时生效，保留 error/warn
 plugins: [vue(), tailwindcss(), compression(), first-screen-preload, spaFallback(), vitePrerenderPlugin({ renderTarget: '#app', prerenderScript: 'src/prerender.ts' })]
-manualChunks: 函数式分包（vue+vue-router / three / three-examples / gsap；fuse 仅 search.worker 内嵌，无独立 chunk）
+manualChunks: 函数式分包（vue+vue-router / three / three-examples；fuse 仅 search.worker 内嵌，无独立 chunk）
 ```
 
 `spa-fallback` 插件构建后将 `index.html` 复制为 `dist/404.html`。

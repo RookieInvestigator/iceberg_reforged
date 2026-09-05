@@ -35,14 +35,7 @@ import sys
 import time
 from datetime import datetime
 from bs4 import BeautifulSoup
-
-def _sort_key(name):
-    """中英文混合排序键：中文转拼音全拼（与 build_data_api.py 一致），英文转小写，自然穿插"""
-    try:
-        from pypinyin import lazy_pinyin
-        return ''.join(lazy_pinyin(name)).lower()
-    except ImportError:
-        return name  # 无 pypinyin 时回退 Unicode 序（与 build_data_api.py 一致）
+from pinyin_sort import sort_key  # 无依赖「按首字母」key：读 lib/pinyin.ts 首字母表（见 pinyin_sort.py）
 
 
 # ==========================================
@@ -223,7 +216,7 @@ def extract_from_html(html_file):
         else:
             names_raw = tail
             suffix = ''
-        names = sorted([n.strip() for n in names_raw.split('、') if n.strip()], key=_sort_key)
+        names = sorted([n.strip() for n in names_raw.split('、') if n.strip()], key=sort_key)
         intro_text = head + '参与创作者（按首字母排序）：' + '、'.join(names) + suffix
 
     # 从图例区构建 color → category_name 映射

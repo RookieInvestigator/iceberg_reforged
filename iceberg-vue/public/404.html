@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -27,8 +27,9 @@
     // 双部署兼容：GitHub Pages 部署在 /iceberg_reforged/ 子路径，CF Pages 部署在根路径
     var root = location.pathname.indexOf('/iceberg_reforged') === 0 ? '/iceberg_reforged/' : '/'
     var path = location.pathname.replace(/^\/iceberg_reforged/, '') || '/'
+    var home = document.getElementById('home')
+    if (home) home.href = root
     location.replace(root + '?r=' + encodeURIComponent(path + location.search + location.hash))
-    document.getElementById('home').href = root
   </script>
 </head>
 <body>

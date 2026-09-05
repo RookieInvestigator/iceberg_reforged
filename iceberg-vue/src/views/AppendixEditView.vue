@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import raw from '../data/iceberg.json'
-import { normalizeData } from '../lib/data'
+import { normalizeData, formatUnixDate } from '../lib/data'
 import { parseCSV } from '../lib/csv'
 
 const data = normalizeData(raw)
@@ -283,9 +283,9 @@ function rowCount(def: AppendixDef): number {
             {{ (selectedItem as any).desc }}
           </p>
           <div class="card-meta" v-if="(selectedItem as any).createdAt">
-            <span>创建：{{ new Date((selectedItem as any).createdAt * 1000).toLocaleDateString('zh-CN') }}</span>
+            <span>创建：{{ formatUnixDate((selectedItem as any).createdAt) }}</span>
             <span v-if="(selectedItem as any).modifiedAt !== (selectedItem as any).createdAt">
-              更新：{{ new Date((selectedItem as any).modifiedAt * 1000).toLocaleDateString('zh-CN') }}
+              更新：{{ formatUnixDate((selectedItem as any).modifiedAt) }}
             </span>
           </div>
           <div class="card-tags" v-if="(selectedItem as any).tags?.length">

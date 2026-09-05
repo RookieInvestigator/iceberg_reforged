@@ -46,7 +46,9 @@ python scripts/build_data_api.py
 1. 从 `https://icebergthreads.com/api/iceberg/fel4BTCqlMAGSa2gelRJ` 拉取 JSON（失败自动重试 3 次，指数退避）
 2. 提取条目、分类（颜色）、emoji 标签映射、层级
 3. 时间戳直接使用 API 的 `createdAt` / `modifiedAt`（毫秒转秒；为 0 或缺失时省略该字段，不伪造 1970 时间戳）
-4. 参与创作者按拼音全拼排序（无 pypinyin 时回退 Unicode 序）
+4. 参与创作者按首字母排序（`scripts/pinyin_sort.py`：读取前端 `lib/pinyin.ts` 汉字首字母表做
+   逐字 key，中英自然混排、确定性、零外部依赖；替代旧的可选 pypinyin——缺失时曾回退
+   Unicode 序导致名单乱序）
 5. 输出 `iceberg-vue/src/data/iceberg.json`
 
 依赖：**零外部依赖**（仅 Python 标准库）。

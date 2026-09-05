@@ -25,6 +25,7 @@ from pathlib import Path
 from urllib.request import urlopen, Request
 from urllib.error import URLError
 from urllib.parse import urlparse
+from pinyin_sort import sort_key
 
 # ==========================================
 # 配置
@@ -217,9 +218,15 @@ def build_from_api(data: dict, history: dict, old_ids_by_title: dict) -> dict:
 
     markers_map = {}
     for m in data.get('markers', []):
+        # 上游 superscript 偶发首尾空白（如 " 🎲"），统一 strip，否则 tagMap 出现
+        # 带空格的脏 key，前端精确匹配时产生幽灵筛选 bug（2026-09-06 发现实证）
+        emoji = (m.get('superscript') or '').strip()
+        name = (m.get('name') or '').strip()
+        if not emoji or not name:
+            continue
         markers_map[m['id']] = {
-            'emoji': m['superscript'],
-            'name': m['name'],
+            'emoji': emoji,
+            'name': name,
         }
 
     # 2. 解析层级
@@ -301,17 +308,11 @@ def build_from_api(data: dict, history: dict, old_ids_by_title: dict) -> dict:
             names_raw = tail
             suffix = ''
 
-        def _pinyin_key(name: str) -> str:
-            """拼音排序 key，无 pypinyin 时回退 Unicode 序（至少拉丁名在前）"""
-            try:
-                from pypinyin import lazy_pinyin
-                return ''.join(lazy_pinyin(name))
-            except ImportError:
-                return name
-
+        # 排序 key：无依赖「按首字母」（读 lib/pinyin.ts 首字母表，见 pinyin_sort.py）；
+        # 旧实现依赖可选 pypinyin 全拼，缺失时回退 Unicode 序导致名单乱序（已修复）
         names = sorted(
             [n.strip() for n in names_raw.split('、') if n.strip()],
-            key=_pinyin_key,
+            key=sort_key,
         )
         intro_text = head + '参与创作者（按首字母排序）：' + '、'.join(names) + suffix
 
@@ -353,6 +354,13 @@ def validate_data(data: dict) -> list:
     tiers = data.get('tiers', {})
     if not tiers:
         errors.append('tiers 为空')
+    # tagMap / categoryColors 的 key 禁止首尾空白（上游 superscript 脏数据曾产出 " 🎲"）
+    for key in list(data.get('tagMap', {}).keys()):
+        if key != key.strip():
+            errors.append(f'tagMap 脏 key（含首尾空白）: {key!r}')
+    for key in list(data.get('categoryColors', {}).keys()):
+        if key != key.strip():
+            errors.append(f'categoryColors 脏 key（含首尾空白）: {key!r}')
     ids = []
     for tier, items in tiers.items():
         if not isinstance(tier, str) or not tier.strip():

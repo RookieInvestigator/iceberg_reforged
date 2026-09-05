@@ -69,6 +69,8 @@ function nav(): string {
     <a href="${base}handbook" class="text-sky-300 hover:text-sky-200">术语表</a>
     <a href="${base}features" class="text-sky-300 hover:text-sky-200">专题</a>
     <a href="${base}on-this-day" class="text-sky-300 hover:text-sky-200">历史上的今天</a>
+    <a href="${base}ancient-book" class="text-sky-300 hover:text-sky-200">古籍</a>
+    <a href="${base}3d" class="text-sky-300 hover:text-sky-200">3D 冰山</a>
   </nav>`
 }
 
@@ -275,8 +277,47 @@ function onThisDayHtml(): string {
   </div>`
 }
 
+/**
+ * 古籍模式静态壳：构建期无浏览器排版能力（列数/展页依赖容器尺寸），
+ * 因此只输出可索引的目录级摘要（分卷 + 每卷条目数 + 卷首词条），不模拟竖排版式。
+ * 客户端接管后才是完整线装书阅读器（分类/层级两种分卷，可翻页）。
+ */
+function ancientBookHtml(): string {
+  const total = Object.values(data.tiers).reduce((n, t) => n + (t?.length || 0), 0)
+  const byCat = new Map<string, number>()
+  for (const items of Object.values(data.tiers)) {
+    for (const it of items || []) byCat.set(it.category, (byCat.get(it.category) || 0) + 1)
+  }
+  const vols = Object.keys(data.categoryColors || {})
+    .map(
+      (cat) =>
+        `<li class="text-xs leading-6 text-gray-400">${esc(cat)} · ${byCat.get(cat) || 0} 条</li>`,
+    )
+    .join('')
+  return `<div class="max-w-3xl mx-auto px-6 py-10 text-white">
+    <h1 class="text-2xl font-black tracking-wider">古籍线装书</h1>
+    <p class="mt-3 text-sm leading-7 text-gray-400">竖排右起的线装书阅读模式，共 ${total} 词条，支持按类别 / 层级两种分卷。启用 JavaScript 后可翻页阅读全文。</p>
+    <ul class="mt-6 grid gap-x-8 sm:grid-cols-2">${vols || '<li class="text-sm text-gray-500">暂无分卷。</li>'}</ul>
+    ${nav()}
+  </div>`
+}
+
+/**
+ * 3D 冰山静态壳：WebGL 场景无法在 Node 内渲染，输出占位说明保证
+ * sitemap 承诺的 URL 对爬虫/无 JS 用户非空。客户端接管后加载完整 Three.js 场景。
+ */
+function threeDHtml(): string {
+  const total = Object.values(data.tiers).reduce((n, t) => n + (t?.length || 0), 0)
+  return `<div class="max-w-3xl mx-auto px-6 py-10 text-white">
+    <h1 class="text-2xl font-black tracking-wider">3D 冰山</h1>
+    <p class="mt-3 text-sm leading-7 text-gray-400">Three.js 驱动的 3D 冰山场景，共 ${total} 词条，以类别着色的词条钻石呈现。需要启用 JavaScript 且浏览器支持 WebGL 才能进入完整场景。</p>
+    <p class="mt-4 text-sm"><a href="${base}" class="text-sky-300 hover:text-sky-200">← 返回 2D 冰山图（无需 WebGL）</a></p>
+    ${nav()}
+  </div>`
+}
+
 export async function prerender({ url }: { url: string }) {
-  const baseLinks = new Set(['/home', '/handbook', '/features', '/on-this-day'])
+  const baseLinks = new Set(['/home', '/handbook', '/features', '/on-this-day', '/ancient-book', '/3d'])
 
   if (url === '/') {
     return { html: homeHtml(), links: baseLinks, head: headFor('/', SITE) }
@@ -298,6 +339,18 @@ export async function prerender({ url }: { url: string }) {
   if (url === '/on-this-day') {
     return { html: onThisDayHtml(), links: baseLinks, head: headFor('/on-this-day', `历史上的今天 · ${SITE}`) }
   }
+  if (url === '/ancient-book') {
+    return { html: ancientBookHtml(), links: baseLinks, head: headFor('/ancient-book', `古籍线装书 · ${SITE}`) }
+  }
+  if (url === '/3d') {
+    return { html: threeDHtml(), links: baseLinks, head: headFor('/3d', `3D 冰山 · ${SITE}`) }
+  }
 
-  return { html: homeHtml(), links: baseLinks, head: headFor('/', SITE) }
+  // 未知路由（如 404）：渲染最小占位壳，但 canonical/标题跟随请求 URL，
+  // 避免误用首页 canonical 造成搜索引擎去重误判。
+  return {
+    html: `<div class="max-w-3xl mx-auto px-6 py-10 text-white"><h1 class="text-2xl font-black tracking-wider">页面不存在</h1><p class="mt-3 text-sm text-gray-400">你试图进入的页面不存在。</p>${nav()}</div>`,
+    links: baseLinks,
+    head: headFor(url, `页面不存在 · ${SITE}`),
+  }
 }

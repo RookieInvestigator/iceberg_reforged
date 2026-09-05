@@ -39,6 +39,12 @@ describe('派生数据与 iceberg.json 一致', () => {
     expect(meta.tagMap).toEqual(data.tagMap)
   })
 
+  it('tagMap / categoryColors 的 key 无首尾空白（上游 superscript 脏数据回归守卫）', () => {
+    for (const k of Object.keys(data.tagMap)) expect(k, `tagMap 脏 key ${JSON.stringify(k)}`).toBe(k.trim())
+    for (const k of Object.keys(meta.tagMap)) expect(k, `meta tagMap 脏 key ${JSON.stringify(k)}`).toBe(k.trim())
+    for (const k of Object.keys(data.categoryColors)) expect(k).toBe(k.trim())
+  })
+
   it('meta.generatedAt 与主数据一致', () => {
     expect(meta.generatedAt).toBe(data.generatedAt)
   })

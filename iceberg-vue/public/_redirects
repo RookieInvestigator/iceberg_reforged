@@ -1,1 +1,3 @@
+# Netlify 遗留规则（CF Pages / GH Pages 均忽略）：实际 SPA 回退靠 dist/404.html
+#（public/404.html 经 ?r= 编码 + router redirectGuard 还原），本文件仅防某天迁回 Netlify 时丢失回退。
 /* /index.html 200

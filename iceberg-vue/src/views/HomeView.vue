@@ -9,6 +9,7 @@ import { useI18n } from '../lib/useI18n'
 // 不导入 iceberg.json：那会拉下 ~800KB 的词条数据 chunk 并进入首屏关键路径。
 import meta from '../data/meta.json'
 import type { IcebergMeta } from '../lib/data'
+import { formatUnixDate } from '../lib/data'
 import csvRaw from '../data/on-this-day.csv?raw'
 import { parseCSV } from '../lib/csv'
 import LiquidGradient from '../components/layout/LiquidGradient.vue'
@@ -66,7 +67,7 @@ onActivated(() => { rerollSeed() })
 
 // 数据统计（来源 meta.json，无需全量词条数据）
 const data = meta as IcebergMeta
-const buildDate = new Date(data.generatedAt * 1000).toLocaleDateString('zh-CN')
+const buildDate = formatUnixDate(data.generatedAt)
 const entryCount = computed(() => data.total)
 const tierCount = computed(() => data.tierOrder.length)
 const categoryCount = computed(() => Object.keys(data.categoryColors).length)

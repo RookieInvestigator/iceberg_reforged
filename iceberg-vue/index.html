@@ -7,7 +7,7 @@
   <!-- SEO：canonical 与 og:url 由构建期预渲染注入（指向主站 iceberg-reforged.pages.dev），
        浏览器端 router.afterEach 同步更新。robots meta 与 google-site-verification 由
        vite.config.ts 的 seo-master-mirror 插件按构建环境注入（主站 index/follow+验证码，
-       镜像 noindex/follow）。 -->
+       镜像 noindex/follow）。og:image 恒指主站（有意：社交卡片权重归并主站，镜像不分流）。 -->
   <meta name="description" content="中文兔子洞冰山图——社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识档案。词条顺序不代表热度、质量或重要性的高低。" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="中文兔子洞冰山图" />
@@ -27,7 +27,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@200;300;400;500;700;900&family=Noto+Serif+SC:wght@200;300&family=Noto+Serif+TC:wght@400;700;900&display=swap" rel="stylesheet">
   <title>中文兔子洞冰山图</title>
   <!-- P0-审计（2026-08-16）：CSP —— 会话令牌存 localStorage，无 CSP 时一次 XSS 即全盘失守。
-       script-src 的 sha256 哈希仅放行下方内联 JSON-LD 数据块，不放行任何可执行内联脚本 -->
+       script-src 的 sha256 哈希仅放行下方内联 JSON-LD 数据块，不放行任何可执行内联脚本
+       注意：frame-ancestors 只能由 public/_headers 下发（<meta> 不支持该指令），改 CSP 时两处同步 -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Z5q8TZYONrNqyLxSr3ur3paaNHAy1TijELePKQ4UYaQ='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https://count.moeyy.cn; connect-src 'self' https://*.supabase.co wss://*.supabase.co ws://localhost:* ws://127.0.0.1:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
   <!-- 结构化数据（WebSite）：CSP 按内容哈希放行 -->
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"中文兔子洞冰山图","alternateName":"Chinese Oddities Iceberg","url":"https://iceberg-reforged.pages.dev/","description":"社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识冰山图目录。","inLanguage":["zh-CN","en","ja"]}</script>
@@ -125,7 +126,7 @@
     <style>#app-shield { display: none; }</style>
     <main class="noscript-main">
       <h1>中文兔子洞冰山图</h1>
-      <p>社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识档案，收录 1400+ 词条。词条顺序为共创过程中自然形成的排布，不代表任何属性上的高低差异。本站需要启用 JavaScript 才能浏览完整冰山图。</p>
+      <p>社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识档案，收录 1432 词条。词条顺序为共创过程中自然形成的排布，不代表任何属性上的高低差异。本站需要启用 JavaScript 才能浏览完整冰山图。</p>
       <p><a href="%BASE_URL%">进入首页</a> · <a href="%BASE_URL%handbook">术语表</a> · <a href="%BASE_URL%features">专题</a></p>
     </main>
   </noscript>

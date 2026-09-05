@@ -2,6 +2,7 @@
 // 术语表 — 页首标签切换 + A-Z 快速跳转，词条采用百科式排版（不装卡片）
 import { computed, nextTick, ref } from 'vue'
 import type { IcebergMeta } from '../lib/data'
+import { formatUnixDate } from '../lib/data'
 // 术语表只用到分类色 / 标签表 / 生成时间 / 词条总数 —— 走轻量 meta.json（~3.5KB），
 // 不导入 iceberg.json（否则会拉下 ~800KB 的词条数据 chunk，而这些内容本页面一条都不显示）
 import meta from '../data/meta.json'
@@ -12,7 +13,7 @@ import FlowBackground from '../components/layout/FlowBackground.vue'
 
 const { t } = useI18n()
 const data = meta as IcebergMeta
-const buildDate = new Date(data.generatedAt * 1000).toLocaleDateString('zh-CN')
+const buildDate = formatUnixDate(data.generatedAt)
 
 const LETTER_ORDER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('')
 
