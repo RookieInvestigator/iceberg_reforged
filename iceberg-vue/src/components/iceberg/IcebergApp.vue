@@ -219,7 +219,7 @@ function onDrawerTouchCancel() {
           <button @click="favFilter.set(!favF)"
             :class="['group flex items-center gap-2 px-3 py-1.5 text-[length:var(--font-sm)] font-medium tracking-wide transition-colors duration-200 cursor-pointer select-none border-none',
               favF ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30' : 'bg-transparent text-gray-400 hover:bg-white hover:text-black']">
-            {{ favF ? '★ 取消收藏' : '☆ 收藏' }}
+            {{ favF ? '★ ' + t('unfavorite') : '☆ ' + t('favorite') }}
           </button>
         </div>
       </div>

@@ -57,7 +57,6 @@ export default {
 	filterHide: 'Hide',
 	noDesc: 'No description yet...',
 	noDescShort: 'This entry has no description yet',
-	noLink: 'No reference link',
 	backToTop: 'Back to Top',
 	randomEntry: 'Random Entry',
 	openLink: 'Visit Link',
@@ -209,5 +208,6 @@ export default {
 	featuresWipBadge: 'In Development',
 	featuresWip: 'The Features page is under construction. Stay tuned.',
 	backToFeatures: '← Features list',
-	loading: 'Loading…'
+	viewAll: 'View all',
+	noBulletins: 'No bulletins yet'
 };

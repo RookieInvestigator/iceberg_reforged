@@ -57,7 +57,6 @@ export default {
 	filterHide: '非表示',
 	noDesc: '説明はまだありません',
 	noDescShort: 'この項目の説明はまだありません',
-	noLink: '参照リンクなし',
 	backToTop: 'トップへ戻る',
 	randomEntry: 'ランダム',
 	openLink: 'リンクを開く',
@@ -211,5 +210,6 @@ export default {
 	featuresWipBadge: '開発中',
 	featuresWip: '特集ページは開発中です。お楽しみに。',
 	backToFeatures: '← 特集一覧',
-	loading: '読み込み中…'
+	viewAll: 'すべて見る',
+	noBulletins: 'お知らせはまだありません'
 };

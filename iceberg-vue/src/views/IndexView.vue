@@ -171,7 +171,7 @@ const dimSet = computed(() => dimItems.value)
 
 // 层空/全空提示（声明式，替代原 useFilterPipeline 命令式 createElement 路径；
 //   仅 hide 模式可见——dim 模式全部词条仍在 DOM，提示会造成误读）
-// 层可见数由过滤管线单遍产出（wallCounts——不再单独扫 1420 词条）
+// 层可见数由过滤管线单遍产出（wallCounts——不再单独扫 1432 词条）
 const { t } = useI18n()
 const hasNoResults = computed(() => filterVisible.value !== null && filterVisible.value.size === 0)
 

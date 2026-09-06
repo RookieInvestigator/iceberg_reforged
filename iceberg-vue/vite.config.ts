@@ -23,7 +23,11 @@ export default defineConfig({
       // （index → 路由 chunk → 依赖链）。此前只处理根 index.html，其余预渲染入口
       // （/home /handbook /features /on-this-day）仍有瀑布，现按入口逐一处理。
       name: 'first-screen-preload',
+      // 仅构建期生效：vitest 会加载 vite.config 并触发 closeBundle（实测 npm test 改写 dist），
+      // apply + VITEST 双保险，保证测试命令对产物目录零副作用
+      apply: 'build',
       closeBundle() {
+        if (process.env.VITEST) return
         try {
           const dist = path.resolve(__dirname, 'dist')
           const assetsDir = path.join(dist, 'assets')
@@ -98,7 +102,9 @@ export default defineConfig({
     },
     {
       name: 'spa-fallback',
+      apply: 'build',
       closeBundle() {
+        if (process.env.VITEST) return
         const dist = path.resolve(__dirname, 'dist')
         const fallback = path.join(dist, '404.html')
         // public/404.html 由 Vite 自动复制到 dist/404.html；已存在则视为自定义 404，不覆盖
@@ -116,7 +122,9 @@ export default defineConfig({
       // 本插件在 public 拷贝完成后覆盖 dist 版本，只补 lastmod。
       // 失败时 dist 里仍留有 Vite 复制的静态副本，不会丢 sitemap。
       name: 'sitemap-lastmod',
+      apply: 'build',
       closeBundle() {
+        if (process.env.VITEST) return
         try {
           const dist = path.resolve(__dirname, 'dist')
           const src = path.resolve(__dirname, 'public/sitemap.xml')
@@ -141,7 +149,9 @@ export default defineConfig({
       // dev 模式：不注入任何标签，保持干净。
       // 同时在 closeBundle 时覆盖镜像的 robots.txt（不声明 Sitemap）并删除镜像的 sitemap.xml。
       name: 'seo-master-mirror',
+      apply: 'build',
       transformIndexHtml(html) {
+        if (process.env.VITEST) return html
         const isDev = process.env.NODE_ENV === 'development' || !!process.env.VITE_DEV_SERVER
         if (isDev) return html
         const isMaster = !!process.env.CF_PAGES_BRANCH
@@ -152,6 +162,7 @@ export default defineConfig({
         return html.replace('</head>', `${tags}</head>`)
       },
       closeBundle() {
+        if (process.env.VITEST) return
         const isDev = process.env.NODE_ENV === 'development' || !!process.env.VITE_DEV_SERVER
         if (isDev) return
         const isMaster = !!process.env.CF_PAGES_BRANCH

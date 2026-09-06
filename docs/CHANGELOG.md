@@ -1,6 +1,28 @@
 # 更新日志
 
 
+## v4.5.9 — 2026-09-06 — 测试零副作用 · i18n 缺口与死 key · Google 验证文件
+
+### 修复
+
+- **`npm test` 不再改写 `dist/`**：`first-screen-preload` / `spa-fallback` / `sitemap-lastmod` / `seo-master-mirror` 加 `apply: 'build'` + `process.env.VITEST` 早退双保险。此前跑测试会重写 `dist/robots.txt` 并删除 `dist/sitemap.xml`（mtime 实证 3 次 `closeBundle`），现复跑验证 `dist` 零变动
+- **测试 tsconfig 补 `node` 类型**：`tsconfig.test.json` 的 `types` 锁死 `vitest/globals`，`node:fs` 无声明导致新测试类型检查失败，已补
+- **收藏筛选按钮 i18n**：`IcebergApp.vue` 硬编码 `★ 取消收藏` / `☆ 收藏` → `t('unfavorite')` / `t('favorite')`（该 key 在弹窗/抽屉早已使用，唯独此按钮漏网，EN/JA 用户看到中文）
+- **硬编码文案入字典**：`OnThisDayModal` 查看全部 → `viewAll`；`BulletinModal` 暫無公告（繁体硬编码）→ `noBulletins`（三语，zh 用简体）
+- **死 key 清理 2 个**：`loading` / `noLink` ×3 语零引用，删除（字典总数 208 不变：删 2 加 2）
+- **注释旧数字**：1420/1400 → 1432（6 文件 perf 注记）；`MIN_ITEMS` 注释 1409 → 1432；TODO 公告 5 → 6 条（含 006-cf-pages）；CI BOM 守卫覆盖 `py` / `mjs`
+- **CLAUDE.md**：`scripts/` 行补上探针 mjs；i18n 计数维持 208×3
+
+### 新增
+
+- **`public/googled0c6ce1342f1a758.html`**：Google Search Console 验证文件，随构建发布到站点根（主站/镜像均可访问，镜像 URL 前缀验证可用）
+- **`src/lib/i18n/i18n.test.ts`**：三语 key 集合对齐 + 死 key 守卫（`t()` 字面量 / `labelKey` / `descKey` / `font*` / `sort*` 前缀全覆盖，191 个字面量引用实测零缺失）
+
+### 测试
+
+- 双 typecheck 通过；全套件 20 文件 / 162 用例通过；生产构建绿（8 页预渲染）；test 后 `dist` mtime 不变，副作用已消除
+
+
 ## v4.5.8 — 2026-09-06 — SEO 主从镜像回补 · 数据 1420→1432 · 预渲染/文档一致性修复
 
 ### 新增

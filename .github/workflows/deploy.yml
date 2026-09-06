@@ -35,11 +35,11 @@ jobs:
           cache-dependency-path: iceberg-vue/package-lock.json
       - run: npm ci
       # BOM 守卫：PostCSS 配置探测会把带 BOM 的 package.json 解析崩（Windows 编辑器常见写入）。
-      # 任何受监管文本文件（JSON/TS/Vue/CSS/MD）首字节为 EF BB BF 即失败，防复发。
+      # 任何受监管文本文件（JSON/TS/Vue/CSS/MD/Python/MJS）首字节为 EF BB BF 即失败，防复发。
       - name: BOM guard
         run: |
           set -e
-          for f in $(git ls-files | grep -E '\.(json|ts|tsx|js|jsx|vue|css|md|html)$'); do
+          for f in $(git ls-files | grep -E '\.(json|ts|tsx|js|mjs|jsx|vue|css|md|html|py)$'); do
             if [ -n "$(head -c 3 "$f" | grep -P '^\xef\xbb\xbf')" ]; then
               echo "::error file=$f::UTF-8 BOM 被禁止（PostCSS/Vite JSON 解析会崩）"
               exit 1

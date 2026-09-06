@@ -57,7 +57,6 @@ export default {
 	filterHide: '隐藏',
 	noDesc: '这个词条还没有描述……',
 	noDescShort: '此词条尚待补充描述',
-	noLink: '暂无参考链接',
 	backToTop: '回到顶部',
 	randomEntry: '随机词条',
 	openLink: '访问词条链接',
@@ -209,5 +208,6 @@ export default {
 	featuresWipBadge: '开发中',
 	featuresWip: '专题页正在建设中，敬请期待。',
 	backToFeatures: '← 专题列表',
-	loading: '加载中…'
+	viewAll: '查看全部',
+	noBulletins: '暂无公告'
 };

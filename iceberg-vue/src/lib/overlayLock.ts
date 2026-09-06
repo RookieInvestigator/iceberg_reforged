@@ -7,7 +7,7 @@
  * - 每个组件实例持有一个 token，卸载时自动释放
  *
  * perf：overflow:hidden 会移除滚动条 → 视口宽度变化 → 整页 reflow（冰山页
- * 1400 词条全量重排，弹窗打开瞬间的卡顿主因之一）。加锁时给 body 补偿
+ * 1432 词条全量重排，弹窗打开瞬间的卡顿主因之一）。加锁时给 body 补偿
  * 等宽 padding-right，视口宽度不变，reflow 范围缩到最小。
  */
 let tokens = new Set<symbol>()

@@ -11,7 +11,7 @@ Iceberg/                  ← git 仓库根
 ├── .github/workflows/deploy.yml   ← CI（working-directory: iceberg-vue）
 ├── package.json          ← 根构建 shim（CF Pages：构建 iceberg-vue 并镜像 dist 到根）
 ├── CLAUDE.md / docs/     ← 协作指引 + 文档（docs/plans/ 规划、docs/audits/ 巡检为内部文档，git 忽略）
-├── scripts/              ← 数据管线脚本（9 个 Python + build-cf.mjs；Python 路径基于脚本位置推导，任意 cwd 可运行）
+├── scripts/              ← 数据管线脚本（9 个 Python + build-cf.mjs / scroll-probe.mjs / tooltip-probe.mjs 探针；Python 路径基于脚本位置推导，任意 cwd 可运行）
 ├── data/                 ← 数据工作区（git 忽略）
 │   ├── work/             ← 词条工作文件（config.json + items/*.md）
 │   ├── archive/          ← 历史快照 + legacy-2026-08 + tools-2026-08 归档

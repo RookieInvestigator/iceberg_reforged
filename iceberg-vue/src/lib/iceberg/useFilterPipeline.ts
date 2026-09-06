@@ -18,7 +18,7 @@ interface PipelineOptions {
 /**
  * 过滤管线 + 已读/NEW 标记（codeq 拆分：原 ItemInteractivity 的筛选职责）。
  * F14：统一快照 + 单一调度器取消旧帧；F15：与随机入口共用 matchesFilter；
- * 已读/最近更新标记独立于过滤管线（避免开弹窗触发 1400 词条全量重扫）。
+ * 已读/最近更新标记独立于过滤管线（避免开弹窗触发 1432 词条全量重扫）。
  */
 export function useFilterPipeline(allItems: RenderItem[], opts: PipelineOptions) {
   const { filterVisible, dimItems, searchResults, resolveId, newCutoff, itemModAt } = opts
@@ -114,7 +114,7 @@ export function useFilterPipeline(allItems: RenderItem[], opts: PipelineOptions)
   })
 
   // 已读/NEW 标记：**只对开关变化全量扫描**；单条已读由 ItemInteractivity.markRead 定向
-  // 翻转（O(1)），管线不再监听 readItems —— 每次开弹窗不再触发 1400 节点全量重扫。
+  // 翻转（O(1)），管线不再监听 readItems —— 每次开弹窗不再触发 1432 节点全量重扫。
   // 关闭开关时清理一次残留标记类，之后保持零扫描。
   let marksApplied = false
   function applyItemMarks() {

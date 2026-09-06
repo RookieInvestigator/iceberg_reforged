@@ -90,7 +90,7 @@ const getMonthName = (d: Date) => new Intl.DateTimeFormat(monthLocales[lang.valu
     </div>
 
     <template #footer-hint>
-      <router-link to="/on-this-day" class="text-[10px] text-zinc-500 hover:text-zinc-300 tracking-wider">查看全部 &rarr;</router-link>
+      <router-link to="/on-this-day" class="text-[10px] text-zinc-500 hover:text-zinc-300 tracking-wider">{{ t('viewAll') }} &rarr;</router-link>
     </template>
   </BaseModal>
 </template>

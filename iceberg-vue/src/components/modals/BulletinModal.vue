@@ -24,7 +24,7 @@ onUnmounted(() => {
 
 <template>
   <BaseModal :title="t('bulletinTitle')" size="md" @close="$emit('close')">
-    <div v-if="bulletins.length === 0" class="text-sm text-white/55 text-center py-4">暫無公告</div>
+    <div v-if="bulletins.length === 0" class="text-sm text-white/55 text-center py-4">{{ t('noBulletins') }}</div>
     <div v-else class="space-y-1">
       <div v-for="(b, i) in bulletins" :key="i" :class="i > 0 ? 'border-t border-white/10' : ''">
         <button class="w-full text-left py-3 flex items-center justify-between gap-2 cursor-pointer select-none hover:bg-white/[0.02] transition-colors" @click="toggle(i)">

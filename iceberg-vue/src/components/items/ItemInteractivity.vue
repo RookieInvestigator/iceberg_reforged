@@ -74,7 +74,7 @@ function markRead(id: string) {
   const cur = readItems.get();
   // perf：上限 2000（约 16KB），超出丢弃最早记录，防 localStorage 无界增长
   if (!cur.includes(id)) readItems.set([...cur, id].slice(-2000));
-  // O(1) 定向标记：管线不再监听 readItems 全量重扫（O(1400) → O(1)），
+  // O(1) 定向标记：管线不再监听 readItems 全量重扫（O(1432) → O(1)），
   // 与 applyItemMarks 的 read 判定同语义（元素 data-id 即当前 id）
   if (!showReadMark.get()) return;
   const el = document.querySelector<HTMLElement>(`.iceberg-item[data-id="${CSS.escape(id)}"]`);
@@ -99,7 +99,7 @@ function setModalItem(raw: RenderItem) {
   markRead(raw.id);
 
   const { explicit, recommended } = pickRelated(raw);
-  // 手机端底部抽屉不再展示左右箭头，无需构建前后导航 id（也省去移动端 1400 节点扫描）
+  // 手机端底部抽屉不再展示左右箭头，无需构建前后导航 id（也省去移动端 1432 节点扫描）
   if (window.innerWidth < 1024) {
     openSheet({ id: raw.id, title: raw.title, tier: raw.tier, desc: raw.desc, category: raw.category, color: raw.categoryColor, tags: raw.tags || [], link: raw.link, related: explicit, recommended });
     return;
@@ -141,7 +141,7 @@ watch(fm, (mode) => {
 
 // Random entry（F15：随机池 = 当前筛选下的匹配集合；无命中时不做随机，
 // 避免抽到不符合条件的词条）。2026-08-21: 走 wallState.wallMatched（管线单遍产出，
-// hide/dim 皆有效），替代每次点击的 1420 词条 matchesFilter 全量扫描
+// hide/dim 皆有效），替代每次点击的 1432 词条 matchesFilter 全量扫描
 let randomTooltipTimer = 0
 function showRandom() {
   const matched = wallMatched.value;
