@@ -32,7 +32,7 @@ onMounted(() => {
 <template>
   <div class="text-center pt-10 pb-6 max-sm:pt-8 max-sm:pb-4" style="padding: 0 var(--header-padding-x)">
     <div class="mb-14 max-sm:mb-8 flex flex-col items-center">
-      <div class="mb-4 text-sm font-light uppercase tracking-[0.8em] mr-[-0.8em] text-white/50 max-sm:text-xs max-sm:tracking-[0.5em]">
+      <div class="mb-4 text-sm font-normal uppercase tracking-[0.8em] mr-[-0.8em] text-white-50 max-sm:text-xs max-sm:tracking-[0.5em]">
         Chinese Oddities Iceberg · Reforged
       </div>
       <div class="relative inline-flex items-start">
@@ -40,17 +40,17 @@ onMounted(() => {
           {{ t('siteTitle') }}
         </h1>
       </div>
-      <p class="mt-8 max-sm:mt-6 text-[length:var(--font-sm)] max-sm:text-[length:var(--font-xs)] font-light text-white/50 tracking-widest max-sm:tracking-wide uppercase">
+      <p class="mt-8 max-sm:mt-6 text-sm max-sm:text-xs font-normal text-white-50 tracking-widest max-sm:tracking-wide uppercase">
         {{ buildDate }} <span class="mx-3 opacity-30">|</span> {{ entryCount }} {{ t('entries') }}
       </p>
 
-      <div class="mt-3 flex items-center gap-3 max-sm:gap-4 text-xs max-sm:text-[length:var(--font-sm)] tracking-wider">
-        <button v-if="openOnThisDay" @click="openOnThisDay()" class="text-white/60 hover:text-white/90 transition-colors py-1">{{ t('onThisDay') }}</button>
-        <router-link v-else to="/on-this-day" class="text-white/60 hover:text-white/90 transition-colors py-1">{{ t('onThisDay') }}</router-link>
-        <span class="text-white/10">|</span>
-        <router-link to="/home" class="text-white/60 hover:text-white/90 transition-colors py-1">{{ t('navHome') }}</router-link>
-        <span class="text-white/10">|</span>
-        <button v-if="supReady" @click="showUser = true" class="text-white/60 hover:text-white/90 transition-colors py-1">
+      <div class="mt-3 flex items-center gap-3 max-sm:gap-4 text-xs max-sm:text-sm tracking-wider">
+        <button v-if="openOnThisDay" @click="openOnThisDay()" class="text-white-60 hover:text-white-90 transition-colors py-1">{{ t('onThisDay') }}</button>
+        <router-link v-else to="/on-this-day" class="text-white-60 hover:text-white-90 transition-colors py-1">{{ t('onThisDay') }}</router-link>
+        <span class="text-white-10">|</span>
+        <router-link to="/home" class="text-white-60 hover:text-white-90 transition-colors py-1">{{ t('navHome') }}</router-link>
+        <span class="text-white-10">|</span>
+        <button v-if="supReady" @click="showUser = true" class="text-white-60 hover:text-white-90 transition-colors py-1">
           {{ u ? t('user') + ': ' + u.displayName : t('login') }}
         </button>
       </div>
@@ -59,7 +59,7 @@ onMounted(() => {
 
     <p
       v-if="introText"
-      class="text-[1rem] max-sm:text-[length:var(--font-base)] text-white/60 font-normal leading-relaxed max-w-[750px] mx-auto whitespace-pre-wrap max-sm:leading-snug"
+      class="text-base text-white-60 font-normal leading-relaxed max-w-[750px] mx-auto whitespace-pre-wrap max-sm:leading-snug"
     >
       {{ introText }}
     </p>

@@ -3,8 +3,9 @@
    生效规则为文件末尾的「徹底修復」版本（0.95em / 700）。P3-71：.dc/.dl 的 transition:
    all 已改为具体属性；.nz 的 mix-blend-mode: multiply 为墨水晕染效果，有意保留。 */
 
-/* Noto Serif TC 由 index.html <link> 并行加载（替代 CSS @import 串行），
-   fallback 链含系统中文字体：Songti SC（macOS）/ SimSun（Windows）保证 Google Fonts 不可达时回退质量 */
+/* Noto Serif TC 自托管于 public/fonts/（语料子集，脚本 scripts/subset_fonts.py 生成，
+   src/styles/fonts.css 经 global.css 首行引入），竖排特性 vrt2/vert 由 pyftsubset 默认保留；
+   fallback 链含系统中文字体：Songti SC（macOS）/ SimSun（Windows）保证子集外生僻字回退质量 */
 /* ─── 1. 基礎變數與全局設定 ─── */
 .wr {
   --cw: 24px;   /* 字格寬 */

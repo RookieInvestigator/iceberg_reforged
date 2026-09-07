@@ -24,7 +24,7 @@ const links = [
       <a v-for="(link, i) in links" :key="i" :href="link.url" target="_blank" rel="noopener noreferrer"
         class="group flex items-center justify-between gap-3 rounded-xl border border-white-08 bg-white-03 px-4 py-3 no-underline transition-colors duration-200 hover:border-white-16 hover:bg-white-05">
         <span class="min-w-0">
-          <span class="block text-sm font-semibold text-text-primary">{{ t(link.labelKey) }}</span>
+          <span class="block text-sm font-bold text-text-primary">{{ t(link.labelKey) }}</span>
           <span class="mt-0.5 block text-xs text-white-45">{{ t(link.descKey) }}</span>
         </span>
         <span class="shrink-0 text-white-60 transition-transform duration-200 group-hover:translate-x-[3px]" aria-hidden="true">→</span>

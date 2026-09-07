@@ -9,6 +9,7 @@
     "skipLibCheck": true,
     "jsx": "preserve",
     "resolveJsonModule": true,
+    "incremental": true,
     "paths": { "@/*": ["./src/*"] }
   }
 }

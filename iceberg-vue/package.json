@@ -1,7 +1,8 @@
 {
   "name": "iceberg-vue",
   "private": true,
-  "version": "4.5.9",
+  "version": "4.6.0",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
     "dev": "vite",

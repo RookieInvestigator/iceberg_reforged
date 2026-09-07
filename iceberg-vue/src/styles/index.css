@@ -26,6 +26,8 @@
 @layer components {
   /* ===== Font size via CSS variable ===== */
   #items-container { font-size: var(--item-font-size, 1rem); }
+  /* ===== 跨页大标题（Features / Handbook 共用；改字号只改这一处）===== */
+  .h1-display { font-size: 2rem; font-weight: 900; color: var(--white-92); margin-bottom: 0.5rem; letter-spacing: 0.03em; }
   /* ===== perf: 层级按需渲染 =====
      视口外层级跳过 layout/paint/raster：boot 长任务实测 -60%（1260→516ms），
      滚动每帧成本从 O(词条总数) 降为 O(视口内)。

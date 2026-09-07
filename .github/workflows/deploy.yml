@@ -48,6 +48,10 @@ jobs:
       # P0-审计（2026-08-16）：测试与双类型检查接入 CI —— 绿了才继续构建/部署
       - run: npm run typecheck:test
       - run: npm run test
+      # 字体子集新鲜度：站内语料新增用字后必须重跑 scripts/subset_fonts.py，
+      # 否则新字无字形（回退系统字体）。--check 纯标准库， runner 自带 python3 即可。
+      - name: Font subset freshness
+        run: python3 ../scripts/subset_fonts.py --check
       - run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

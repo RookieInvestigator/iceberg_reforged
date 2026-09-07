@@ -107,10 +107,12 @@ export function isSafeHttpUrl(url: string): boolean {
  *
  * 管线输出的 `generatedAt` / `createdAt` / `modifiedAt` 均为秒（见 build_data_api.py），
  * 此前各视图手写 `new Date(x * 1000)`，毫秒/秒极易混淆，收敛为唯一入口。
+ * 语言默认跟随页面 `lang`（i18n 切换时同步写入），保证构建日期与界面语言一致。
  */
-export function formatUnixDate(sec: number | undefined | null): string {
+export function formatUnixDate(sec: number | undefined | null, locale?: string): string {
   if (!sec) return ''
-  return new Date(sec * 1000).toLocaleDateString('zh-CN')
+  const loc = locale || (typeof document !== 'undefined' ? document.documentElement.lang || 'zh-CN' : 'zh-CN')
+  return new Date(sec * 1000).toLocaleDateString(loc)
 }
 
 // 归一化：解析颜色、emoji 标签

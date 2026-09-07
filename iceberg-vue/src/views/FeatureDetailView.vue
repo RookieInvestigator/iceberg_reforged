@@ -19,7 +19,7 @@ const { t } = useI18n()
       >{{ t('backToFeatures') }}</button>
 
       <div class="rounded-2xl border border-white-08 bg-black/45 px-6 py-20 text-center backdrop-blur-md sm:px-10">
-        <span class="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-accent-soft">
+        <span class="inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-accent-soft">
           <span class="h-1.5 w-1.5 rounded-full bg-accent-soft" aria-hidden="true"></span>
           {{ t('featuresWipBadge') }}
         </span>

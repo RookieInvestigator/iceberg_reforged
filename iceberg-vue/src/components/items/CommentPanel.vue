@@ -156,7 +156,7 @@ watch(() => props.itemId, (id) => { if (supabaseReady) load() })
     <!-- 展开状态：宿主（动作条评论按钮）控制 opened -->
     <div class="cmt-hd flex items-center gap-1.5 mb-2.5">
       <MessageCircle class="shrink-0" :size="12" :stroke-width="1.7" aria-hidden="true" />
-      <span class="text-tiny font-semibold text-white-40 tracking-[0.06em]">{{ t('commentsTitle') }}</span>
+      <span class="text-tiny font-bold text-white-40 tracking-[0.06em]">{{ t('commentsTitle') }}</span>
       <span v-if="comments.length" class="text-tiny text-white-45">{{ comments.length }}</span>
       <span class="flex-1" />
     </div>
@@ -188,7 +188,7 @@ watch(() => props.itemId, (id) => { if (supabaseReady) load() })
     <div v-else class="cmt-list flex flex-col gap-1">
       <div v-for="c in comments" :key="c.id" class="cmt-item py-2 border-b border-white-03 last:border-none">
         <div class="flex items-baseline gap-1.5 mb-1">
-          <span class="text-xs font-semibold text-white-45">{{ c.author_name }}</span>
+          <span class="text-xs font-bold text-white-45">{{ c.author_name }}</span>
           <span class="text-micro text-white-45">{{ timeAgo(c.created_at) }}</span>
           <button v-if="u && u.id === c.user_id" @click="doDelete(c.id)"
             class="text-sm px-1 bg-transparent border-none text-white-50 cursor-pointer ml-auto leading-none hover:text-danger max-sm:min-w-10 max-sm:min-h-10 max-sm:px-2.5" :title="t('delete')">×</button>

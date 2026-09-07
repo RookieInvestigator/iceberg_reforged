@@ -1,0 +1,59 @@
+/* 本文件由 scripts/subset_fonts.py 生成，勿手工编辑；重跑脚本即更新。
+   自托管 Noto 子集（SIL OFL 1.1，见 public/fonts/OFL.txt），替代 Google Fonts CDN
+   （访客 IP 不再外发 + 国内加载可靠）。单文件即全语料覆盖，无 unicode-range；
+   语料外字符（用户评论生僻字等）由字栈后备字体逐字回退。*/
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/noto-sans-sc-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/noto-sans-sc-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/noto-sans-sc-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('/fonts/noto-sans-sc-900.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Serif TC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/noto-serif-tc-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Serif TC';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/noto-serif-tc-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Serif TC';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('/fonts/noto-serif-tc-900.woff2') format('woff2');
+}

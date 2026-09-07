@@ -88,8 +88,6 @@ export default {
 	aboutDescription: 'The "Chinese Oddities Iceberg" is a community-curated iceberg chart cataloging Chinese internet oddities, urban legends, paranormal phenomena, unsolved mysteries, and obscure knowledge. All entries are collected and maintained by community members.',
 	aboutBuildDate: 'Build Date',
 	aboutEntries: 'Entries',
-	aboutCommunity: 'Community Project · Non-Commercial',
-	aboutVibeCoding: 'Built with Vibe Coding, primarily using DeepSeek V4P & Gemini 3.1P',
 	aboutRepo: 'GitHub Repository',
 	contactLink: 'Contact',
 	contactTitle: 'Contact Us',
@@ -209,5 +207,20 @@ export default {
 	featuresWip: 'The Features page is under construction. Stay tuned.',
 	backToFeatures: '← Features list',
 	viewAll: 'View all',
-	noBulletins: 'No bulletins yet'
+	noBulletins: 'No bulletins yet',
+	licenseNote: 'This site’s source code is licensed under AGPLv3; entries and curated content (glossary, features, translations) are shared under CC BY-NC-SA 4.0. Copyright belongs to the Contributors of the Chinese Oddities Iceberg and the respective original authors.',
+	takedownNote: 'If you find infringing content or factual errors, please let us know via "Contact Us" and we will handle it as soon as we can.',
+	// ===== Simplified Terms (see zh for the binding version) =====
+	termsLink: 'Terms',
+	termsTitle: 'Terms & Privacy (Summary)',
+	termsAgree: 'By continuing you agree to the',
+	termsIntro: 'This site is a community-built archive of Chinese internet folklore offering favorites, comments and likes. By using it you agree to the terms below. The Chinese version shall prevail.',
+	termsService: '1. Service\nThis site provides a community-built archive for exchange among enthusiasts. We may modify, suspend or discontinue parts of the service at any time; material changes will be announced on site.',
+	termsAccount: '2. Accounts\nYou must be 14 or older to register. Please provide accurate information and keep your credentials safe — everything under your account is your responsibility. Seriously violating accounts may be restricted or closed; thank you for your understanding.',
+	termsIP: '3. Intellectual Property\nSite code is licensed under AGPLv3; entries and curated content are shared under CC BY-NC-SA 4.0, with copyright held by the Contributors and respective authors. Comments and nicknames you post remain yours, while also allowing us to display and distribute them. If you spot infringing content, please tell us via "Contact Us" and we will handle it as soon as we can.',
+	termsConduct: '4. Acceptable Use\nPlease refrain from illegal, infringing, hateful, harassing or spam content, impersonation, API abuse or bulk scraping. Violating content will be removed, and serious cases may lead to restricted accounts.',
+	termsPrivacy: '5. Data & Privacy\nWe collect your email, nickname, favorites, comments and likes, stored on Supabase servers abroad and in your browser’s local storage, only to keep you signed in and synced. To delete your data, sign out, clear site data, or contact us for assistance anytime. Third-party services (Supabase, Moe Counter) apply their own privacy policies.',
+	termsLiability: '6. Liability & Termination\nThe service is provided as-is; entries are community-curated and we cannot guarantee every detail. To the maximum extent permitted by law, we are not liable for indirect losses. You may leave and delete your data anytime; serious violations may regrettably require us to revoke access.',
+	termsChanges: '7. Changes & Contact\nWe may revise these terms with an on-site announcement. Questions? Contact us via "Contact Us".',
+	termsEffective: 'These terms take effect on September 6, 2026.'
 };

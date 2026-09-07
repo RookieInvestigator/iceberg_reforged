@@ -1,27 +1,32 @@
 <script setup lang="ts">
-import { shallowRef, ref, computed, onMounted, provide, watch, onUnmounted } from 'vue'
+// IndexNext（/v2，仅 DEV）：主冰山图换代实验 —— v2 全套专用组件
+// （V2Header / V2FilterBar / V2Wall / V2TierChapter / V2Interactivity /
+// V2EntryCard / V2Sheet / V2Tooltip），v1 文件一律不动。
+// 数据 provide / 深链 / 入场 / 背景沿用 IndexView 模式；过滤管线与搜索 Worker 复用 lib 层。
+// 通过验收后：用本文件替换 IndexView.vue，并把 V2* 组件转正更名。
+import { shallowRef, ref, computed, onMounted, provide, watch, watchEffect, onUnmounted } from 'vue'
 import OnThisDayModal from '../components/calendar/OnThisDayModal.vue'
 import { useRoute } from 'vue-router'
 import { useStore } from '@nanostores/vue'
-import { bgMode, sortMode, scatterMode } from '../lib/settingsStore'
+import { bgMode, scatterMode, fontSize } from '../lib/settingsStore'
 import raw from '../data/iceberg.json'
 import relatedRaw from '../data/appendix/related.csv?raw'
 import referencesRaw from '../data/appendix/references.csv?raw'
 import { normalizeData, isSafeHttpUrl, formatUnixDate } from '../lib/data'
 import { parseCSV } from '../lib/csv'
 import { useI18n } from '../lib/useI18n'
-import { initialMountCount, nextMountCount } from '../lib/iceberg/wallMount'
-import { tierVisibleCounts } from '../lib/iceberg/wallCounts'
-import { docOrder } from '../lib/iceberg/wallState'
 import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, TIER_ORDER_KEY, CATEGORY_COLORS_KEY, TAG_MAP_KEY, DEFAULT_COLOR_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, HERO_TITLES_KEY, RELATED_MAP_KEY, REFERENCES_MAP_KEY, OPEN_ON_THIS_DAY_KEY, ID_ALIASES_KEY } from '../lib/injectionKeys'
+import { FACET_COUNTS_KEY, type FacetCounts } from '../lib/iceberg/v2keys'
 import IcebergBg from '../components/layout/IcebergBg.vue'
-import FooterSection from '../components/layout/FooterSection.vue'
+import V2Colophon from '../components/iceberg/V2Colophon.vue'
 // TEMP：hero 页暂时移除
 // import HeroSection from '../components/iceberg/HeroSection.vue'
-import Header from '../components/iceberg/Header.vue'
-import TierNav from '../components/iceberg/TierNav.vue'
-import IcebergApp from '../components/iceberg/IcebergApp.vue'
+import V2Header from '../components/iceberg/V2Header.vue'
+import V2FilterBar from '../components/iceberg/V2FilterBar.vue'
+import V2Interactivity from '../components/items/V2Interactivity.vue'
+import FloatingButtons from '../components/iceberg/FloatingButtons.vue'
 import ScatterField from '../components/iceberg/ScatterField.vue'
+import V2Wall from '../components/iceberg/V2Wall.vue'
 
 const data = normalizeData(raw)
 const allItemsRaw = Object.entries(data.tiers).flatMap(([tierName, items]) =>
@@ -32,24 +37,6 @@ const allItems = shallowRef(allItemsRaw)
 // 全量数据下发（含 desc）；descMap 供 ItemInteractivity 按 id 快速取回
 const renderItemsRef = shallowRef(allItemsRaw)
 const descMap = new Map(allItemsRaw.map(i => [i.id, (i as any).desc || '']))
-
-// 声明式排序：按 sortMode 生成每层有序数组（替代命令式 DOM 重排，避免被 keyed diff 纠正回模板序）
-const srt = useStore(sortMode)
-const tierItems = computed(() => {
-  const out: Record<string, any[]> = {}
-  for (const [tn, items] of Object.entries(data.tiers as Record<string, any[]>)) {
-    let arr: any[] = items
-    const m = srt.value
-    if (m === 'title-asc' || m === 'title-desc') {
-      arr = [...items].sort((a: any, b: any) =>
-        m === 'title-asc' ? a.title.localeCompare(b.title, 'zh-CN') : b.title.localeCompare(a.title, 'zh-CN'))
-    } else if (m === 'category') {
-      arr = [...items].sort((a: any, b: any) => a.category.localeCompare(b.category, 'zh-CN'))
-    }
-    out[tn] = arr
-  }
-  return out
-})
 
 // 副表加载：关联词条 (source_id → target_id[], 含反向索引)
 const relatedMap = new Map<string, string[]>()
@@ -87,38 +74,29 @@ provide(HERO_TITLES_KEY, allItemsRaw.map(i => i.title))
 provide(RELATED_MAP_KEY, relatedMap)
 provide(REFERENCES_MAP_KEY, referencesMap)
 
-// 词条墙 DOM 文档序（tierOrder × 层内声明式排序）→ wallState.docOrder（单一事实源）：
-// 导航索引/随机池均由模块消费，与分片挂载兼容（不依赖 DOM 补齐状态）；sortMode 变化才重建
-watch(tierItems, (ti) => {
-  const out: string[] = []
-  for (const tn of data.tierOrder) {
-    const arr = ti[tn]
-    if (arr) for (const it of arr) out.push((it as any).id)
+// v2 筛选面计数：分类 / 标签词条数（数据静态，单遍产出，顶栏展示用）
+const facetCounts: FacetCounts = (() => {
+  const cats: Record<string, number> = {}
+  const tags: Record<string, number> = {}
+  const nameToEmoji: Record<string, string> = {}
+  for (const [emoji, name] of Object.entries(data.tagMap || {})) nameToEmoji[name] = emoji
+  for (const it of allItemsRaw) {
+    cats[it.category] = (cats[it.category] || 0) + 1
+    for (const t of it.tags || []) {
+      const e = nameToEmoji[t] || t
+      tags[e] = (tags[e] || 0) + 1
+    }
   }
-  docOrder.value = out
-}, { immediate: true })
+  return { cats, tags }
+})()
+provide(FACET_COUNTS_KEY, facetCounts)
 
-// ═══ 生产性能：词条墙分片挂载（首屏 2 层 + 逐帧补齐，见 lib/iceberg/wallMount.ts）═══
-// 首屏长任务从「一次性创建 1432 节点」拆成 ~6 帧小任务；视口外 paint 本就被
-// content-visibility 跳过，补齐阶段只增 DOM/布局。安全网：任何用户交互/筛选/深链
-// → 立即 flush（pointerdown 先于 click，Vue 微任务刷新保证事件处理时墙已完整）。
-// prerender 为手工快照（src/prerender.ts 不渲染本组件），无 SSR 分支。
-const totalTiers = data.tierOrder.length
-const mountedTiers = ref(initialMountCount(totalTiers, true))
-let mountRaf = 0
+// ═══ v2 安全网：任何用户交互 / 筛选 / 深链 / 弹窗 → V2Wall 全量挂载 ═══
+// （observer 常驻方案已因滚动不连贯回退；现用 wallMount 渐进挂载，见 V2Wall）
+const wallRef = ref<{ flushWall: () => void } | null>(null)
 let entranceDoneTimer = 0
-function flushWall() {
-  if (mountedTiers.value >= totalTiers) return
-  mountedTiers.value = totalTiers
-  if (mountRaf) { cancelAnimationFrame(mountRaf); mountRaf = 0 }
-  unbindWallListeners()
-}
-function tickMount() {
-  mountRaf = 0
-  mountedTiers.value = nextMountCount(mountedTiers.value, totalTiers)
-  if (mountedTiers.value < totalTiers) mountRaf = requestAnimationFrame(tickMount)
-}
-function onWallFlushSignal() { flushWall() }
+function flushWall() { wallRef.value?.flushWall() }
+function onWallFlushSignal() { wallRef.value?.flushWall() }
 let wallListenersBound = false
 function bindWallListeners() {
   if (wallListenersBound) return
@@ -134,6 +112,20 @@ function unbindWallListeners() {
   document.removeEventListener('keydown', onWallFlushSignal, true)
   document.removeEventListener('open-item-modal', onWallFlushSignal)
 }
+
+// 字号设置 → 词条字号 CSS 变量（v1 由 IcebergApp 承担，v2 无侧边栏，收归本视图）
+const FONT_SCALE: Record<string, string> = { xs: '0.75rem', sm: '0.875rem', md: '1rem', lg: '1.125rem', xl: '1.25rem' }
+const fsVal = useStore(fontSize)
+watchEffect(() => {
+  if (typeof document === 'undefined') return
+  document.documentElement.style.setProperty('--item-font-size', FONT_SCALE[fsVal.value] || '1rem')
+})
+
+// 顶栏 + 随机入口接线（v1 由 IcebergApp 承担）
+const filterBarRef = ref<{ togglePanel: () => void } | null>(null)
+const interactivityRef = ref<{ showRandom: () => void } | null>(null)
+function onRandom() { interactivityRef.value?.showRandom() }
+function onToggleFilter() { filterBarRef.value?.togglePanel() }
 
 const buildDate = formatUnixDate(data.generatedAt)
 
@@ -183,8 +175,8 @@ const route = useRoute()
 // 监听 ?item=xxx 触发词条弹窗（支持从其他地方跳转过来）；定时器在卸载/重复触发时清理
 let itemTimer = 0
 watch(() => route.query.item, (itemId) => {
-  // 只在冰山图主页消费 ?item=；3D 等页面也会同步该 query，不能在这里弹主站词条弹窗
-  if (route.path !== '/') return
+  // 只在换代冰山图（/v2）消费 ?item=；主站 / 与 3D 等页面各管各的 query，不能串台
+  if (route.path !== '/v2') return
   if (itemId) {
     clearTimeout(itemTimer)
     itemTimer = window.setTimeout(() => {
@@ -213,16 +205,14 @@ onMounted(() => {
   // 详见 index.css content-enter 注释；曾用 will-change 提升合成层 → 引入裁剪回归）
   entranceDoneTimer = window.setTimeout(() => content.classList.remove('content-enter'), 1500)
 
-  // 词条墙分片挂载：深链/弹窗定向需要完整墙 → 直接全量；否则逐帧补齐
+  // 视口窗口挂载：IO 接管前首屏 2 层已就绪（useTierWindow 初始值）；深链/弹窗定向需要完整墙 → 直接全量
   bindWallListeners()
   if (route.query.item || window.location.hash) {
     flushWall()
-  } else if (mountedTiers.value < totalTiers) {
-    mountRaf = requestAnimationFrame(tickMount)
   }
+  document.dispatchEvent(new CustomEvent('vue-ready'))
 })
 onUnmounted(() => {
-  if (mountRaf) cancelAnimationFrame(mountRaf)
   unbindWallListeners()
   window.clearTimeout(entranceDoneTimer)
   clearTimeout(itemTimer)
@@ -230,60 +220,22 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div id="capture-area" class="w-full min-h-screen relative overflow-x-hidden bg-black">
+  <div id="capture-area" class="w-full min-h-screen relative overflow-x-clip bg-black">
     <IcebergBg v-if="showBg" />
     <!-- TEMP：hero 页暂时移除 -->
     <!-- <HeroSection /> -->
 
     <div id="iceberg-content" class="relative z-10 w-full mx-auto flex flex-col pt-20 pb-8 max-sm:pt-10 max-sm:pb-4" style="max-width: var(--max-width)">
-      <Header :buildDate="buildDate" :entryCount="allItems.length" :introText="data.introText" />
-      <TierNav v-if="!scatter" />
-      <IcebergApp />
+      <V2Header :buildDate="buildDate" :entryCount="allItems.length" :introText="data.introText" />
+      <V2FilterBar ref="filterBarRef" />
 
-      <div id="items-container">
-        <template v-if="!scatter">
-          <!-- 全空（hide 模式 0 命中）：整体提示 + 隐藏层级（等价原命令式路径语义） -->
-          <div v-if="hasNoResults" id="items-empty" class="text-center text-white-20 text-lg py-40 italic">{{ t('noResults') }}</div>
-          <template v-else>
-            <!-- 分片挂载：首屏只出前 mountedTiers 层，其余 rAF 逐帧补齐（flush 信号见 script） -->
-            <section
-              v-for="(tierName, tierIndex) in data.tierOrder.slice(0, mountedTiers)"
-              :key="tierName"
-              class="iceberg-tier relative bg-transparent min-h-[150px] flex flex-col py-10 overflow-visible z-[1]"
-              :data-tier="tierName"
-              :style="`--tier-stagger: ${tierIndex}`"
-            >
-              <div class="relative z-[2] w-full">
-                <h2 class="text-center font-black text-[length:var(--font-sm)] text-white-40 tracking-[0.12em] mb-10">{{ tierName }}</h2>
-                <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-3 max-sm:gap-x-1.5 max-sm:gap-y-[10px] max-sm:mb-3 px-[var(--header-padding-x)]">
-                  <span
-                    v-for="item in tierItems[tierName]"
-                    :key="item.id"
-                    v-show="!filterVisible || filterVisible.has(item.id)"
-                    v-memo="[item.id, dimSet?.has(item.id), filterVisible ? filterVisible.has(item.id) : true]"
-                    tabindex="0"
-                    role="button"
-                    class="iceberg-item inline-flex items-center font-bold cursor-crosshair py-0.5 px-1.5 max-sm:text-[1.05rem]"
-                    :class="{ dimmed: !!dimSet?.has(item.id) }"
-                    :data-id="item.id"
-                    :data-category="item.category"
-                    :style="`font-size: 1.15em; color: ${item.categoryColor}; --item-color: ${item.categoryColor}`"
-                  >
-                    <span class="item-title transition-colors duration-200" :data-text="item.title">{{ item.title }}</span>
-                    <span v-for="(e, ei) in item.emojis" :key="ei" class="item-tag text-[0.625em] ml-[0.3em] relative -top-[0.08em] inline-flex items-center justify-center transition-colors duration-200">{{ e }}</span>
-                  </span>
-                </div>
-                <!-- 层空（hide 模式本层 0 命中，全空时由上方 items-empty 统一提示；管线单遍产出的层可见数） -->
-                <div v-if="tierVisibleCounts && (tierVisibleCounts.get(tierName) || 0) === 0" class="tier-empty text-center text-white-15 text-sm py-8 italic">{{ t('tierEmpty') }}</div>
-              </div>
-            </section>
-          </template>
-        </template>
-        <!-- 非冰山图模式（实验）：全部词条随机散落 -->
-        <ScatterField v-else :items="allItemsRaw" />
-      </div>
+      <V2Wall v-if="!scatter" :data="data" ref="wallRef" />
+      <ScatterField v-else :items="allItemsRaw" />
 
-      <FooterSection :buildDate="buildDate" :entryCount="allItems.length" :bulletins="bulletins" />
+      <V2Interactivity ref="interactivityRef" />
+      <FloatingButtons :sidebarOpen="false" @random="onRandom" @toggleSidebar="onToggleFilter" />
+
+      <V2Colophon :buildDate="buildDate" :entryCount="allItems.length" :tierCount="data.tierOrder.length" :catCount="Object.keys(data.categoryColors || {}).length" :bulletins="bulletins" />
     </div>
 
     <OnThisDayModal v-if="showOnThisDay" @close="showOnThisDay = false" />

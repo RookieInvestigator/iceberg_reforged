@@ -4,6 +4,20 @@
 
 冰山图由参与者共同搭建与维护，条目的释义与出处由社区逐步补充。其定位为持续维护的共创档案，而非权威性的排行或评鉴。
 
+## 访问地址
+
+- 主站：https://iceberg.hezihezi.com/（Cloudflare Pages 自定义域名）
+- 同站默认域名：https://iceberg-reforged.pages.dev/
+- 镜像站（GitHub Pages）：https://rookieinvestigator.github.io/iceberg_reforged/
+
+镜像站与主站内容完全一致，仅作备用访问入口；搜索引擎权重归并于主站。
+
+## 授权许可
+
+- **程序代码**（`iceberg-vue/` 与 `scripts/` 下的源代码）：[AGPLv3](LICENSE)，著作权归中文兔子洞冰山图贡献者所有。
+- **词条内容与整理成果**（词条正文、术语表、专题、翻译等）：[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans) 共享，著作权归中文兔子洞冰山图贡献者及各自原作者所有。本表由本社区创建并在 IcebergThreads 同步共建，数据来源见 [IcebergThreads 原表](https://icebergthreads.com/zh/iceberg/fel4BTCqlMAGSa2gelRJ)。
+- 如发现侵权内容或事实错误，请通过站内「联系我们」告知，我们会尽快处理。
+
 ## 关于词条排序
 
 图中词条的前后顺序**不代表该条目在热度、质量、重要性或其他任何属性上的高低差异**，仅为集体创作过程中自然形成的排布方式，不应据此对条目进行优劣判断。

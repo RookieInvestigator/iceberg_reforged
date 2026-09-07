@@ -129,7 +129,7 @@ onMounted(() => {
         class="no-scrollbar z-20 flex w-full shrink-0 flex-col overflow-y-auto border-b border-white-06 max-h-[45dvh] lg:max-h-none lg:h-full lg:w-[400px] lg:border-b-0 lg:border-r xl:w-[420px]"
       >
         <div class="flex items-center justify-between px-6 pt-5 sm:px-8">
-          <span class="text-xs font-semibold uppercase tracking-[0.2em] text-white-45">{{ t('onThisDay') }}</span>
+          <span class="text-xs font-bold uppercase tracking-[0.2em] text-white-45">{{ t('onThisDay') }}</span>
           <router-link to="/home" class="inline-flex items-center gap-1 text-xs text-white-45 transition-colors duration-200 hover:text-white-85">
             <span aria-hidden="true">←</span><span>{{ t('backToHome') }}</span>
           </router-link>
@@ -158,7 +158,7 @@ onMounted(() => {
 
           <!-- 月份控制器 -->
           <div class="mb-4 flex items-center justify-between">
-            <span class="text-sm font-semibold tracking-wide text-white-60">
+            <span class="text-sm font-bold tracking-wide text-white-60">
               {{ getMonthName(new Date(calendarYear, calendarMonth)) }} {{ calendarYear }}
             </span>
             <div class="flex items-center gap-1">
@@ -179,7 +179,7 @@ onMounted(() => {
 
           <!-- 星期表头 -->
           <div class="mb-2 grid grid-cols-7 text-center">
-            <div v-for="d in weekDays" :key="d" class="text-tiny font-semibold uppercase tracking-wider text-white-30">{{ d }}</div>
+            <div v-for="d in weekDays" :key="d" class="text-tiny font-bold uppercase tracking-wider text-white-30">{{ d }}</div>
           </div>
 
           <!-- 日历网格 -->
@@ -229,12 +229,12 @@ onMounted(() => {
 
                   <div class="mt-4 flex flex-wrap items-center gap-5">
                     <a v-if="event.link" :href="event.link" target="_blank" rel="noopener"
-                      class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white-35 transition-colors duration-200 hover:text-accent-soft">
+                      class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white-35 transition-colors duration-200 hover:text-accent-soft">
                       <span>{{ t('source') }}</span>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
                     </a>
                     <a v-if="event.item" @click.prevent="goItem(event.item)" href="#"
-                      class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-white-35 transition-colors duration-200 hover:text-accent-soft">
+                      class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white-35 transition-colors duration-200 hover:text-accent-soft">
                       <span>{{ t('explore') }}</span>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                     </a>

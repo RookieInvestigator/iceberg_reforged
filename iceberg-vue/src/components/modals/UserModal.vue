@@ -11,6 +11,7 @@ import type { UserStats } from '../../lib/supabaseData'
 import idIndex from '../../data/id-index.json'
 import BaseModal from './BaseModal.vue'
 import GeoAvatar from './GeoAvatar.vue'
+import TermsModal from './TermsModal.vue'
 
 const emit = defineEmits(['close'])
 const { t } = useI18n()
@@ -25,6 +26,7 @@ const errorMsg = ref('')
 const otpSent = ref(false)
 const editingNick = ref(false)
 const editNickVal = ref('')
+const showTerms = ref(false)
 
 function reset() {
   errorMsg.value = ''
@@ -264,6 +266,9 @@ const hl = () => heatLabel()
         <button v-else @click="doRegister" :disabled="loading" class="w-full px-4 py-2.5 text-sm font-semibold rounded-md bg-white-12 border-none text-white-85 cursor-pointer transition-colors duration-200 mt-2 enabled:hover:bg-white-20 disabled:opacity-40 disabled:cursor-not-allowed">
           {{ loading ? t('registering') : t('register') }}
         </button>
+        <p v-if="tab === 'register'" class="text-xs text-white-30 mt-3 text-center">
+          {{ t('termsAgree') }}<button @click="showTerms = true" class="bg-transparent border-none cursor-pointer p-0 text-xs text-white-50 hover:text-white-85 transition-colors duration-200">《{{ t('termsTitle') }}》</button>
+        </p>
 
         <button v-if="tab === 'login'" @click="doMagicLink" :disabled="loading" class="block text-center mt-4 w-full text-xs text-white-30 bg-transparent border-none cursor-pointer p-0 transition-colors duration-200 hover:text-white-70">
           {{ t('magicLink') }}
@@ -273,4 +278,5 @@ const hl = () => heatLabel()
       </template>
     </template>
   </BaseModal>
+  <TermsModal v-if="showTerms" @close="showTerms = false" />
 </template>

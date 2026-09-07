@@ -11,7 +11,7 @@ Iceberg/                  ← git 仓库根
 ├── .github/workflows/deploy.yml   ← CI（working-directory: iceberg-vue）
 ├── package.json          ← 根构建 shim（CF Pages：构建 iceberg-vue 并镜像 dist 到根）
 ├── CLAUDE.md / docs/     ← 协作指引 + 文档（docs/plans/ 规划、docs/audits/ 巡检为内部文档，git 忽略）
-├── scripts/              ← 数据管线脚本（9 个 Python + build-cf.mjs / scroll-probe.mjs / tooltip-probe.mjs 探针；Python 路径基于脚本位置推导，任意 cwd 可运行）
+├── scripts/              ← 数据管线脚本（10 个 Python + build-cf.mjs / scroll-probe.mjs / tooltip-probe.mjs 探针；Python 路径基于脚本位置推导，任意 cwd 可运行）
 ├── data/                 ← 数据工作区（git 忽略）
 │   ├── work/             ← 词条工作文件（config.json + items/*.md）
 │   ├── archive/          ← 历史快照 + legacy-2026-08 + tools-2026-08 归档
@@ -106,7 +106,7 @@ iceberg-vue/
 └── src/
     ├── main.ts / App.vue
     ├── prerender.ts                 # 构建期预渲染脚本（vite-prerender-plugin 调用，Node 内生成各路由静态快照）
-    ├── router/index.ts             # 10+1 条路由（10 正式 + 1 DEV；懒加载 + keep-alive）
+    ├── router/index.ts             # 10+2 条路由（10 正式 + 2 DEV；懒加载 + keep-alive）
     ├── data/                       # iceberg.json, meta.json, id-index.json, on-this-day.csv, bulletins/
     ├── lib/                        # data.ts, filterStore.ts, settingsStore.ts, i18nStore.ts,
     │                               # useI18n.ts, search.worker.ts, csv.ts, baseUrl.ts,
@@ -116,17 +116,17 @@ iceberg-vue/
     ├── lib/ancient-book/           # 古籍模式（types / engine / layout / render + SpreadView/SpreadPage）
     ├── lib/iceberg/                # 冰山图 composables（搜索 Worker / 相关索引 / 筛选管线 / tooltip）
     ├── lib/iceberg3d/              # 3D 引擎（engine / picking / materials / cameraFlight / prng）
-    ├── lib/i18n/                   # 翻译字典（zh / en / ja，208×3 key）
+    ├── lib/i18n/                   # 翻译字典（zh / en / ja，220×3 key；`i18n.test.ts` 锁三语对齐 + 死 key）
     ├── styles/                     # global.css, index.css, bg.css, modal.css, ancient-book.css, themes/
     ├── views/                      # IndexView, HomeView, HandbookView, FeaturesView, FeatureDetailView,
     │                               # OnThisDayView, AncientBookView, Iceberg3DView,
-    │                               # AppendixEditView, NotFoundView
+    │                               # AppendixEditView, NotFoundView, IndexNextView（/v2 换代实验，仅 DEV）
     └── components/
         ├── layout/                 # AppShell, IcebergBg, LiquidBg, LiquidGradient, FooterSection
         ├── iceberg/                # IcebergApp, Header, HeroSection（暂时下线）, TierNav, FloatingButtons, ScatterField
         ├── items/                  # ItemInteractivity, ItemTooltip, EntryDetailCardNext, MobileSheet,
         │                           # CommentPanel, EntryMetaBadges, EntryRelatedLinks
-        ├── modals/                 # BaseModal, SettingsPanel, AboutModal, ContactModal, LinksModal, BulletinModal, UserModal, GeoAvatar
+        ├── modals/                 # BaseModal, SettingsPanel, AboutModal, ContactModal, LinksModal, BulletinModal, TermsModal, UserModal, GeoAvatar
         ├── calendar/               # OnThisDayApp, OnThisDayModal
         └── home/                   # IcebergParticles
 ```
@@ -184,14 +184,15 @@ function storedAtom<T>(key: string, fallback: T) {
 ## 关键设计点
 
 - **Hero 页面**：已暂时下线（`IndexView.vue` 中 TEMP 注释保留组件与挂载点，恢复时还原三处注释即可）；恢复时需一并处理响应式背景图与 preload。
-  ⚠️ `HeroSection.vue` 引用的背景图 `public/assets/annie-spratt-Tno1Zd3T6yY-unsplash.webp`（1.44MB）已于 2026-08-30 随死重清理删除（Hero 下线期间无任何引用），**恢复 Hero 前需用 `git restore` 取回该文件**
+  ⚠️ `HeroSection.vue` 引用的背景图 `public/assets/annie-spratt-Tno1Zd3T6yY-unsplash.webp`（1.44MB）已于 2026-08-30 随死重清理删除（Hero 下线期间无任何引用），**恢复 Hero 前需用 `git restore` 取回该文件**；其用的 Noto Serif SC（200/300）同样随字体自托管下线，恢复时重跑 `scripts/subset_fonts.py` 加回该家族
 - **古籍模式**：独立子系统，声明式 Vue 渲染（`SpreadView` / `SpreadPage`），分 4 模块（types / engine / layout / render），两种模式（分类/层级）
 - **公告板**：`bulletins/*.md`，YAML frontmatter，构建时 `import.meta.glob` 自动加载
 - **拼音表**：`lib/pinyin.ts` 的汉字→首字母映射存为**定长字符串**（索引 = 码点 − 0x4E00，`'-'` 表示空位），非对象字面量——后者 218KB，是 `HandbookView` chunk 的主要体积来源；转换脚本 `scripts/compact_pinyin.py`（幂等，任意 cwd 可运行）。重新导出时先生成对象字面量再跑该脚本，改后运行 `src/lib/pinyin.test.ts` 校验
+- **字体自托管**：Noto Sans SC（400/500/700/900）+ Noto Serif TC（400/700/900）按站内语料子集化存于 `public/fonts/`（SIL OFL 1.1，见同目录 `OFL.txt`，随包分发），`src/styles/fonts.css` 由 `global.css` 首行引入，替代 Google Fonts CDN（访客 IP 不外发 + 国内加载可靠）。转换脚本 `scripts/subset_fonts.py --src <OTF目录>`（幂等，任意 cwd 可运行，需 fonttools + brotli；源 OTF 见脚本头注释，不入库）。语料变化（新词条/新文案）后重跑；竖排特性 vrt2/vert 由 pyftsubset 默认保留，勿加 layout 裁剪参数
 - **预渲染静态壳不得依赖构建期时间**：`prerender.ts` 禁止用 `new Date()` 决定静态内容（内容会被冻结在构建日，非每日部署即长期错误）。`/on-this-day` 的静态壳因此渲染**全年档案**（205 条 / 163 个日期），而非「今天」
 - **补间一律走 `lib/iceberg3d/tween.ts`**：项目已移除 GSAP，改用 `@tweenjs/tween.js` 薄封装（`to` / `fromTo` / `killTweensOf` / `isTweening`）。**不要再引入 GSAP**——它为 4 个 API 付出了 27KB gzip。语义细节（秒制、kill 不触发 onComplete、`back.out(1.4)` 的 overshoot）见该文件头注释与 `tween.test.ts`
 - **主题**：仅暗色主题，`base.css` + `dark.css`，CSS 变量体系
-- **设计令牌**：白色透明度统一用 `var(--white-XX)`（XX = 百分比整数，定义于 `themes/base.css` 的 White-alpha ramp，如 `--white-30` = 30% 白）；强调色统一 `--color-accent` / `--color-accent-bright` / `--color-accent-soft`，收藏 `--color-fav`，NEW `--color-new`；小字号只允许 `--font-micro/tiny/xs/sm/base` 五个阶梯（最小 10px）；过渡曲线统一 `--ease-out/standard/emphatic/hero/float`；焦点环 `--focus-ring`。禁止新写 `rgba(255,255,255,α)` 或任意字号硬编码（canvas JS 颜色除外）
+- **设计令牌**：白色透明度统一用 `var(--white-XX)`（XX = 百分比整数，定义于 `themes/base.css` 的 White-alpha ramp，如 `--white-30` = 30% 白）；强调色统一 `--color-accent` / `--color-accent-bright` / `--color-accent-soft`，收藏 `--color-fav`，NEW `--color-new`；小字号只允许 `--font-micro/tiny/xs/sm/base` 五个阶梯（最小 10px）；字重只允许 400/500/700/900（600/800 已归一，200/300 与 Serif SC 已删除，见字体条）；过渡曲线统一 `--ease-out/standard/emphatic/hero/float`；焦点环 `--focus-ring`。禁止新写 `rgba(255,255,255,α)` 或任意字号硬编码（canvas JS 颜色除外）；白色透明度统一走 `text-white-XX` / `bg-white-XX` ramp，禁止 `white/NN` 斜杠写法（遗留页面逐步收敛中）
 - **焦点与动效**：全局 `:focus-visible` 统一焦点环，组件不得裸写 `outline: none`；`prefers-reduced-motion` 由 global.css 全站屏蔽 CSS 动画/过渡，3D 自动旋转与相机飞行在 JS 侧同步关闭/瞬移
 - **搜索**：Web Worker Fuse.js，双索引（标题/全文），threshold 0.3，防抖 150ms
 - **Tooltip**：200ms 悬停延迟，滚动时阻止误触发
@@ -207,7 +208,7 @@ function storedAtom<T>(key: string, fallback: T) {
 | 词条总数 | 1432（API 实时同步，见 `meta.json` / `CHANGELOG` 数据条目） |
 | 层级 / 分类 / tagMap | 8 / 15 / 68 |
 | iceberg.json 体积 | ~969KB |
-| i18n 字典 | 208 key × 3 语言 |
+| i18n 字典 | 220 key × 3 语言 |
 | 搜索防抖 / 阈值 | 150ms / 0.3 |
 | Tooltip 延迟 | 200ms |
 

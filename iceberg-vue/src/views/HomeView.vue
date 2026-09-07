@@ -340,7 +340,7 @@ onUnmounted(() => {
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.35);
 }
 .ds-cta:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
-.ds-cta-title { font-size: var(--font-base); font-weight: 600; color: var(--color-text-primary); }
+.ds-cta-title { font-size: var(--font-base); font-weight: 700; color: var(--color-text-primary); }
 .ds-cta-desc { font-size: var(--font-xs); line-height: 1.55; color: var(--white-45); white-space: pre-line; }
 
 /* ═══ 全屏粒子冰山层（纯装饰：不可点击，不拦截事件） ═══ */

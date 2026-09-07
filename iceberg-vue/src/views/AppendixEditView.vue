@@ -437,7 +437,7 @@ function rowCount(def: AppendixDef): number {
 
 /* 词条信息卡 */
 .card { border: 1px solid var(--white-05); border-radius: 7px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; background: var(--white-015); }
-.card-title { font-size: 1.2rem; font-weight: 800; color: var(--white-88); margin-bottom: 0.3rem; }
+.card-title { font-size: 1.2rem; font-weight: 900; color: var(--white-88); margin-bottom: 0.3rem; }
 .card-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; margin-bottom: 0.5rem; }
 .badge { font-size: var(--font-tiny); padding: 0.08rem 0.4rem; border-radius: 3px; border: 1px solid var(--white-10); color: var(--white-30); }
 .id-code { font-size: var(--font-micro); color: var(--white-16); font-family: 'SF Mono', monospace; }
@@ -451,7 +451,7 @@ function rowCount(def: AppendixDef): number {
 /* ===== Section ===== */
 .sec { margin-bottom: 2rem; }
 .sec-hd { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.7rem; }
-.sec-hd h3 { font-size: var(--font-sm); font-weight: 600; color: var(--white-50); }
+.sec-hd h3 { font-size: var(--font-sm); font-weight: 700; color: var(--white-50); }
 .sec-n { font-size: var(--font-xs); color: var(--white-18); }
 .sec-gap { flex: 1; }
 .btn-add { font-size: var(--font-xs); padding: 0.18rem 0.55rem; border-radius: 4px; background: var(--white-05); border: 1px solid var(--white-10); color: var(--white-45); cursor: pointer; }
@@ -467,7 +467,7 @@ function rowCount(def: AppendixDef): number {
 
 /* 已选词条 */
 .rel-picked { display: flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0; }
-.rel-picked-name { font-size: var(--font-sm); font-weight: 600; }
+.rel-picked-name { font-size: var(--font-sm); font-weight: 700; }
 .rel-picked-tier { font-size: var(--font-tiny); color: var(--white-20); }
 .rel-picked-id { font-size: var(--font-micro); color: var(--white-12); font-family: 'SF Mono', monospace; }
 .rel-missing-id { font-size: var(--font-xs); color: var(--white-15); }

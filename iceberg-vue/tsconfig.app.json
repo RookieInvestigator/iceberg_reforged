@@ -1,5 +1,8 @@
 {
   "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.cache/tsbuildinfo/app.tsbuildinfo"
+  },
   "include": ["src/**/*.ts", "src/**/*.vue", "vite-env.d.ts"],
   "exclude": ["src/**/*.test.ts", "src/**/*.spec.ts"]
 }

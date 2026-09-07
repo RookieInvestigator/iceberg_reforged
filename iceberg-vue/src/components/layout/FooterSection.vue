@@ -4,6 +4,7 @@ import { useI18n } from '../../lib/useI18n';
 import AboutModal from '../modals/AboutModal.vue';
 import ContactModal from '../modals/ContactModal.vue';
 import BulletinModal from '../modals/BulletinModal.vue';
+import TermsModal from '../modals/TermsModal.vue';
 
 interface Bulletin {
   title: string;
@@ -23,16 +24,24 @@ const { t } = useI18n();
 const showAbout = ref(false);
 const showContact = ref(false);
 const showBulletin = ref(false);
+const showTerms = ref(false);
 </script>
 
 <template>
   <footer class="relative z-10 w-full pt-4 pb-2 text-center">
     
-    <p class="mb-1.5 text-xs tracking-widest text-white/40 select-none">
+    <p class="mb-1.5 text-xs tracking-widest text-white-40 select-none">
       中文兔子洞冰山图 · 社区共建
     </p>
+
+    <p class="mb-1.5 text-xs tracking-widest text-white-25 select-none">
+      © 2026 中文兔子洞冰山图贡献者 ·
+      <a href="https://github.com/RookieInvestigator/iceberg_reforged/blob/master/LICENSE" target="_blank" rel="noopener noreferrer" class="text-white-25 hover:text-white-60 transition-colors">AGPLv3</a>
+      ·
+      <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans" target="_blank" rel="noopener noreferrer" class="text-white-25 hover:text-white-60 transition-colors">CC BY-NC-SA 4.0</a>
+    </p>
     
-    <div class="flex flex-col sm:flex-row items-center justify-center text-xs tracking-widest text-white/40">
+    <div class="flex flex-col sm:flex-row items-center justify-center text-xs tracking-widest text-white-40">
       
       <span class="select-none">Chinese Oddities Iceberg · Community Curated</span>
       
@@ -44,6 +53,8 @@ const showBulletin = ref(false);
         <button class="ft-btn" @click="showAbout = true">{{ t('aboutLink') }}</button>
         <span class="ft-sep">|</span>
         <button class="ft-btn" @click="showContact = true">{{ t('contactLink') }}</button>
+        <span class="ft-sep">|</span>
+        <button class="ft-btn" @click="showTerms = true">{{ t('termsLink') }}</button>
       </div>
 
     </div>
@@ -57,5 +68,6 @@ const showBulletin = ref(false);
     <BulletinModal v-if="showBulletin" :bulletins="props.bulletins" @close="showBulletin = false" />
     <AboutModal v-if="showAbout" :buildDate="props.buildDate" :entryCount="props.entryCount" @close="showAbout = false" />
     <ContactModal v-if="showContact" @close="showContact = false" />
+    <TermsModal v-if="showTerms" @close="showTerms = false" />
   </footer>
 </template>

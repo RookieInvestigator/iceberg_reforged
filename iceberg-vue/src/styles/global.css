@@ -1,3 +1,4 @@
+@import "./fonts.css";
 @import "tailwindcss";
 /* 主题文件仅在此加载一次：base.css 内含 @import dark.css，避免重复加载 */
 @import "./themes/base.css";

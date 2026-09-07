@@ -20,6 +20,10 @@ const router = createRouter({
 // 开发专用路由：构建时 tree-shake 掉
 if (import.meta.env.DEV) {
   router.addRoute({ path: '/appendix-edit', component: () => import('../views/AppendixEditView.vue') })
+  // IndexNext（/v2）：主冰山图换代实验（墙体新版式，逻辑与 IndexView 同构）。
+  // keep-alive 排除（见 App.vue）：与 IndexView 双实例的 #items-container / ItemInteractivity 互斥。
+  // 通过验收后：路由改回 / 并替换 IndexView，删除 IndexNextView.vue + index-next.css。
+  router.addRoute({ path: '/v2', component: () => import('../views/IndexNextView.vue') })
 }
 
 // P1-13：消费 404.html 重定向携带的 ?r=（原始 path + search + hash 的一次 encodeURIComponent），
@@ -28,10 +32,10 @@ if (import.meta.env.DEV) {
 router.beforeEach(redirectGuard)
 
 // P1-2：canonical / og:url 跟随当前路由，但 origin 强制指向主站（主从镜像策略）。
-// 无论用户访问 Cloudflare（主站）还是 GitHub Pages（镜像），canonical 都指向主站，
-// 让搜索引擎把权重归并到主站。镜像通过构建期 noindex meta 做双保险。
+// 无论用户访问自定义域名、pages.dev 默认域名还是 GitHub Pages（镜像），canonical 都指向主站
+// iceberg.hezihezi.com，让搜索引擎把权重归并到主站。镜像通过构建期 noindex meta 做双保险。
 // 模板不写死这两个标签：构建期预渲染按路由注入，浏览器端不存在时由这里创建。
-const MASTER_ORIGIN = 'https://iceberg-reforged.pages.dev'
+const MASTER_ORIGIN = 'https://iceberg.hezihezi.com'
 router.afterEach((to) => {
   const url = new URL(to.fullPath, MASTER_ORIGIN).href
   let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')

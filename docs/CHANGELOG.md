@@ -1,6 +1,39 @@
 # 更新日志
 
 
+## v4.6.0 — 2026-09-06 — 许可证落地：代码 AGPLv3 + 内容 CC BY-NC-SA 4.0
+
+### 新增
+
+- **主站切到自定义域名 `iceberg.hezihezi.com`**：`MASTER_ORIGIN`（router.afterEach）/ 预渲染 `ORIGIN` / sitemap 全 7 条 / robots Sitemap / JSON-LD url / og:image 与 twitter:image 全指向新域名；pages.dev 默认域名与 github.io 镜像的权重经 canonical + noindex 双保险归并到新域名；README 访问地址同步（主站 + 默认域名 + 镜像三入口）
+- **根 `LICENSE`**：AGPLv3 全文（SPDX 官方文本），头部声明权利人"中文兔子洞冰山图贡献者"与范围（仅程序代码；内容另行 CC）；`package.json` 加 `license: AGPL-3.0-or-later`
+- **内容许可直接声明**（务实版）：词条与整理成果 CC BY-NC-SA 4.0，著作权归贡献者及各自原作者；上游 ToS 已核查（贡献者保留所有权、平台获展示权、无开放许可、无系统性抓取），本表由本社区创建故汇编权自有，署名链完整（创作者名单 + 每条出处 + 数据来源）
+- **站内授权入口**：关于弹窗新增许可段（`licenseNote` + AGPL/CC 双链接 + `takedownNote` 尽快处理承诺，不设硬性时限，三语）；页脚新增 `© 2026 中文兔子洞冰山图贡献者 · AGPLv3 · CC BY-NC-SA 4.0` 行
+- **关于弹窗改版**：删除 Vibe Coding 署名行与「社区共建项目 · 非商业」标语块（`aboutVibeCoding` / `aboutCommunity` key 三语同步删除）；统计区改双卡片（词条数/构建日期，大数字 + 小标签）；i18n 222 → 220 key
+- **排版审计收敛**：`OnThisDayModal` zinc 色板回归 white ramp（11 处）+ `text-[10px]` / 冗长 `text-[length:…]` 收为 `text-micro/tiny`；`IndexView` / 页脚 / 关于 / 条款 / Header 的 `white/NN` 斜杠收为 ramp（含 `border-white-05` / `bg-white-03`）；`Features` / `Handbook` 重复大标题收为 `.h1-display` 共享类；层级标题与徽章去无用 `uppercase`；构建日期跟随页面语言；`formatUnixDate` 唯一入口不变
+- **字重纪律补完**：漏扫发现 `components/` 下 600 余处（`**` 在 PowerShell 不递归）——`OnThisDayApp` ×5、`OnThisDayModal`、`CommentPanel` ×2、`LinksModal` 全归一 700；`Header` 两处真 300（Google 时代实载）归一 400，**页眉品牌字会比今天略粗，dev 目检确认**；规范新增斜杠透明度禁令
+- **`/v2` 换代实验（仅 DEV，生产 tree-shake）**：v2 全套专用组件（`V2Header` / `V2FilterBar` / `V2Wall` / `V2TierChapter` / `V2Interactivity` / `V2EntryCard` / `V2Sheet` / `V2Tooltip` / `V2Colophon`），v1 文件只增不改；**侧边栏整体移除**，筛选收进顶栏；tooltip/modal/描边/dim/已读/scatter 行为零改动；keep-alive 排除防双实例互斥；验收后替换 `/` 并转正更名
+- **v2 顶栏多轮重做**：横滑单行被否 → 纵向换行网格 + 纵滚 + 高对比激活态；取命令面板语言（毛玻璃、发丝边框、11px 分组标签、kbd 徽标、facet 计数 + 实时结果数）；**真 sticky 同条变形 + 层级指示并入 + 阅读进度发丝线 + 面板浮层永不顶墙**；截图实证多态；方向感知 + 热区组合显隐；`/`/Ctrl+K 召唤语义（展开面板 + 直解 auto-hide + 聚焦，修"深处按键无反应"）
+- **v2 挂载策略定稿**：IO 真卸载曾致滚动不连贯，已删除；回归 wallMount 渐进挂载 + content-visibility，逻辑收进 `V2Wall`
+- **v2 二级界面**：`V2EntryCard`（大标题 + 收敛斜杠 + 宽松正文）、`V2Sheet`（眉题 + 大标题）、`V2Tooltip`（眉题 + 发丝线 + 对比色修复）
+- **v2 新能力**：输入框速查下拉（Fuse 标题索引，`/`/Ctrl+K 召唤，↑↓/回车/Esc，零新 key；独立 Spotlight 方案因入口重复已删）；`V2Colophon` 跋页脚（统计 + 许可 + 来源 + 导航 + 公告/关于/联系/条款入口，零新 key）
+- **简易使用条款 `TermsModal`**：合一页七节（服务/账户14+/知识产权/使用规范/数据与隐私/责任限制与终止/变更与联系，zh 全文 + en/ja 简版并注明以中文版为准，`termsEffective` 标注 2026-09-06 生效）；页脚第四按钮 + 注册页提示链接挂钩（嵌套弹窗走 body teleport + token 滚动锁）；i18n 210 → 220 key（含关于改版净 -2）
+- **ToS 对标上游扩为七节**：参照 IcebergThreads 条款结构（服务/账户/知识产权/使用规范/第三方与无广告/责任限制与终止/变更与联系），评论昵称授权与下架通道写入知识产权节（key 计数见上一条）
+- **下架承诺去时限**：维护者看不过来，所有"7 天内处理"改为"尽快处理"（About/条款/README/CHANGELOG 同步）
+- **`subset_fonts.py --check` 接 CI**：语料指纹机制（`public/fonts/corpus.sha256`），新词条/文案带新字而未重跑脚本时 CI 失败；正反分支均已验证；`deploy.yml` 新增 Font subset freshness 步骤（纯标准库，runner 自带 python3）
+- **README**：新增「访问地址」（主站 + 镜像站）与「授权许可」章节；i18n 208 → 210 key
+- **字体自托管（Google Fonts 下线）**：11 个 CDN 字重 → 7 个语料子集（Sans SC 400/500/700/900 + Serif TC 400/700/900，约 4.3MB woff2 + OFL.txt 随包分发）；200/300（零引用）与 Serif SC（仅下线 Hero 用）删除；600/800 归一为 700/900（与 CDN 时代合成渲染像素一致，10 处）；转换脚本 `scripts/subset_fonts.py --src <OTF目录>`（幂等，需 fonttools + brotli，源 OTF 不入库）；`index.html` 删 preconnect/css2，CSP 双源收紧（去 google 两域），ToS 第三方名单删 Google Fonts，古籍竖排 vrt2/vert 由 pyftsubset 默认保留
+
+### 说明
+
+- SEO 策略维持主从镜像不变（镜像保持 noindex，权重归并主站）；镜像地址写入 README（仓库页可被 Google 收录），解决"搜到 github.io 网址"的需求而不稀释排名
+
+### 测试
+
+- 双 typecheck 通过；全套件 20 文件 / 162 用例通过（含新 `i18n.test.ts`，七节 ToS key 全对齐零死 key）；test 后无构建插件日志，`dist` 零变动
+- 生产构建绿（8 页预渲染）：`dist/fonts/` 7 个 woff2 + OFL.txt + `corpus.sha256` 落盘；CSS 中字体 URL 已按 base 改写（`/iceberg_reforged/fonts/…`）；`dist/index.html` 与全产物零 `googleapis` / `gstatic` 引用；收敛后的 ramp 工具类（`text-white-10/15/20/30/40/45/60/85`、`bg-white-08`、`border-white-05`、`text-micro`、`.h1-display`）逐项确认进包；`dist/` 4.08MB → 8.03MB（+4.3MB 字体，gzip 几乎不压缩 woff2）
+
+
 ## v4.5.9 — 2026-09-06 — 测试零副作用 · i18n 缺口与死 key · Google 验证文件
 
 ### 修复

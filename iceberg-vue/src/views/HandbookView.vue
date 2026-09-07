@@ -195,7 +195,7 @@ function onTabKeydown(e: KeyboardEvent, index: number) {
 
     <div class="relative z-10 mx-auto max-w-[1040px] px-4 pt-8 pb-16 sm:px-8 sm:pt-12 sm:pb-24">
       <header class="mb-8">
-      <h1 class="text-[2rem] font-black text-white-92 mb-2 tracking-[0.03em]">{{ t('handbookTitle') }}</h1>
+      <h1 class="h1-display">{{ t('handbookTitle') }}</h1>
       <p class="max-w-2xl text-sm leading-[1.7] text-white-35 sm:text-base">{{ t('handbookIntro') }}</p>
     </header>
 
@@ -228,7 +228,7 @@ function onTabKeydown(e: KeyboardEvent, index: number) {
 
         <div class="hb-scroll-x flex gap-1 overflow-x-auto pl-4 pb-3 pt-1" aria-label="A-Z 快速跳转" @wheel="onAZWheel">
           <button v-for="l in letters" :key="l.letter" type="button" :disabled="!l.active"
-            class="h-8 min-w-0 flex-1 rounded-full px-1 text-tiny font-semibold transition-colors duration-150 max-sm:h-11 max-sm:min-w-11"
+            class="h-8 min-w-0 flex-1 rounded-full px-1 text-tiny font-bold transition-colors duration-150 max-sm:h-11 max-sm:min-w-11"
             :class="activeLetter === l.letter
               ? 'bg-white-10 text-white-90'
               : l.active
@@ -247,7 +247,7 @@ function onTabKeydown(e: KeyboardEvent, index: number) {
         <template v-if="groups.length">
           <section v-for="[letter, entries] in groups" :key="letter" class="mb-8">
             <h2 :id="`hb-letter-${letter}`"
-              class="mb-4 scroll-mt-36 border-b border-white-05 pb-2 text-xl font-extrabold tracking-[0.1em] text-white-55">{{ letter }}</h2>
+              class="mb-4 scroll-mt-36 border-b border-white-05 pb-2 text-xl font-black tracking-[0.1em] text-white-55">{{ letter }}</h2>
 
             <!-- 词条百科式排版：只留标题与解释，不用卡片框住每个词条 -->
             <article v-for="e in entries" :key="e.name" class="mb-5 last:mb-0">

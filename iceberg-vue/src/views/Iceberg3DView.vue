@@ -289,7 +289,7 @@ onUnmounted(() => {
 }
 
 .cat-badge {
-  font-size: var(--font-xs); font-weight: 600;
+  font-size: var(--font-xs); font-weight: 700;
   border: 1px solid; padding: 0.25rem 0.7rem; border-radius: 999px;
   background: rgba(0, 0, 0, 0.2);
   transition: opacity 0.3s ease, transform 0.3s ease;
@@ -334,7 +334,7 @@ onUnmounted(() => {
   display: inline-flex; align-items: center; gap: 0.5rem;
   margin-top: 1.5rem; padding: 0.5rem 1.25rem;
   border: 1px solid var(--white-18); border-radius: 999px;
-  font-size: var(--font-xs); font-weight: 600; color: var(--white-55); text-decoration: none;
+  font-size: var(--font-xs); font-weight: 700; color: var(--white-55); text-decoration: none;
   transition: background 0.15s, color 0.15s, border-color 0.15s, opacity 0.3s ease 0.16s, transform 0.3s ease 0.16s;
   align-self: flex-start;
 }
