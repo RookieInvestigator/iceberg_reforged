@@ -5,74 +5,33 @@
 // 数据 provide / 深链 / 入场 / 背景沿用 IndexView 模式；过滤管线与搜索 Worker 复用 lib 层。
 // 通过验收后：用本文件替换 IndexView.vue，并把 V2* 组件转正更名。
 import { shallowRef, ref, computed, onMounted, provide, watch, watchEffect, onUnmounted } from 'vue'
-import OnThisDayModal from '../components/calendar/OnThisDayModal.vue'
+import OnThisDayModal from '../../components/calendar/OnThisDayModal.vue'
 import { useRoute } from 'vue-router'
 import { useStore } from '@nanostores/vue'
-import { bgMode, scatterMode, fontSize } from '../lib/settingsStore'
-import raw from '../data/iceberg.json'
-import relatedRaw from '../data/appendix/related.csv?raw'
-import referencesRaw from '../data/appendix/references.csv?raw'
-import { normalizeData, isSafeHttpUrl, formatUnixDate } from '../lib/data'
-import { parseCSV } from '../lib/csv'
-import { useI18n } from '../lib/useI18n'
-import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, TIER_ORDER_KEY, CATEGORY_COLORS_KEY, TAG_MAP_KEY, DEFAULT_COLOR_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, HERO_TITLES_KEY, RELATED_MAP_KEY, REFERENCES_MAP_KEY, OPEN_ON_THIS_DAY_KEY, ID_ALIASES_KEY } from '../lib/injectionKeys'
-import { FACET_COUNTS_KEY, type FacetCounts } from '../lib/iceberg/v2keys'
-import IcebergBg from '../components/layout/IcebergBg.vue'
-import V2Colophon from '../components/iceberg/V2Colophon.vue'
+import { bgMode, scatterMode, fontSize } from '../../lib/settingsStore'
+import raw from '../../data/iceberg.json'
+import relatedRaw from '../../data/appendix/related.csv?raw'
+import referencesRaw from '../../data/appendix/references.csv?raw'
+import { normalizeData, isSafeHttpUrl, formatUnixDate } from '../../lib/data'
+import { parseCSV } from '../../lib/csv'
+import { useI18n } from '../../lib/useI18n'
+import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, TIER_ORDER_KEY, CATEGORY_COLORS_KEY, TAG_MAP_KEY, DEFAULT_COLOR_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, HERO_TITLES_KEY, RELATED_MAP_KEY, REFERENCES_MAP_KEY, OPEN_ON_THIS_DAY_KEY, ID_ALIASES_KEY } from '../../lib/injectionKeys'
+import { FACET_COUNTS_KEY, type FacetCounts } from '../../lib/iceberg/v2/keys'
+import IcebergBg from '../../components/layout/IcebergBg.vue'
+import V2Colophon from '../../components/v2/V2Colophon.vue'
 // TEMP：hero 页暂时移除
-// import HeroSection from '../components/iceberg/HeroSection.vue'
-import V2Header from '../components/iceberg/V2Header.vue'
-import V2FilterBar from '../components/iceberg/V2FilterBar.vue'
-import V2Interactivity from '../components/items/V2Interactivity.vue'
-import FloatingButtons from '../components/iceberg/FloatingButtons.vue'
-import ScatterField from '../components/iceberg/ScatterField.vue'
-import V2Wall from '../components/iceberg/V2Wall.vue'
+// import HeroSection from '../../components/iceberg/HeroSection.vue'
+import V2Header from '../../components/v2/V2Header.vue'
+import V2FilterBar from '../../components/v2/V2FilterBar.vue'
+import V2Interactivity from '../../components/v2/V2Interactivity.vue'
+import FloatingButtons from '../../components/iceberg/FloatingButtons.vue'
+import ScatterField from '../../components/iceberg/ScatterField.vue'
+import V2Wall from '../../components/v2/V2Wall.vue'
 
-const data = normalizeData(raw)
-const allItemsRaw = Object.entries(data.tiers).flatMap(([tierName, items]) =>
-  items.map(item => ({ ...item, tier: tierName }))
-)
-const allItems = shallowRef(allItemsRaw)
+import { useIcebergDataSource } from '../../lib/iceberg/useIcebergDataSource'
 
-// 全量数据下发（含 desc）；descMap 供 ItemInteractivity 按 id 快速取回
-const renderItemsRef = shallowRef(allItemsRaw)
-const descMap = new Map(allItemsRaw.map(i => [i.id, (i as any).desc || '']))
-
-// 副表加载：关联词条 (source_id → target_id[], 含反向索引)
-const relatedMap = new Map<string, string[]>()
-for (const row of parseCSV(relatedRaw)) {
-  const src = (row.source_id || '').trim()
-  const tgt = (row.target_id || '').trim()
-  if (!src || !tgt) continue
-  if (!relatedMap.has(src)) relatedMap.set(src, [])
-  relatedMap.get(src)!.push(tgt)
-  // 反向：target 也获得 source
-  if (!relatedMap.has(tgt)) relatedMap.set(tgt, [])
-  relatedMap.get(tgt)!.push(src)
-}
-
-// 副表加载：参考链接 (source_id → [{label, url}])
-const referencesMap = new Map<string, { label: string; url: string }[]>()
-for (const row of parseCSV(referencesRaw)) {
-  const src = (row.source_id || '').trim()
-  const label = (row.label || '').trim()
-  const url = (row.url || '').trim()
-  if (!src || !url) continue
-  if (!isSafeHttpUrl(url)) continue // F34：副表 URL 同样过 schema 校验
-  if (!referencesMap.has(src)) referencesMap.set(src, [])
-  referencesMap.get(src)!.push({ label: label || url, url })
-}
-
-// 全局注入：子组件不需要 JSON.parse props
-provide(TIER_ORDER_KEY, data.tierOrder)
-provide(CATEGORY_COLORS_KEY, data.categoryColors)
-provide(TAG_MAP_KEY, data.tagMap)
-provide(DEFAULT_COLOR_KEY, data.defaultColor)
-provide(RENDER_ITEMS_KEY, renderItemsRef)
-provide(DESC_MAP_KEY, descMap)
-provide(HERO_TITLES_KEY, allItemsRaw.map(i => i.title))
-provide(RELATED_MAP_KEY, relatedMap)
-provide(REFERENCES_MAP_KEY, referencesMap)
+// 数据源（normalize + 副表 + 全套 provide，见 useIcebergDataSource；facetCounts 为 v2 专有，留在此处）
+const { data, allItems, allItemsRaw } = useIcebergDataSource()
 
 // v2 筛选面计数：分类 / 标签词条数（数据静态，单遍产出，顶栏展示用）
 const facetCounts: FacetCounts = (() => {
@@ -122,10 +81,10 @@ watchEffect(() => {
 })
 
 // 顶栏 + 随机入口接线（v1 由 IcebergApp 承担）
-const filterBarRef = ref<{ togglePanel: () => void } | null>(null)
+const filterBarRef = ref<{ togglePanel: (source?: 'fab' | 'bar') => void } | null>(null)
 const interactivityRef = ref<{ showRandom: () => void } | null>(null)
 function onRandom() { interactivityRef.value?.showRandom() }
-function onToggleFilter() { filterBarRef.value?.togglePanel() }
+function onToggleFilter() { filterBarRef.value?.togglePanel('fab') }
 
 const buildDate = formatUnixDate(data.generatedAt)
 
@@ -159,13 +118,11 @@ provide(FILTER_VISIBLE_KEY, filterVisible)
 // perf：dim 模式变暗集合（null=无变暗），模板 :class + v-memo 响应式消费
 const dimItems = shallowRef(null as Set<string> | null)
 provide(DIM_ITEMS_KEY, dimItems)
-const dimSet = computed(() => dimItems.value)
 
 // 层空/全空提示（声明式，替代原 useFilterPipeline 命令式 createElement 路径；
 //   仅 hide 模式可见——dim 模式全部词条仍在 DOM，提示会造成误读）
 // 层可见数由过滤管线单遍产出（wallCounts——不再单独扫 1432 词条）
 const { t } = useI18n()
-const hasNoResults = computed(() => filterVisible.value !== null && filterVisible.value.size === 0)
 
 // F30：旧 ID → 新 ID 重定向表（分享 hash / 深链 / 收藏旧 id 解析用）
 provide(ID_ALIASES_KEY, new Map(Object.entries(data.idAliases || {})))
@@ -175,8 +132,8 @@ const route = useRoute()
 // 监听 ?item=xxx 触发词条弹窗（支持从其他地方跳转过来）；定时器在卸载/重复触发时清理
 let itemTimer = 0
 watch(() => route.query.item, (itemId) => {
-  // 只在换代冰山图（/v2）消费 ?item=；主站 / 与 3D 等页面各管各的 query，不能串台
-  if (route.path !== '/v2') return
+  // 只在主冰山图（/）消费 ?item=；/legacy 与 3D 等页面各管各的 query，不能串台
+  if (route.path !== '/') return
   if (itemId) {
     clearTimeout(itemTimer)
     itemTimer = window.setTimeout(() => {
@@ -229,11 +186,14 @@ onUnmounted(() => {
       <V2Header :buildDate="buildDate" :entryCount="allItems.length" :introText="data.introText" />
       <V2FilterBar ref="filterBarRef" />
 
+      <!-- F5：跳过词条墙（键盘用户免 1400+ 次 Tab；v1 同状，已记为已知限制） -->
+      <a href="#v2-colophon" class="v2-skip">{{ t('skipWall') }}</a>
       <V2Wall v-if="!scatter" :data="data" ref="wallRef" />
       <ScatterField v-else :items="allItemsRaw" />
 
       <V2Interactivity ref="interactivityRef" />
-      <FloatingButtons :sidebarOpen="false" @random="onRandom" @toggleSidebar="onToggleFilter" />
+      <!-- 漏斗按钮在 v2 隐藏：筛选入口已收进 V2FilterBar，避免重复 -->
+      <FloatingButtons :sidebarOpen="false" hideFilter @random="onRandom" @toggleSidebar="onToggleFilter" />
 
       <V2Colophon :buildDate="buildDate" :entryCount="allItems.length" :tierCount="data.tierOrder.length" :catCount="Object.keys(data.categoryColors || {}).length" :bulletins="bulletins" />
     </div>

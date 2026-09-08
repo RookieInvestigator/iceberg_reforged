@@ -5,6 +5,7 @@
 @import "./index.css";
 @import "./bg.css";
 @import "./modal.css";
+@import "./v2.css";
 
 /* style 审计：全局键盘焦点环（:focus-visible 统一出口；局部样式仍可覆盖颜色/偏移） */
 :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }

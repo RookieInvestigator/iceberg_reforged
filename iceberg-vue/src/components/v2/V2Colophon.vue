@@ -6,6 +6,7 @@ import { ref } from 'vue';
 import { useI18n } from '../../lib/useI18n';
 import BulletinModal from '../modals/BulletinModal.vue';
 import AboutModal from '../modals/AboutModal.vue';
+import CopyrightModal from '../modals/CopyrightModal.vue';
 import ContactModal from '../modals/ContactModal.vue';
 import TermsModal from '../modals/TermsModal.vue';
 
@@ -27,6 +28,7 @@ defineProps({
 const { t } = useI18n();
 const showBulletin = ref(false);
 const showAbout = ref(false);
+const showCopyright = ref(false);
 const showContact = ref(false);
 const showTerms = ref(false);
 
@@ -36,15 +38,17 @@ const CC_URL = 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans';
 </script>
 
 <template>
-  <footer class="v2colo">
+  <footer class="v2colo" id="v2-colophon">
     <p class="v2colo-stats">{{ t('homeStats').replace('{count}', String(entryCount)).replace('{tiers}', String(tierCount)).replace('{cats}', String(catCount)) }} · {{ buildDate }}</p>
     <p class="v2colo-note">{{ t('licenseNote') }}</p>
     <nav class="v2colo-nav">
       <router-link to="/">{{ t('navIceberg') }}</router-link>
       <router-link to="/home">{{ t('navHome') }}</router-link>
+      <router-link to="/handbook">{{ t('handbookTitle') }}</router-link>
       <router-link to="/on-this-day">{{ t('navOnThisDay') }}</router-link>
       <button type="button" class="v2colo-linklike" @click="showBulletin = true">{{ t('bulletinLink') }}</button>
       <button type="button" class="v2colo-linklike" @click="showAbout = true">{{ t('aboutLink') }}</button>
+      <button type="button" class="v2colo-linklike" @click="showCopyright = true">{{ t('copyrightLink') }}</button>
       <button type="button" class="v2colo-linklike" @click="showContact = true">{{ t('contactLink') }}</button>
       <button type="button" class="v2colo-linklike" @click="showTerms = true">{{ t('termsLink') }}</button>
     </nav>
@@ -53,9 +57,10 @@ const CC_URL = 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans';
       <a :href="GITHUB_URL" target="_blank" rel="noopener noreferrer">{{ t('aboutRepo') }}</a>
       <a :href="CC_URL" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a>
     </nav>
-    <p class="v2colo-copy">© 2026 中文兔子洞冰山图贡献者</p>
+    <p class="v2colo-copy">{{ t('copyrightLine').replace('{year}', String(new Date().getFullYear())) }}</p>
     <BulletinModal v-if="showBulletin" :bulletins="bulletins" @close="showBulletin = false" />
-    <AboutModal v-if="showAbout" :buildDate="buildDate" :entryCount="entryCount" @close="showAbout = false" />
+    <AboutModal v-if="showAbout" :buildDate="buildDate" :entryCount="entryCount" @close="showAbout = false" @open-copyright="showAbout = false; showCopyright = true" />
+    <CopyrightModal v-if="showCopyright" @close="showCopyright = false" />
     <ContactModal v-if="showContact" @close="showContact = false" />
     <TermsModal v-if="showTerms" @close="showTerms = false" />
   </footer>

@@ -4,6 +4,10 @@
 // data-id / v-show / v-memo / dim），ItemInteractivity 的委托、tooltip 定位、
 // 错落偏移全部零改动；只有章节头与间距是新的。
 import { useI18n } from '../../lib/useI18n';
+import { useStore } from '@nanostores/vue';
+import { floatMode } from '../../lib/settingsStore';
+import { floatOffsetFor } from '../../lib/iceberg/floatOffset';
+import { registerItem } from '../../lib/iceberg/itemRegistry';
 import { tierVisibleCounts } from '../../lib/iceberg/wallCounts';
 import type { RenderItem } from '../../lib/injectionKeys';
 
@@ -16,6 +20,17 @@ defineProps<{
 }>();
 
 const { t } = useI18n();
+// 错落排版渲染层输出（F1 根治：随挂载自然生效；开关切换经 v-memo 重渲染）
+// 错落排版渲染层输出（F1 根治：随挂载自然生效；开关切换经 v-memo 重渲染）
+const floatStatic = useStore(floatMode);
+function itemStyle(item: RenderItem): string {
+  let s = `color: ${item.categoryColor}; --item-color: ${item.categoryColor}`;
+  if (floatStatic.value === 'static') {
+    const { x, y } = floatOffsetFor(item.id);
+    s += `; --fx: ${x}px; --fy: ${y}px`;
+  }
+  return s;
+}
 </script>
 
 <template>
@@ -30,22 +45,23 @@ const { t } = useI18n();
         <span
           v-for="item in items"
           :key="item.id"
+          :ref="(el) => registerItem(item.id, el as unknown as HTMLElement | null)"
           v-show="!filterVisible || filterVisible.has(item.id)"
-          v-memo="[item.id, dimSet?.has(item.id), filterVisible ? filterVisible.has(item.id) : true]"
+          v-memo="[item.id, floatStatic, dimSet?.has(item.id), filterVisible ? filterVisible.has(item.id) : true]"
           tabindex="0"
           role="button"
           class="iceberg-item inline-flex items-center font-bold cursor-crosshair py-0.5 px-1.5 max-sm:text-[1.05rem]"
           :class="{ dimmed: !!dimSet?.has(item.id) }"
           :data-id="item.id"
           :data-category="item.category"
-          :style="`font-size: 1.15em; color: ${item.categoryColor}; --item-color: ${item.categoryColor}`"
+          :style="itemStyle(item)"
         >
           <span class="item-title transition-colors duration-200" :data-text="item.title">{{ item.title }}</span>
           <span v-for="(e, ei) in item.emojis" :key="ei" class="item-tag text-[0.625em] ml-[0.3em] relative -top-[0.08em] inline-flex items-center justify-center transition-colors duration-200">{{ e }}</span>
         </span>
       </div>
       <!-- 层空（hide 模式本层 0 命中；管线单遍产出的层可见数，数据驱动与 DOM 挂载无关） -->
-      <div v-if="tierVisibleCounts && (tierVisibleCounts.get(tierName) || 0) === 0" class="tier-empty text-center text-white-15 text-sm py-8 italic">{{ t('tierEmpty') }}</div>
+      <div v-if="tierVisibleCounts && (tierVisibleCounts.get(tierName) || 0) === 0" class="tier-empty text-center text-white-25 text-sm py-8 italic">{{ t('tierEmpty') }}</div>
     </div>
   </section>
 </template>
@@ -58,6 +74,12 @@ const { t } = useI18n();
   font-size: var(--font-xs); font-weight: 400; letter-spacing: 0.35em; margin-right: -0.35em; color: var(--white-40);
 }
 .tier-next .iceberg-item { border-radius: 999px; padding: 0.3rem 0.8rem; }
+/* P4：字号从 1432 条内联收归规则（与原来内联同优先级行为：max-sm:text-[1.05rem] 本就打不过内联，保持不变） */
+.tier-next .iceberg-item { font-size: 1.15em; }
+/* 错落偏移渲染层落点（F1：--fx/--fy 由 itemStyle 输出，无变量时回落 0） */
+.tier-next .iceberg-item { transform: translate(var(--fx, 0px), var(--fy, 0px)); }
+/* v2 词条行距略收（全局 1.5 用户指定不动，仅 v2 章节覆盖 1.4） */
+.tier-next .iceberg-item { line-height: 1.4; }
 .tier-next .iceberg-item::before { border-radius: inherit; }
 .tier-next .iceberg-item.recently-updated { border-radius: 999px; }
 @media (max-width: 640px) {

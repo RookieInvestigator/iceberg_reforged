@@ -295,6 +295,8 @@ def build_from_api(data: dict, history: dict, old_ids_by_title: dict) -> dict:
             items_by_tier[tier_name].append(item_out)
 
     # 3. 解析 introText（按拼音首字母重排参与创作者）
+    # 名单一并写入 meta.json，供前端转载模板引用（与 introText 同源，数据更新自动同步）
+    contributor_names: list = []
     contrib_match = re.search(r'参与创作者(?:（[^）]*）)?：', intro_text)
     if contrib_match:
         head = intro_text[:contrib_match.start()]
@@ -315,6 +317,7 @@ def build_from_api(data: dict, history: dict, old_ids_by_title: dict) -> dict:
             key=sort_key,
         )
         intro_text = head + '参与创作者（按首字母排序）：' + '、'.join(names) + suffix
+        contributor_names = names
 
     # 4. 构建检查（F30）：碰撞检测 + 非预期 ID 变更报告
     check_id_collisions(items_by_tier)
@@ -454,6 +457,7 @@ def compile_output(data: dict, output_dir: str):
     print(f"  {len(data['categoryColors'])} categories, {len(data['tagMap'])} tags")
 
     # 轻量元数据：仅统计口径，供首页 / 术语表使用（不含任何词条正文）
+    # contributors：参与创作者名单（与 introText 同源），供转载模板完整展示
     tier_counts = {name: len(data['tiers'].get(name, [])) for name in data['tierOrder']}
     meta = {
         'generatedAt': data.get('generatedAt'),
@@ -462,6 +466,7 @@ def compile_output(data: dict, output_dir: str):
         'tagMap': data.get('tagMap', {}),
         'tierCounts': tier_counts,
         'total': total,
+        'contributors': contributor_names,
     }
     meta_tmp = META_PATH + '.tmp'
     with open(meta_tmp, 'w', encoding='utf-8') as f:

@@ -11,12 +11,12 @@ import LiquidGradient from './LiquidGradient.vue'
 // 滚动沉海：色板采样向深色端平移（darkShift），黑色占比随滚动增大
 const scrollDepth = ref(0)
 // ═══ 交互感知帧率（治 hover/tooltip 卡顿）═══
-// 全屏 shader 静止 60fps 会与词条墙的 hover 记号笔/tooltip 抢合成（历史 24fps 设计意图
-// 曾因重构回退为 60fps）。三档：滚动 30（沉海跟随）/ 鼠标停在词条墙 12（近静止，
-// 湍流细节保留、视觉几乎无感；把合成器让给交互）/ 静止 24（慢流速，肉眼与 60 无差）。
-const SCROLL_FPS = 30
-const HOVER_WALL_FPS = 12
-const IDLE_FPS = 24
+// 全屏 shader 高帧率会与词条墙的 hover 记号笔/tooltip 抢合成，因此分档：
+// 滚动 60（沉海跟随）/ 鼠标停在词条墙 30（把合成器让给交互）/ 静止 60。
+// URL 旋钮（?scrollFps= / ?hoverFps= / ?idleFps=，上限 120）可不经构建 A/B 对比。
+const SCROLL_FPS = 60
+const HOVER_WALL_FPS = 30
+const IDLE_FPS = 60
 /**
  * 性能实测旋钮：URL 参数可覆盖上面三档帧率，便于在不重新构建的情况下 A/B 对比。
  * 例：?scrollFps=60  /  ?idleFps=60&scrollFps=15
@@ -95,7 +95,7 @@ onUnmounted(() => {
 <template>
   <div class="liquid-bg" aria-hidden="true">
     <!-- colorA 传纯黑：沉海终点为纯黑（色板最深端由深蓝黑 #001220 改为 #000000）
-         湍流 7 档保留全部形变；fps 三档交互自适应（滚动 30 / 词条墙 hover 12 / 静止 24） -->
+         湍流 7 档保留全部形变；fps 三档交互自适应（滚动 60 / 词条墙 hover 30 / 静止 60） -->
     <LiquidGradient :darkShift="liquidShift" colorA="#000000" :seed="liquidSeed" :turb-iter="7" :fps="liquidFps" />
   </div>
 </template>

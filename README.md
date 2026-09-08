@@ -17,6 +17,7 @@
 - **程序代码**（`iceberg-vue/` 与 `scripts/` 下的源代码）：[AGPLv3](LICENSE)，著作权归中文兔子洞冰山图贡献者所有。
 - **词条内容与整理成果**（词条正文、术语表、专题、翻译等）：[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans) 共享，著作权归中文兔子洞冰山图贡献者及各自原作者所有。本表由本社区创建并在 IcebergThreads 同步共建，数据来源见 [IcebergThreads 原表](https://icebergthreads.com/zh/iceberg/fel4BTCqlMAGSa2gelRJ)。
 - 如发现侵权内容或事实错误，请通过站内「联系我们」告知，我们会尽快处理。
+- **转载要求**：转载本站内容时，请使用站内「版权与转载」弹窗中的转载模板，并完整展示全部参与创作者名单（CC BY-NC-SA 4.0 署名要求，名单随数据更新自动同步）。
 
 ## 关于词条排序
 

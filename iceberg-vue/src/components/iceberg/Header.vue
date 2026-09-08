@@ -6,6 +6,8 @@ import { useI18n } from '../../lib/useI18n';
 import { user as userAtom, isSupabaseReady } from '../../lib/userState';
 import { OPEN_ON_THIS_DAY_KEY } from '../../lib/injectionKeys';
 const UserModal = defineAsyncComponent(() => import('../modals/UserModal.vue'));
+// 版权弹窗非首屏关键内容，懒加载（与 UserModal 同策略）
+const CopyrightModal = defineAsyncComponent(() => import('../modals/CopyrightModal.vue'));
 
 defineProps({
   buildDate: { type: String, default: '' },
@@ -17,6 +19,7 @@ const { t } = useI18n();
 const openOnThisDay = inject(OPEN_ON_THIS_DAY_KEY, null);
 const u = useStore(userAtom);
 const showUser = ref(false);
+const showCopyright = ref(false);
 // P0-4: 未配置 Supabase 时不显示登录入口（点了也会抛错）
 const supReady = isSupabaseReady();
 
@@ -50,11 +53,14 @@ onMounted(() => {
         <span class="text-white-10">|</span>
         <router-link to="/home" class="text-white-60 hover:text-white-90 transition-colors py-1">{{ t('navHome') }}</router-link>
         <span class="text-white-10">|</span>
+        <button @click="showCopyright = true" class="text-white-60 hover:text-white-90 transition-colors py-1">{{ t('copyrightLink') }}</button>
+        <span class="text-white-10">|</span>
         <button v-if="supReady" @click="showUser = true" class="text-white-60 hover:text-white-90 transition-colors py-1">
           {{ u ? t('user') + ': ' + u.displayName : t('login') }}
         </button>
       </div>
       <UserModal v-if="showUser" @close="showUser = false" />
+      <CopyrightModal v-if="showCopyright" @close="showCopyright = false" />
     </div>
 
     <p

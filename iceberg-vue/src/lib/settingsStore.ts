@@ -97,6 +97,8 @@ export const showReadMark = storedAtom('iceberg-show-read-mark', true);
 export const showNewMark = storedAtom('iceberg-show-new-mark', true);
 /** 实验功能：非冰山图模式 —— 无层级，全部词条随机散落 */
 export const scatterMode = storedAtom('iceberg-scatter-mode', false);
+/** v2 实验：详情弹窗表面 —— 'dark' 黑底（默认，零回归）/ 'light' 浅色阅读表面（S13） */
+export const v2DetailSurface = storedAtom('iceberg-v2-detail-surface', 'dark');
 
 export function applySimpleMode() {
   detailMode.set('tooltip'); filterMode.set('dim'); immersiveMode.set(false);

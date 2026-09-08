@@ -21,6 +21,8 @@
   --color-surface: #050505;
   --color-surface-border: #333333;
   --color-text-primary: #ffffff;
+  /* 阅读表面（reading surface）令牌：tooltip 白底黑字 21:1，专供久读载体；
+   * 与操控层毛玻璃（--v2-surface）分工，勿当成「不一致」误改（见审计 S1） */
   --color-tooltip-bg: #ffffff;
   --color-tooltip-text: #000000;
   --color-tooltip-meta: #888888;

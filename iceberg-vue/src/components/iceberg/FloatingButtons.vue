@@ -5,7 +5,7 @@ import { showRandomBtn, immersiveMode } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import SettingsPanel from '../modals/SettingsPanel.vue';
 
-const props = defineProps({ sidebarOpen: Boolean });
+const props = defineProps({ sidebarOpen: Boolean, hideFilter: Boolean });
 const emit = defineEmits(['random', 'toggleSidebar']);
 
 // 响应式窗口宽度：resize / orientationchange 时重算 fabBottom（避免旋转或缩放后位置过期）
@@ -51,7 +51,7 @@ onUnmounted(() => {
       bottom: fabBottom,
     }"
   >
-    <button class="fab-btn w-11 h-11 rounded-full flex items-center justify-center cursor-pointer border-none text-white-40 bg-white-04 transition-colors duration-150 hover:text-white-70 hover:bg-white-08 active:scale-[0.94]" :aria-label="t('filter')" @mousedown.stop @click="toggleFilter">
+    <button v-if="!hideFilter" class="fab-btn w-11 h-11 rounded-full flex items-center justify-center cursor-pointer border-none text-white-40 bg-white-04 transition-colors duration-150 hover:text-white-70 hover:bg-white-08 active:scale-[0.94]" :aria-label="t('filter')" @mousedown.stop @click="toggleFilter">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
       </svg>

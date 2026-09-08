@@ -16,6 +16,7 @@ import LiquidGradient from '../components/layout/LiquidGradient.vue'
 import { BG_COLORS, BG_TUNING } from '../lib/bgTheme'
 import IcebergParticles from '../components/home/IcebergParticles.vue'
 import AboutModal from '../components/modals/AboutModal.vue'
+import CopyrightModal from '../components/modals/CopyrightModal.vue'
 import LinksModal from '../components/modals/LinksModal.vue'
 
 const UserModal = defineAsyncComponent(() => import('../components/modals/UserModal.vue'))
@@ -25,6 +26,7 @@ const { t } = useI18n()
 const currentLang = useStore(lang)
 
 const showAbout = ref(false)
+const showCopyright = ref(false)
 const showLinks = ref(false)
 const showUser = ref(false)
 const u = useStore(userAtom)
@@ -212,7 +214,8 @@ onUnmounted(() => {
       </div>
     </section>
 
-    <AboutModal v-if="showAbout" :build-date="buildDate" :entry-count="entryCount" @close="showAbout = false" />
+    <AboutModal v-if="showAbout" :build-date="buildDate" :entry-count="entryCount" @close="showAbout = false" @open-copyright="showAbout = false; showCopyright = true" />
+    <CopyrightModal v-if="showCopyright" @close="showCopyright = false" />
     <LinksModal v-if="showLinks" @close="showLinks = false" />
     <UserModal v-if="showUser" @close="showUser = false" />
   </main>

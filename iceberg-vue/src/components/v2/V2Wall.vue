@@ -76,7 +76,7 @@ onUnmounted(() => {
 <template>
   <div id="items-container">
     <!-- 全空（hide 模式 0 命中）：整体提示 -->
-    <div v-if="hasNoResults" id="items-empty" class="text-center text-white-20 text-lg py-40 italic">{{ t('noResults') }}</div>
+    <div v-if="hasNoResults" id="items-empty" class="text-center text-white-25 text-sm py-40 italic">{{ t('noResults') }}</div>
     <template v-else>
       <V2TierChapter
         v-for="(tierName, tierIndex) in data.tierOrder.slice(0, mountedTiers)"

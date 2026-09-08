@@ -3,16 +3,20 @@
 // 相关索引 / 过滤管线 / Tooltip 控制器 / 弹窗前后导航 / 随机 / 已读标记），
 // 仅把三个二级界面的呈现换成 v2 版（V2EntryCard / V2Sheet / V2Tooltip）。
 // 交互语义、性能路径（懒加载、增量重绘）与 v1 完全一致。
-import { ref, watch, watchEffect, onMounted, onUnmounted, nextTick, markRaw, inject, defineAsyncComponent } from 'vue';
+import { ref, watchEffect, onMounted, onUnmounted, nextTick, markRaw, inject, provide, defineAsyncComponent } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { searchQuery, searchMode, NEW_MARK_WINDOW_DAYS } from '../../lib/filterStore';
-import { floatMode, detailMode, readItems, showReadMark } from '../../lib/settingsStore';
+import { detailMode, readItems, showReadMark } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, RELATED_MAP_KEY, ID_ALIASES_KEY, type RenderItem } from '../../lib/injectionKeys';
 import { useSearchWorker } from '../../lib/iceberg/useSearchWorker';
 import { useRelatedIndex } from '../../lib/iceberg/useRelatedIndex';
 import { useFilterPipeline } from '../../lib/iceberg/useFilterPipeline';
 import { useTooltip } from '../../lib/iceberg/useTooltip';
+import { getItemEl } from '../../lib/iceberg/itemRegistry';
+import { MOBILE_BP, resolvePresenter, toEntryView, type EntryView } from '../../lib/iceberg/entryView';
+import { decodeTrail, encodeTrail, useTrail } from '../../lib/iceberg/useTrail';
+import { TRAIL_KEY } from '../../lib/iceberg/v2/keys';
 import { navIndex, wallMatched } from '../../lib/iceberg/wallState';
 import V2Tooltip from './V2Tooltip.vue';
 // P1-10: 详情弹窗/抽屉懒加载 —— V2EntryCard / V2Sheet 静态引入会把
@@ -39,7 +43,6 @@ const itemMap = new Map(allItems.map(i => [i.id, i]));
 
 const { t } = useI18n();
 
-const fm = useStore(floatMode);
 const dm = useStore(detailMode);
 const rList = useStore(readItems);
 const query = useStore(searchQuery);
@@ -57,21 +60,21 @@ const navIdx = navIndex
 const { tip, tipRef, onMouseOver, onMouseLeave, showTooltip, hideTooltip, resetCurrentItem } = useTooltip({ t, dm, findItem })
 
 // ── 弹窗 / 抽屉状态 ──
-const sheetItem = ref<any>(null);
-// P1-10: MobileSheet 懒加载 —— 首次打开才挂载（先空挂载 → nextTick 再放数据，保留滑入动画）；此后常驻以保留关闭动画
+const sheetItem = ref<EntryView | null>(null);
+// P1-10: V2Sheet 懒加载 —— 首次打开才挂载（先空挂载 → nextTick 再放数据，保留滑入动画）；此后常驻以保留关闭动画
 const sheetMounted = ref(false);
 let sheetSeq = 0;
-function openSheet(payload: Record<string, any>) {
+function openSheet(view: EntryView) {
   const seq = ++sheetSeq;
   if (!sheetMounted.value) {
     sheetMounted.value = true;
     sheetItem.value = null;
-    nextTick(() => { if (seq === sheetSeq) sheetItem.value = payload; });
+    nextTick(() => { if (seq === sheetSeq) sheetItem.value = view; });
   } else {
-    sheetItem.value = payload;
+    sheetItem.value = view;
   }
 }
-const modalItem = ref<any>(null);
+const modalItem = ref<EntryView | null>(null);
 let hashNavTimer = 0; // F18：hash 导航延时（含内层 tooltip 延时），卸载时取消
 
 function markRead(id: string) {
@@ -81,7 +84,7 @@ function markRead(id: string) {
   // O(1) 定向标记：管线不再监听 readItems 全量重扫（O(1432) → O(1)），
   // 与 applyItemMarks 的 read 判定同语义（元素 data-id 即当前 id）
   if (!showReadMark.get()) return;
-  const el = document.querySelector<HTMLElement>(`.iceberg-item[data-id="${CSS.escape(id)}"]`);
+  const el = getItemEl(id) ?? document.querySelector<HTMLElement>(`.iceberg-item[data-id="${CSS.escape(id)}"]`);
   if (el) el.classList.add('read');
 }
 
@@ -98,50 +101,75 @@ function navIdsFor(raw: RenderItem) {
   };
 }
 
-function setModalItem(raw: RenderItem) {
-  // 标记已读
-  markRead(raw.id);
-
-  const { explicit, recommended } = pickRelated(raw);
-  // 手机端底部抽屉不再展示左右箭头，无需构建前后导航 id（也省去移动端 1432 节点扫描）
-  if (window.innerWidth < 1024) {
-    openSheet({ id: raw.id, title: raw.title, tier: raw.tier, desc: raw.desc, category: raw.category, color: raw.categoryColor, tags: raw.tags || [], link: raw.link, related: explicit, recommended });
-    return;
-  }
-  const nav = navIdsFor(raw);
-  modalItem.value = { id: raw.id, title: raw.title, tier: raw.tier, desc: raw.desc, category: raw.category, categoryColor: raw.categoryColor, tags: raw.tags || [], link: raw.link, related: explicit, recommended, ...nav };
+// A3：探索轨迹 —— 面包屑读取的栈（经 TRAIL_KEY 下发卡片），URL ?trail= 同步（replaceState，不占历史）
+const { trail, push: trailPush, reset: trailReset, surface: trailSurface } = useTrail()
+provide(TRAIL_KEY, { trail })
+function syncTrailToUrl() {
+  const url = new URL(window.location.href)
+  const code = encodeTrail(trail.value.map((n) => n.id))
+  if (code) url.searchParams.set('trail', code)
+  else url.searchParams.delete('trail')
+  window.history.replaceState(null, '', url.pathname + url.search + url.hash)
 }
 
-function onModalNav(item: { id: string }) {
+/** 单一意图：打开词条（A2 收敛原先 4 条路径；A3：fromId 决定轨迹语义——
+ * 来源在栈顶则追加（下潜），否则回到该来源再续（回跳），无来源则新起一段） */
+function openEntry(raw: RenderItem, fromId?: string | null) {
+  if (fromId) {
+    const top = trail.value[trail.value.length - 1]
+    if (top && top.id === fromId) {
+      trailPush({ id: raw.id, title: raw.title })
+    } else {
+      const i = trail.value.findIndex((n) => n.id === fromId)
+      const base = i >= 0 ? trail.value.slice(0, i + 1) : []
+      trail.value = [...base, { id: raw.id, title: raw.title }]
+    }
+  } else {
+    trailReset({ id: raw.id, title: raw.title })
+  }
+  syncTrailToUrl()
+  const depth = Math.max(0, trail.value.findIndex((n) => n.id === raw.id))
+  const presenter = resolvePresenter({ viewport: window.innerWidth, detailMode: dm.value });
+  if (presenter === 'sheet') {
+    markRead(raw.id);
+    const { explicit, recommended } = pickRelated(raw);
+    openSheet(toEntryView(raw, { related: explicit, recommended, depth }));
+  } else if (presenter === 'modal') {
+    // 标记已读
+    markRead(raw.id);
+
+    const { explicit, recommended } = pickRelated(raw);
+    // 手机端底部抽屉不再展示左右箭头，无需构建前后导航 id（也省去移动端 1432 节点扫描）
+    if (window.innerWidth < MOBILE_BP) {
+      openSheet(toEntryView(raw, { related: explicit, recommended, depth }));
+      return;
+    }
+    const nav = navIdsFor(raw);
+    modalItem.value = toEntryView(raw, { related: explicit, recommended, prevId: nav.prevId, nextId: nav.nextId, depth });
+  } else if (raw.link) {
+    window.open(raw.link, '_blank', 'noopener');
+  }
+}
+
+function onModalNav(item: { id: string; from?: string }) {
   const full = itemMap.get(item.id);
   if (!full) return;
-  if (window.innerWidth < 1024) {
-    markRead(full.id);
-    const { explicit, recommended } = pickRelated(full);
-    openSheet({ id: full.id, title: full.title, tier: full.tier, desc: full.desc, category: full.category, color: full.categoryColor, tags: full.tags || [], link: full.link, related: explicit, recommended });
-  } else {
-    setModalItem(full);
-  }
+  openEntry(full, item.from);
+}
+
+function closeModal() {
+  modalItem.value = null
+  trailSurface()
+  syncTrailToUrl()
+}
+
+function closeSheet() {
+  sheetItem.value = null
+  trailSurface()
+  syncTrailToUrl()
 }
 
 function findItem(el: HTMLElement) { return itemMap.get(el.dataset.id || ''); }
-
-// 错落排版（原 floatMode）：词条按 id 哈希得到固定随机偏移，打破整齐排列（仅视觉，无动画）
-watch(fm, (mode) => {
-  const c = document.getElementById('items-container');
-  if (!c) return;
-  c.querySelectorAll<HTMLElement>('.iceberg-item').forEach((el) => {
-    if (mode === 'static') {
-      const id = el.dataset.id || '';
-      let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffffffff;
-      const tx = (((h % 300) / 100) - 1.5).toFixed(2);
-      const ty = ((((h * 37) % 600) / 100) - 3).toFixed(2);
-      el.style.transform = `translate(${tx}px, ${ty}px)`;
-    } else {
-      el.style.transform = '';
-    }
-  });
-}, { immediate: true });
 
 // Random entry（F15：随机池 = 当前筛选下的匹配集合；无命中时不做随机，
 // 避免抽到不符合条件的词条）。2026-08-21: 走 wallState.wallMatched（管线单遍产出，
@@ -155,15 +183,30 @@ function showRandom() {
   const item = itemMap.get(id);
   if (!item) return;
   if (dm.value === 'modal') {
-    setModalItem(item);
+    openEntry(item);
     return;
   }
-  const el = document.querySelector<HTMLElement>(`.iceberg-item[data-id="${CSS.escape(id)}"]`);
-  if (!el) return;
-  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  // F18：保存 tooltip 延时 id，卸载时取消（避免访问已卸载状态）
-  window.clearTimeout(randomTooltipTimer);
-  randomTooltipTimer = window.setTimeout(() => showTooltip(el, item), 600);
+  // A4：注册表查表优先；未挂载（渐进挂载补齐窗口）逐帧重试，
+  // 覆盖 pointerdown 安全网 flush 后的挂载延迟；8 帧后仍无则放弃（F9 静默语义不变）
+  const getEl = () => getItemEl(id) ?? document.querySelector<HTMLElement>(`.iceberg-item[data-id="${CSS.escape(id)}"]`);
+  const el = getEl();
+  const showTip = (target: HTMLElement) => {
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // F18：保存 tooltip 延时 id，卸载时取消（避免访问已卸载状态）
+    window.clearTimeout(randomTooltipTimer);
+    randomTooltipTimer = window.setTimeout(() => showTooltip(target, item), 600);
+  };
+  if (el) {
+    showTip(el);
+    return;
+  }
+  let tries = 8;
+  const tick = () => {
+    const late = getEl();
+    if (late) { showTip(late); return; }
+    if (tries-- > 0) requestAnimationFrame(tick);
+  };
+  requestAnimationFrame(tick);
 }
 defineExpose({ showRandom });
 
@@ -181,20 +224,7 @@ function onClick(e: Event) {
   if (!el) return;
   const item = findItem(el);
   if (!item) return;
-  // 手机端统一用底部抽屉
-  if (window.innerWidth < 1024) {
-    markRead(item.id);
-    const { explicit, recommended } = pickRelated(item);
-    openSheet({ id: item.id, title: item.title, tier: item.tier, desc: item.desc, category: item.category, color: item.categoryColor, tags: item.tags || [], link: item.link, related: explicit, recommended });
-    return;
-  }
-  if (dm.value === 'modal') {
-    setModalItem(item);
-    return;
-  }
-  if (item.link) {
-    window.open(item.link, '_blank', 'noopener');
-  }
+  openEntry(item);
 }
 
 watchEffect(() => {
@@ -204,7 +234,7 @@ watchEffect(() => {
 const openModalHandler = (e: Event) => {
   const id = resolveId((e as CustomEvent).detail); // F30：旧 hash/深链 id → 新 id
   const item = itemMap.get(id);
-  if (item) setModalItem(item);
+  if (item) openEntry(item);
 };
 
 // P1-10: 空闲预取详情弹窗/抽屉 chunk（首次点击零等待；SDK 已移出首屏关键路径）
@@ -227,16 +257,31 @@ onMounted(() => {
     c.addEventListener('click', onClick);
     c.addEventListener('keydown', onKeyDown);
   }
+  // A3：?trail= 恢复（分享/刷新）—— 栈重建后打开末项（经 openEntry 落深度），
+  // 恢复成功则跳过 ?item=/hash 旧链（trail 已含全部信息）
+  const restoredIds = decodeTrail(new URLSearchParams(window.location.search).get('trail'))
+    .map((id) => itemMap.get(resolveId(id)))
+    .filter((it): it is RenderItem => !!it)
+  if (restoredIds.length > 0) {
+    trail.value = restoredIds.map((r) => ({ id: r.id, title: r.title }))
+    const last = restoredIds[restoredIds.length - 1]
+    const from = restoredIds.length > 1 ? restoredIds[restoredIds.length - 2].id : undefined
+    hashNavTimer = window.setTimeout(() => openEntry(last, from), 600)
+  }
   // Hash navigation — 弹窗模式直接打开 Modal，tooltip 模式滚动定位
   // F18：延时保存 id，卸载时取消
   const hash = window.location.hash.slice(1);
-  if (hash && /^[a-f0-9]{8}$/.test(hash)) {
+  if (!restoredIds.length && hash && /^[a-f0-9]{8}$/.test(hash)) {
     hashNavTimer = window.setTimeout(() => {
       const item = itemMap.get(resolveId(hash)); // F30：旧 hash 重定向
-      if (!item) return;
-      if (dm.value === 'modal' || window.innerWidth < 1024) {
+      // F9：非法深链不再静默——洗掉坏 hash，避免刷新反复撞墙
+      if (!item) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        return;
+      }
+      if (dm.value === 'modal' || window.innerWidth < MOBILE_BP) {
         // P1-4: 移动端 tooltip 模式也直接走弹窗/抽屉（合成 mouseover 被宽度判定拦截）
-        setModalItem(item);
+        openEntry(item);
       } else {
         const el = document.querySelector<HTMLElement>(`.iceberg-item[data-id="${resolveId(hash)}"]`);
         if (el) {
@@ -269,7 +314,6 @@ onUnmounted(() => {
 
 <template>
   <V2Tooltip ref="tipRef" v-bind="tip" @enter="resetCurrentItem" @leave="hideTooltip" />
-  <V2EntryCard v-if="modalItem" :item="modalItem" @close="modalItem = null" @navigate="onModalNav" />
-  <V2Sheet v-if="sheetMounted" :item="sheetItem" @close="sheetItem = null" @navigate="onModalNav" />
-  <MobileSheet v-if="sheetMounted" :item="sheetItem" @close="sheetItem = null" @navigate="onModalNav" />
+  <V2EntryCard v-if="modalItem" :item="modalItem" @close="closeModal" @navigate="onModalNav" />
+  <V2Sheet v-if="sheetMounted" :item="sheetItem" @close="closeSheet" @navigate="onModalNav" />
 </template>

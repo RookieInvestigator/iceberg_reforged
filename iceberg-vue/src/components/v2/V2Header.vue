@@ -8,6 +8,8 @@ import { useI18n } from '../../lib/useI18n';
 import { user as userAtom, isSupabaseReady } from '../../lib/userState';
 import { OPEN_ON_THIS_DAY_KEY } from '../../lib/injectionKeys';
 const UserModal = defineAsyncComponent(() => import('../modals/UserModal.vue'));
+// 版权弹窗非首屏关键内容，懒加载（与 UserModal 同策略）
+const CopyrightModal = defineAsyncComponent(() => import('../modals/CopyrightModal.vue'));
 
 defineProps({
   buildDate: { type: String, default: '' },
@@ -19,6 +21,7 @@ const { t } = useI18n();
 const openOnThisDay = inject(OPEN_ON_THIS_DAY_KEY, null);
 const u = useStore(userAtom);
 const showUser = ref(false);
+const showCopyright = ref(false);
 const supReady = isSupabaseReady();
 
 onMounted(() => {
@@ -40,11 +43,16 @@ onMounted(() => {
       <span aria-hidden="true">/</span>
       <router-link to="/home">{{ t('navHome') }}</router-link>
       <span aria-hidden="true">/</span>
+      <router-link to="/handbook">{{ t('handbookTitle') }}</router-link>
+      <span aria-hidden="true">/</span>
+      <button @click="showCopyright = true">{{ t('copyrightLink') }}</button>
+      <span aria-hidden="true">/</span>
       <button v-if="supReady" @click="showUser = true">
         {{ u ? t('user') + ': ' + u.displayName : t('login') }}
       </button>
     </nav>
     <UserModal v-if="showUser" @close="showUser = false" />
+    <CopyrightModal v-if="showCopyright" @close="showCopyright = false" />
     <p v-if="introText" class="v2mast-intro">{{ introText }}</p>
   </div>
 </template>
@@ -52,7 +60,7 @@ onMounted(() => {
 <style scoped>
 .v2mast { text-align: center; padding-top: 3.5rem; padding-bottom: 1rem; }
 .v2mast-kicker { margin: 0 0 1rem; font-size: var(--font-xs); font-weight: 400; letter-spacing: 0.5em; margin-right: -0.5em; color: var(--white-35); text-transform: uppercase; }
-.v2mast-title { margin: 0; font-size: 2.4rem; font-weight: 900; letter-spacing: 0.18em; margin-right: -0.18em; color: var(--white-90); line-height: 1.2; }
+.v2mast-title { margin: 0; font-size: var(--v2-title-size); font-weight: 900; letter-spacing: 0.18em; margin-right: -0.18em; color: var(--white-90); line-height: 1.2; }
 .v2mast-meta { margin: 1rem 0 0; font-size: var(--font-xs); font-weight: 400; letter-spacing: 0.2em; color: var(--white-40); }
 .v2mast-nav { margin-top: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 0.9rem; font-size: var(--font-xs); letter-spacing: 0.1em; }
 .v2mast-nav a, .v2mast-nav button { background: none; border: none; cursor: pointer; padding: 0.2rem 0; color: var(--white-45); text-decoration: none; transition: color 0.15s; }
@@ -61,6 +69,6 @@ onMounted(() => {
 .v2mast-intro { margin: 1.4rem auto 0; max-width: 620px; font-size: var(--font-sm); line-height: 1.9; color: var(--white-40); white-space: pre-wrap; }
 @media (max-width: 640px) {
   .v2mast { padding-top: 2.5rem; }
-  .v2mast-title { font-size: 1.7rem; }
+  .v2mast-title { font-size: var(--v2-title-size-sm); }
 }
 </style>

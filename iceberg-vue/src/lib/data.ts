@@ -39,6 +39,8 @@ export interface IcebergMeta {
   /** 层级名 → 该层词条数（与 tierOrder 同序） */
   tierCounts: Record<string, number>;
   total: number;
+  /** 参与创作者名单（与 introText 同源，转载模板完整展示用） */
+  contributors?: string[];
 }
 
 // 中文排版规范化（合并正则减少扫描遍数）

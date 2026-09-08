@@ -4,12 +4,14 @@ import { redirectGuard } from '../lib/redirectGuard'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/',             component: () => import('../views/IndexView.vue') },
+    { path: '/',             component: () => import('../views/v2/IndexNextView.vue') },
+    { path: '/legacy',       component: () => import('../views/IndexView.vue') },
     { path: '/home',         component: () => import('../views/HomeView.vue') },
     { path: '/handbook',     component: () => import('../views/HandbookView.vue') },
     { path: '/features',     component: () => import('../views/FeaturesView.vue') },
     { path: '/features/:slug', component: () => import('../views/FeatureDetailView.vue') },
     { path: '/minimal',      redirect: '/' },
+    { path: '/v2',           redirect: '/' },
     { path: '/on-this-day',  component: () => import('../views/OnThisDayView.vue') },
     { path: '/ancient-book', component: () => import('../views/AncientBookView.vue') },
     { path: '/3d',           component: () => import('../views/Iceberg3DView.vue') },
@@ -20,10 +22,6 @@ const router = createRouter({
 // 开发专用路由：构建时 tree-shake 掉
 if (import.meta.env.DEV) {
   router.addRoute({ path: '/appendix-edit', component: () => import('../views/AppendixEditView.vue') })
-  // IndexNext（/v2）：主冰山图换代实验（墙体新版式，逻辑与 IndexView 同构）。
-  // keep-alive 排除（见 App.vue）：与 IndexView 双实例的 #items-container / ItemInteractivity 互斥。
-  // 通过验收后：路由改回 / 并替换 IndexView，删除 IndexNextView.vue + index-next.css。
-  router.addRoute({ path: '/v2', component: () => import('../views/IndexNextView.vue') })
 }
 
 // P1-13：消费 404.html 重定向携带的 ?r=（原始 path + search + hash 的一次 encodeURIComponent），
@@ -37,7 +35,9 @@ router.beforeEach(redirectGuard)
 // 模板不写死这两个标签：构建期预渲染按路由注入，浏览器端不存在时由这里创建。
 const MASTER_ORIGIN = 'https://iceberg.hezihezi.com'
 router.afterEach((to) => {
-  const url = new URL(to.fullPath, MASTER_ORIGIN).href
+  // A3：?trail= 是会话态（探索轨迹分享），不进 canonical/og:url，避免同一内容多 URL 分权
+  const cleanFullPath = to.fullPath.replace(/([?&])trail=[^&]*&?/, '$1').replace(/[?&]$/, '')
+  const url = new URL(cleanFullPath, MASTER_ORIGIN).href
   let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')
   if (!canonical) {
     canonical = document.createElement('link')

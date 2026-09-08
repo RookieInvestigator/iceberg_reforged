@@ -1,8 +1,12 @@
 <script setup lang="ts">
 // 术语表 — 页首标签切换 + A-Z 快速跳转，词条采用百科式排版（不装卡片）
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Eye } from '@lucide/vue'
 import type { IcebergMeta } from '../lib/data'
 import { formatUnixDate } from '../lib/data'
+import { activeCategories, activeTags, searchQuery } from '../lib/filterStore'
+import { HANDBOOK_TABS, parseSections } from '../lib/handbook'
 // 术语表只用到分类色 / 标签表 / 生成时间 / 词条总数 —— 走轻量 meta.json（~3.5KB），
 // 不导入 iceberg.json（否则会拉下 ~800KB 的词条数据 chunk，而这些内容本页面一条都不显示）
 import meta from '../data/meta.json'
@@ -21,34 +25,10 @@ interface GlossaryEntry { name: string; desc: string; initial: string; color?: s
 interface TabDef { key: string; heading: string; labelKey: string; source?: 'criteria' }
 
 // handbook.md 的二级标题即标签页；后续新增板块（组织、事件等）时在 md 加一节并在此注册
-const TABS: TabDef[] = [
-  { key: 'criteria', heading: '划定标准', labelKey: 'handbookTabCriteria', source: 'criteria' },
-  { key: 'concepts', heading: '各类概念', labelKey: 'handbookTabConcepts' },
-  { key: 'people', heading: '人物作品', labelKey: 'handbookTabPeople' },
-]
-
-function parseSections(md: string): Map<string, Record<string, string>> {
-  const sections = new Map<string, Record<string, string>>()
-  const parts = md.split(/\r?\n## /)
-  for (const part of parts.slice(1)) {
-    const nl = part.indexOf('\n')
-    const title = (nl === -1 ? part : part.slice(0, nl)).trim()
-    const body = nl === -1 ? '' : part.slice(nl + 1)
-    const entries: Record<string, string> = {}
-    const blocks = body.split(/\r?\n### /)
-    for (const block of blocks) {
-      const sn = block.indexOf('\n')
-      if (sn === -1) continue
-      const name = block.slice(0, sn).trim()
-      const rest = block.slice(sn + 1)
-      const end = rest.search(/\n(?:### |## )/)
-      const desc = end === -1 ? rest.trim() : rest.slice(0, end).trim()
-      if (name && desc) entries[name] = desc
-    }
-    sections.set(title, entries)
-  }
-  return sections
-}
+// tab 主键以 lib/handbook.ts 为单一事实源（徽章深链共用），source 标记分类/标签所在页
+const TABS: TabDef[] = HANDBOOK_TABS.map((t) =>
+  t.key === 'criteria' ? { ...t, source: 'criteria' as const } : { ...t },
+)
 
 // 描述里用 ==...== 标记强调：双等号包裹的内容会被高亮，标记本身不显示（可嵌套）。
 // 另外「」『』“”‘’《》引号包裹的内容也会自动微微高亮，作为便捷写法。
@@ -157,6 +137,7 @@ const statsText = computed(() =>
 function selectTab(key: string) {
   activeKey.value = key
   activeLetter.value = ''
+  termEls.clear()
   nextTick(() => window.scrollTo({ top: 0, behavior: 'auto' }))
 }
 
@@ -185,6 +166,51 @@ function onTabKeydown(e: KeyboardEvent, index: number) {
   const next = tabs.value[(index + delta + tabs.value.length) % tabs.value.length]
   selectTab(next.key)
   nextTick(() => document.getElementById(`hb-tab-${next.key}`)?.focus())
+}
+
+// L1：徽章深链（?tab=&term=）定位高亮。元素引用走 ref map，不污染 DOM id。
+const route = useRoute()
+const router = useRouter()
+const termEls = new Map<string, HTMLElement>()
+const bindTermEl = (name: string) => (el: unknown) => {
+  if (el instanceof HTMLElement) termEls.set(name, el)
+  else termEls.delete(name)
+}
+const flash = ref('')
+let flashTimer = 0
+async function applyDeepLink() {
+  const q = route.query
+  const tab = typeof q.tab === 'string' ? q.tab : ''
+  if (tab && HANDBOOK_TABS.some((t) => t.key === tab) && tab !== activeKey.value) {
+    activeKey.value = tab
+    activeLetter.value = ''
+    await nextTick()
+  }
+  const term = typeof q.term === 'string' ? q.term : ''
+  if (!term) return
+  await nextTick()
+  const el = termEls.get(term)
+  if (!el) return
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  flash.value = term
+  window.clearTimeout(flashTimer)
+  flashTimer = window.setTimeout(() => {
+    if (flash.value === term) flash.value = ''
+  }, 1600)
+}
+onMounted(applyDeepLink)
+watch(() => route.query, applyDeepLink)
+
+// L2：反向联动 —— 术语表（仅分类/标签页）设筛选后跳回冰山图。
+// 有色点的是分类（名即筛选值）；无色点有 emoji 的是标签，筛选值必须是 emoji
+// 本身（墙上 item.emojis 存的是 emoji，tagMap 的显示名匹配不上），缺失时回退显示名。
+// from 缺失时回主站。
+function viewInIceberg(e: GlossaryEntry) {
+  const from = typeof route.query.from === 'string' && route.query.from.startsWith('/') ? route.query.from : '/'
+  if (e.color) activeCategories.set([e.name])
+  else activeTags.set([e.emoji || e.name])
+  searchQuery.set('')
+  router.push(from)
 }
 </script>
 
@@ -250,7 +276,7 @@ function onTabKeydown(e: KeyboardEvent, index: number) {
               class="mb-4 scroll-mt-36 border-b border-white-05 pb-2 text-xl font-black tracking-[0.1em] text-white-55">{{ letter }}</h2>
 
             <!-- 词条百科式排版：只留标题与解释，不用卡片框住每个词条 -->
-            <article v-for="e in entries" :key="e.name" class="mb-5 last:mb-0">
+            <article v-for="e in entries" :key="e.name" :ref="bindTermEl(e.name)" class="hb-term mb-5 last:mb-0" :class="{ 'hb-flash': flash === e.name }">
               <h3 class="mb-1.5 flex items-baseline gap-2 text-base font-bold leading-[1.4] text-white-85">
                 <!-- 引导槽：emoji 与色点共用同一固定宽度（w-6），保证名字列在整张列表里对齐 -->
                 <span v-if="e.emoji" class="inline-flex w-6 shrink-0 items-center justify-center self-center text-base leading-none" aria-hidden="true">{{ e.emoji }}</span>
@@ -258,6 +284,9 @@ function onTabKeydown(e: KeyboardEvent, index: number) {
                   <span class="h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: e.color }"></span>
                 </span>
                 <span>{{ e.name }}</span>
+                <button v-if="activeKey === 'criteria'" type="button" class="hb-viewin" :title="t('viewInIceberg')" :aria-label="`${t('viewInIceberg')}：${e.name}`" @click="viewInIceberg(e)">
+                  <Eye :size="14" :stroke-width="1.8" aria-hidden="true" />
+                </button>
               </h3>
               <p class="hb-desc max-w-[640px] text-sm leading-[1.85] text-white-40">
                 <span v-for="(seg, si) in segmentDesc(e.desc)" :key="si" :class="seg.em ? 'hb-em' : ''">{{ seg.text }}</span>
@@ -280,6 +309,16 @@ function onTabKeydown(e: KeyboardEvent, index: number) {
   </template>
 
 <style scoped>
+/* 深链定位目标：吸顶导航补偿 + 高亮描边 */
+.hb-term { scroll-margin-top: 12rem; }
+.hb-flash { outline: 1px solid var(--white-40); outline-offset: 6px; border-radius: 6px; }
+/* 反向回跳（仅分类/标签页）：半透明眼睛，不抢目录阅读节奏 */
+.hb-viewin {
+  display: inline-flex; align-items: center;
+  background: none; border: none; cursor: pointer; padding: 2px;
+  color: var(--white-35); opacity: 0.45; transition: opacity 0.15s, color 0.15s;
+}
+.hb-viewin:hover { opacity: 1; color: var(--white-85); }
 /* 词条描述：保留 md 里的换行（pre-line 折叠多余空格但保留 \n）；==...== 或引号包裹的内容微微高亮 */
 .hb-desc {
   white-space: pre-line;

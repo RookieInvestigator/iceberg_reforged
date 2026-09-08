@@ -1,11 +1,18 @@
 # 更新日志
 
 
+## v5.0.0 — 2026-09-09 — v2 转正：换代冰山图成为主界面
+
+### 新增
+
+- **v2 转正**：`/` 改挂 v2 视图（去 DEV 限定，生产可用）；v1 旧版保留在 `/legacy`；`/v2` 跳转回 `/`；keep-alive 改缓存主视图；`?item=` 守卫与设置 v2 分组跟随新路由；预渲染 `/` 壳为纯数据驱动，无需改动；URL 不变，SEO 无重定向成本
+
 ## v4.6.0 — 2026-09-06 — 许可证落地：代码 AGPLv3 + 内容 CC BY-NC-SA 4.0
 
 ### 新增
 
 - **主站切到自定义域名 `iceberg.hezihezi.com`**：`MASTER_ORIGIN`（router.afterEach）/ 预渲染 `ORIGIN` / sitemap 全 7 条 / robots Sitemap / JSON-LD url / og:image 与 twitter:image 全指向新域名；pages.dev 默认域名与 github.io 镜像的权重经 canonical + noindex 双保险归并到新域名；README 访问地址同步（主站 + 默认域名 + 镜像三入口）
+- **版权独立弹窗 `CopyrightModal`**：许可段（AGPL/CC 双链 + 下架承诺）与转载模板从关于弹窗搬出独立；模板四行（站名/原文/链接/授权，一键复制，滚动条 `no-scrollbar` 隐藏）+ 名单独段纯文字整块展示（`reprintRosterMust` 声明必须以文字或截图完整展示）；页首 / 页脚（v1 五键 + v2 跋）与关于弹窗均设入口（页首懒加载）；`copyrightLink/Title` + `reprintNote/Copy/Copied/Roster/RosterMust` 三语 key，220 → 225；名单取自 `meta.json` 新增 `contributors`（管线与 `introText` 同源解析，67 位，meta 3.5KB → 4.6KB，只吃轻量层不碰 `iceberg.json`）；条款三、README 授权节同步转载要求；`reprint.test.ts` 锁解析/模板/名单一致性
 - **根 `LICENSE`**：AGPLv3 全文（SPDX 官方文本），头部声明权利人"中文兔子洞冰山图贡献者"与范围（仅程序代码；内容另行 CC）；`package.json` 加 `license: AGPL-3.0-or-later`
 - **内容许可直接声明**（务实版）：词条与整理成果 CC BY-NC-SA 4.0，著作权归贡献者及各自原作者；上游 ToS 已核查（贡献者保留所有权、平台获展示权、无开放许可、无系统性抓取），本表由本社区创建故汇编权自有，署名链完整（创作者名单 + 每条出处 + 数据来源）
 - **站内授权入口**：关于弹窗新增许可段（`licenseNote` + AGPL/CC 双链接 + `takedownNote` 尽快处理承诺，不设硬性时限，三语）；页脚新增 `© 2026 中文兔子洞冰山图贡献者 · AGPLv3 · CC BY-NC-SA 4.0` 行
@@ -17,9 +24,23 @@
 - **v2 挂载策略定稿**：IO 真卸载曾致滚动不连贯，已删除；回归 wallMount 渐进挂载 + content-visibility，逻辑收进 `V2Wall`
 - **v2 二级界面**：`V2EntryCard`（大标题 + 收敛斜杠 + 宽松正文）、`V2Sheet`（眉题 + 大标题）、`V2Tooltip`（眉题 + 发丝线 + 对比色修复）
 - **v2 新能力**：输入框速查下拉（Fuse 标题索引，`/`/Ctrl+K 召唤，↑↓/回车/Esc，零新 key；独立 Spotlight 方案因入口重复已删）；`V2Colophon` 跋页脚（统计 + 许可 + 来源 + 导航 + 公告/关于/联系/条款入口，零新 key）
+- **v2 细节对齐原版**：`V2EntryCard` 标题 1.65rem/black → 1.25rem/semibold（与 EntryDetailCardNext 逐字一致）+ 描述 16px/1.9 → 15px/1.8；`V2Sheet` 与 MobileSheet 逐字对齐（标题 2xl → xl，眉题整块删除，头部间距同步）；v2 章节词条行距 1.5 → 1.4（scoped 覆盖，全局不动）；`V2Tooltip` 仅纯白色点（都市传说 #FFFFFF）加黑边，其余纯色圆不动
+- **v2 审计小批（C1/A10/C6/F8/F2/P6/C7）**：删 `V2Interactivity` 未注册 `<MobileSheet>` 死代码；`V2EntryCard` 评论区补 `supabaseReady` 守卫（与 Sheet 对齐）；删 `IndexNextView` 未使用 `dimSet`/`hasNoResults`；底部层级指示回退末层；层级跳转逐帧重试（覆盖渐进挂载窗口）；`V2Sheet` ResizeObserver 先 disconnect；`V2Tooltip` anchor 补类型
+- **v2 审计第零批（A5/A7/A9/S8/双实验开关）**：11 文件 `git mv` 归类（`components/v2/` + `views/v2/` + `lib/iceberg/v2/`，保留 V2 前缀，纯移动未改逻辑）；新建 `V2EntryMetaBadges`（徽章变术语表深链 + 反向回跳，`lib/handbook.ts` 单一事实源 + `lib/tags.ts` 归一化 + 单测）与 `V2RelatedLinks`（删 variant 双分支，形态交容器 CSS，navigate 带 from 供 Trail；末组下加空隙）；术语表接深链定位高亮 + 反向回跳（标签筛选值取 emoji 本身；回跳按钮改半透明眼睛 icon）；标题两端统一 1.25rem/700（`styles/v2.css` 种子）；`BaseModal` 加 `surface` prop（默认 dark 零回归）+ 浅色阅读表面接线（48 阶梯全重映射 + 分类色压暗）+ S2 三档墙样式（原版/柔和/扁平，计算样式断言）；徽章 hover 释义预览（短版优先，无短版回退全文截断；`> ` 短版行约定 + 解析剥离；宽度自适应归位 `lib/fitTip.ts`，超界平移收回弹窗内）；设置新增 `v2WallStyle` 与 `v2DetailSurface` 双开关 + 面板 UI；i18n 225 → 233 key
+- **错落排版根治（F1 仅 v2）**：偏移计算从 `V2Interactivity` 的 setup 时全量 DOM 后写，前移到 `V2TierChapter` 渲染层（`lib/iceberg/floatOffset.ts` 纯函数 + 单测，数值与旧逻辑逐字一致），随渐进挂载自然生效；新鲜进 V2 全部 8 层 1432 条带偏移（探针实证），开关切换经 `v-memo` 重渲染；v1 原逻辑冻结不动
+- **A2 收敛（`V2Interactivity`）**：4 份 payload 字面量收成 `lib/iceberg/entryView.ts` 工厂（`toEntryView` + `resolvePresenter` 纯函数 + 单测，`color`/`categoryColor` 统一后者）；`openEntry` 单意图（tooltip 无链接 no-op 语义不变）；4 处 `1024` 收成 `MOBILE_BP`（`useTooltip` 内 2 处属 v1 共享不动）；modal/sheet 双端冒烟通过；`V2Sheet` prop 顺手类型化
+- **A1 内容区抽取（`V2EntryBody`）**：卡与抽屉从徽章起共用同一内容区（徽章/描述/外链/关联/评论/sticky 动作条），标题 chrome 留各自外壳；交互单实例由外壳持有经 `comment-el` 事件回传（模板传 ref 会被解包）；动作条两套规格并存一切换（卡 36px / 抽屉 44px，态色逐字等价）；抽屉描述收敛自适应间距 + 外链图标；双端冒烟（打开/评论开关/动作条 sticky）通过
+- **A3 探索轨迹**：`lib/iceberg/useTrail.ts`（入栈截断/新起/上浮/清空 + `?trail=` 编解码 + 单测）；关联下潜追加、无来源新起、环点击回跳；卡片顶部面包屑（深度 + 可点环，超 4 环折叠为首 + … + 末，`trailExpand` 三语）；URL `replaceState` 同步（不占历史）、刷新/分享恢复、关闭清理；探针全流程通过
+- **v2 第二批（F3/F4/F5/F6/F7/F9/F10/F11）**：速查 combobox ARIA 补完（动态 expanded + controls + activedescendant）；筛选面板 role=group；跳过词条墙链接（`skipWall` 三语，v1 同状记为已知限制）；抽屉标题行加 44px 关闭钮；小屏次级工具收进面板；平板丸宽流式 + 无 hover 触控内边距；非法深链 hash 洗掉（随机空池由空态提示覆盖，不另加）；FAB 漏斗 v2 隐藏（`hideFilter` additive prop，v1 原样）；设置 v2 组仅 /v2 显示；canonical 洗 `?trail=`；面包屑下沉 body（移动端也有）；页首/跋加术语表入口；i18n 235 → 236 key
+- **v2 第三批 token 收拢（S1/S3/S4/S5/S6/S7/S9/S10/S11/S12）**：`styles/v2.css` 建 v2 token（圆角 sm/md/lg/full + 阴影两档 + 毛玻璃 + 反白 + 标题字号；md=12px 保下拉/tooltip 同档，与 S3 原 16px 方案有偏离）；FilterBar 硬编码全替换（圆角/阴影/底色/模糊/反白/pill 内边距 rem 化/11px→tiny/搜索框 15→16px）；tooltip 形状收拢（圆角 12/字号阶梯/深色边框/lg 阴影/过渡 .18s，白底保留 + 白点特判补浅底注释 + 阅读表面 token 注释）；空态统一 sm/white-25；跋版权行 i18n + 动态年份；S11 维持拼接（与 homeStats 同约定，不动）；描述 15px 记 v1 对齐例外；i18n 236 → 237 key
+- **修标题恒显“已复制”**：卡与抽屉模板直读 `ia.titleCopied`（嵌套 ref 不解包恒为真），改为顶层解构；探针复现并验证修复
+- **v2 第四批（P1/P2/P4/P5/C2/C3/C4/C8）**：P1 层级节点缓存（长度变化失效，rect 保留逐帧保 spy 语义）；P2 进度条 rAF 直写 DOM；P4 字号移出 1432 条内联；P5 hotY 去 ref；C2 抽屉 emits 类型化 + C8 复用 EntryView（C9 转正时处理）；C3 FilterBar 拆 `useV2NavVisibility` + `useV2SearchSuggest`（单 rAF 不拆，行为探针 FAB/速查/spy/召唤全过 + 双单测）；C4 时间戳改来源 flag（FAB 冲突矩阵探针通过）；双环境构建通过
+- **墙风格实验下线**：`v2WallStyle` 整组删除（atom/UI/三语key/三档CSS），词条墙锁回原版色彩；i18n 237 → 233 key
+- **浅色徽章 hover 加深（改 color-mix 方案）**：`filter: brightness()` 会作用整棵子树、把徽章里的白底 tip 一起压灰，改用 `color-mix` 只染字与描边（`--cat` 变量透传，`55%→hover 40%`，并关掉深色 hover 增亮）；tip 背景保持白色；探针四项断言通过
+- **徽章 tip 纯文本**：剥 `==` 标记留文字（`stripMdEm` + 单测；术语表高亮渲染不动）；字号 tiny → xs
+- **液态背景帧率翻档**：`LiquidBg` 三档 30/12/24 → 60/30/60（滚动/词条墙悬停/静止，悬停档仍最低以保护 tooltip 合成；URL 旋钮上限 120 不变）
 - **简易使用条款 `TermsModal`**：合一页七节（服务/账户14+/知识产权/使用规范/数据与隐私/责任限制与终止/变更与联系，zh 全文 + en/ja 简版并注明以中文版为准，`termsEffective` 标注 2026-09-06 生效）；页脚第四按钮 + 注册页提示链接挂钩（嵌套弹窗走 body teleport + token 滚动锁）；i18n 210 → 220 key（含关于改版净 -2）
 - **ToS 对标上游扩为七节**：参照 IcebergThreads 条款结构（服务/账户/知识产权/使用规范/第三方与无广告/责任限制与终止/变更与联系），评论昵称授权与下架通道写入知识产权节（key 计数见上一条）
-- **下架承诺去时限**：维护者看不过来，所有"7 天内处理"改为"尽快处理"（About/条款/README/CHANGELOG 同步）
 - **`subset_fonts.py --check` 接 CI**：语料指纹机制（`public/fonts/corpus.sha256`），新词条/文案带新字而未重跑脚本时 CI 失败；正反分支均已验证；`deploy.yml` 新增 Font subset freshness 步骤（纯标准库，runner 自带 python3）
 - **README**：新增「访问地址」（主站 + 镜像站）与「授权许可」章节；i18n 208 → 210 key
 - **字体自托管（Google Fonts 下线）**：11 个 CDN 字重 → 7 个语料子集（Sans SC 400/500/700/900 + Serif TC 400/700/900，约 4.3MB woff2 + OFL.txt 随包分发）；200/300（零引用）与 Serif SC（仅下线 Hero 用）删除；600/800 归一为 700/900（与 CDN 时代合成渲染像素一致，10 处）；转换脚本 `scripts/subset_fonts.py --src <OTF目录>`（幂等，需 fonttools + brotli，源 OTF 不入库）；`index.html` 删 preconnect/css2，CSP 双源收紧（去 google 两域），ToS 第三方名单删 Google Fonts，古籍竖排 vrt2/vert 由 pyftsubset 默认保留

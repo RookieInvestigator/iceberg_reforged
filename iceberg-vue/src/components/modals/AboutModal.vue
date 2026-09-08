@@ -6,7 +6,7 @@ const props = defineProps({
   buildDate: { type: String, default: '' },
   entryCount: { type: Number, default: 0 },
 });
-defineEmits(['close']);
+defineEmits(['close', 'open-copyright']);
 
 const { t } = useI18n();
 
@@ -29,17 +29,11 @@ const GITHUB_URL = 'https://github.com/RookieInvestigator/iceberg_reforged';
         </div>
       </div>
 
-      <div class="border-t border-white-05 pt-4 text-xs text-white-55 leading-relaxed space-y-2">
-        <p>{{ t('licenseNote') }}</p>
-        <p class="text-center">
-          <a href="https://github.com/RookieInvestigator/iceberg_reforged/blob/master/LICENSE" target="_blank" rel="noopener noreferrer" class="text-white-50 hover:text-white-80 transition-colors">AGPLv3</a>
-          <span class="text-white-15"> · </span>
-          <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans" target="_blank" rel="noopener noreferrer" class="text-white-50 hover:text-white-80 transition-colors">CC BY-NC-SA 4.0</a>
-        </p>
-        <p>{{ t('takedownNote') }}</p>
-      </div>
-
-      <div class="border-t border-white-05 pt-4">
+      <div class="border-t border-white-05 pt-4 space-y-3">
+        <button type="button" class="inline-flex items-center gap-2 text-xs text-white-50 no-underline bg-transparent border-none p-0 cursor-pointer transition-colors duration-200 hover:text-white-80" @click="$emit('open-copyright')">
+          <span>{{ t('copyrightLink') }}</span>
+          <span aria-hidden="true">→</span>
+        </button>
         <a :href="GITHUB_URL" target="_blank" rel="noopener noreferrer"
           class="inline-flex items-center gap-2 text-xs text-white-50 no-underline transition-colors duration-200 hover:text-white-80">
           <span>{{ t('aboutRepo') }}</span>

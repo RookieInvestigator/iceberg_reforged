@@ -130,3 +130,6 @@ export function useEntryInteractions(
     toggleItemLike, toggleFav, copyShareLink, copyTitle, openComments,
   }
 }
+
+/** V2EntryBody 接收的交互实例类型（外壳单实例持有，body 只消费） */
+export type EntryIA = ReturnType<typeof useEntryInteractions>

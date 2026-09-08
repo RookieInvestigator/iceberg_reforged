@@ -15,7 +15,7 @@ function onPageAfterEnter() {
         <transition name="page-fade" mode="out-in" @after-enter="onPageAfterEnter">
           <!-- 有界缓存：限制常驻页面数；古籍/3D/Home 每次进入重建（资源清理依赖卸载触发 / 避免 GPU 资源常驻）；
                IndexNext（/v2）同样排除：与 IndexView 共用 #items-container 等 DOM 约定，双实例互斥 -->
-          <keep-alive :max="3" :exclude="['AncientBookView', 'Iceberg3DView', 'HomeView', 'IndexNextView']">
+          <keep-alive :max="3" :exclude="['AncientBookView', 'Iceberg3DView', 'HomeView', 'IndexView']">
             <component :is="Component" :key="route.path" />
           </keep-alive>
         </transition>

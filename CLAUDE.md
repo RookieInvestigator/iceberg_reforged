@@ -116,7 +116,7 @@ iceberg-vue/
     ├── lib/ancient-book/           # 古籍模式（types / engine / layout / render + SpreadView/SpreadPage）
     ├── lib/iceberg/                # 冰山图 composables（搜索 Worker / 相关索引 / 筛选管线 / tooltip）
     ├── lib/iceberg3d/              # 3D 引擎（engine / picking / materials / cameraFlight / prng）
-    ├── lib/i18n/                   # 翻译字典（zh / en / ja，220×3 key；`i18n.test.ts` 锁三语对齐 + 死 key）
+    ├── lib/i18n/                   # 翻译字典（zh / en / ja，233×3 key；`i18n.test.ts` 锁三语对齐 + 死 key）
     ├── styles/                     # global.css, index.css, bg.css, modal.css, ancient-book.css, themes/
     ├── views/                      # IndexView, HomeView, HandbookView, FeaturesView, FeatureDetailView,
     │                               # OnThisDayView, AncientBookView, Iceberg3DView,
@@ -166,7 +166,7 @@ iceberg-vue/
 ## 状态管理（Nano Stores）
 
 - **filterStore**：9 个 atoms（分类/标签/搜索/筛选），`toggleCategory()` / `toggleTag()` 辅助函数
-- **settingsStore**：13 个 `storedAtom`（字号/浮动/详情/筛选/沉浸/随机按钮/排序/背景/收藏/已读/已读标记/NEW 标记/无层级），`applySimpleMode()` / `applyStandardMode()` 预设
+- **settingsStore**：14 个 `storedAtom`（字号/浮动/详情/筛选/沉浸/随机按钮/排序/背景/收藏/已读/已读标记/NEW 标记/无层级 + v2 实验：详情表面），`applySimpleMode()` / `applyStandardMode()` 预设
 - **i18nStore**：`lang` atom（默认 `zh`，持久化，切换时同步 `document.documentElement.lang`），`t(key)` 翻译回退 `zh → key`，`useI18n()` composable 响应式绑定
 
 ### storedAtom 工厂
@@ -208,7 +208,7 @@ function storedAtom<T>(key: string, fallback: T) {
 | 词条总数 | 1432（API 实时同步，见 `meta.json` / `CHANGELOG` 数据条目） |
 | 层级 / 分类 / tagMap | 8 / 15 / 68 |
 | iceberg.json 体积 | ~969KB |
-| i18n 字典 | 220 key × 3 语言 |
+| i18n 字典 | 233 key × 3 语言 |
 | 搜索防抖 / 阈值 | 150ms / 0.3 |
 | Tooltip 延迟 | 200ms |
 

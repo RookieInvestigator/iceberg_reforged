@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { useStore } from '@nanostores/vue';
 import BaseModal from './BaseModal.vue';
-import { fontSize, floatMode, filterMode, showRandomBtn, bgMode, sortMode, detailMode, showReadMark, showNewMark, immersiveMode, scatterMode, applySimpleMode, applyStandardMode, flushPersistedWrites, cancelPersistedWrites } from '../../lib/settingsStore';
+import { fontSize, floatMode, filterMode, showRandomBtn, bgMode, sortMode, detailMode, showReadMark, showNewMark, immersiveMode, scatterMode, v2DetailSurface, applySimpleMode, applyStandardMode, flushPersistedWrites, cancelPersistedWrites } from '../../lib/settingsStore';
 import { lang as langAtom } from '../../lib/i18nStore';
 import { useI18n } from '../../lib/useI18n';
 
 defineEmits(['close']);
 const { t } = useI18n();
+// v2 实验开关只在主站（/，即 v2 视图）显示，/legacy（v1）下隐藏（v1 行为零影响）
+const route = useRoute();
+const isV2 = computed(() => route.path === '/');
 
 const fs = useStore(fontSize);
 const fm = useStore(floatMode);
@@ -21,6 +25,7 @@ const lang = useStore(langAtom);
 const srt = useStore(sortMode);
 const sct = useStore(scatterMode);
 const imv = useStore(immersiveMode);
+const v2ds = useStore(v2DetailSurface);
 
 const fsOpts = ['xs', 'sm', 'md', 'lg', 'xl'];
 const floatOpts = ['none', 'static'];
@@ -155,6 +160,14 @@ function clearData() {
             {{ t('scatterMode') }}
             <span :class="sct ? 'text-white' : 'text-white/55'">{{ sct ? '●' : '○' }}</span>
           </button>
+        </div>
+      </div>
+
+      <div v-if="isV2">
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('v2DetailSurface') }}</div>
+        <div class="flex gap-1">
+          <button @click="v2DetailSurface.set('dark')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', v2ds === 'dark' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">{{ t('v2SurfaceDark') }}</button>
+          <button @click="v2DetailSurface.set('light')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', v2ds === 'light' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">{{ t('v2SurfaceLight') }}</button>
         </div>
       </div>
 

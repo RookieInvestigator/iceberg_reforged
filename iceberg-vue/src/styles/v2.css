@@ -1,0 +1,158 @@
+/* v2 换代实验共享样式（/v2 专用，不进 v1 回归面）。
+ * 第三批 token 收拢的目标文件，先播 S8 与 S13 的种子，后续 S3/S4/S5 逐项迁入。 */
+
+/* ===== 第三批 token（S3/S4/S5/S6）=====
+ * S3 圆角三档 + 一档下拉专用：sm 8px（pill/chip/kbd/工具/下拉项）、
+ * md 12px（下拉框/tooltip 同档，S1 同档要求优先于 S3 原 16px 方案）、
+ * lg 16px（nav/panel/sheet）、full 999px（胶囊）。
+ * 注意 .sheet-panel 的 16px 是全局共用（v1），不动，全局替换只动 v2 scoped。 */
+:root {
+  --v2-r-sm: 8px;
+  --v2-r-md: 12px;
+  --v2-r-lg: 16px;
+  --v2-r-full: 999px;
+  /* S4 阴影两档：sm 吸顶小丸，lg 全部浮层（.6/.5/.6 统一 .55） */
+  --v2-shadow-sm: 0 2px 16px -6px rgba(0, 0, 0, 0.4);
+  --v2-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55);
+  /* S5 毛玻璃一档：底色 + 模糊（.96 那档经确认无保留必要，统一 .92/24px） */
+  --v2-surface: rgba(8, 10, 14, 0.92);
+  --v2-blur: 24px;
+  /* S6 反白（筛选 pill 选中态；S13 浅色令牌可复用这组做来源） */
+  --v2-on-bg: #f2f4f8;
+  --v2-on-fg: #0a0c10;
+  /* S7 展示级标题字号（masthead；小字仍走 5 阶梯） */
+  --v2-title-size: 2.4rem;
+  --v2-title-size-sm: 1.7rem;
+}
+
+/* S8：详情标题两端统一 1.25rem / 700 / .01em。
+ * .modal-header h2 为 (0,1,1)，双类提权替代原来的 !text- 前缀；
+ * 抽屉内无竞争者，同类直接生效。 */
+.modal-header .v2-entry-title,
+.v2-entry-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+/* F5：跳过词条墙（平时视口外，键盘聚焦时现身） */
+.v2-skip {
+  position: fixed;
+  left: 12px;
+  top: -999px;
+  z-index: 200;
+  padding: 0.5rem 0.875rem;
+  border-radius: var(--v2-r-sm);
+  background: var(--white-90);
+  color: #000;
+  font-size: var(--font-xs);
+  font-weight: 700;
+  text-decoration: none;
+}
+.v2-skip:focus-visible {
+  top: 12px;
+}
+
+/* S13：阅读浅色表面（实验开关 v2DetailSurface，默认 dark 零回归）。
+ * 只在面板作用域内重定义变量，不动 modal.css、不动全局 --color-modal-bg。
+ * 白 alpha 工具类（text-white-XX / bg-white-XX 系）本就是 var() 引用，随重映射
+ * 自动翻面——因此必须把 base.css 里全部阶梯逐一重映射，漏一个就是白上白隐形。
+ * 分类色是裸值（非 ramp），在浅底下另用 brightness 压暗（见下方）。
+ * V2Tooltip 的白点黑边特判在浅底上依然正确，无需反转。 */
+.surface-light {
+  --color-modal-bg: #fff;
+  --color-text-primary: #0a0c10;
+  --white-02: rgba(10, 12, 16, 0.02);
+  --white-03: rgba(10, 12, 16, 0.03);
+  --white-04: rgba(10, 12, 16, 0.04);
+  --white-05: rgba(10, 12, 16, 0.05);
+  --white-06: rgba(10, 12, 16, 0.06);
+  --white-07: rgba(10, 12, 16, 0.07);
+  --white-08: rgba(10, 12, 16, 0.08);
+  --white-09: rgba(10, 12, 16, 0.09);
+  --white-10: rgba(10, 12, 16, 0.1);
+  --white-11: rgba(10, 12, 16, 0.11);
+  --white-12: rgba(10, 12, 16, 0.12);
+  --white-012: rgba(10, 12, 16, 0.012);
+  --white-13: rgba(10, 12, 16, 0.13);
+  --white-14: rgba(10, 12, 16, 0.14);
+  --white-15: rgba(10, 12, 16, 0.15);
+  --white-015: rgba(10, 12, 16, 0.015);
+  --white-16: rgba(10, 12, 16, 0.16);
+  --white-18: rgba(10, 12, 16, 0.18);
+  --white-20: rgba(10, 12, 16, 0.2);
+  --white-22: rgba(10, 12, 16, 0.22);
+  --white-25: rgba(10, 12, 16, 0.25);
+  --white-025: rgba(10, 12, 16, 0.025);
+  --white-28: rgba(10, 12, 16, 0.28);
+  --white-30: rgba(10, 12, 16, 0.3);
+  --white-32: rgba(10, 12, 16, 0.32);
+  --white-33: rgba(10, 12, 16, 0.33);
+  --white-35: rgba(10, 12, 16, 0.35);
+  --white-035: rgba(10, 12, 16, 0.035);
+  --white-38: rgba(10, 12, 16, 0.38);
+  --white-40: rgba(10, 12, 16, 0.4);
+  --white-42: rgba(10, 12, 16, 0.42);
+  --white-45: rgba(10, 12, 16, 0.45);
+  --white-48: rgba(10, 12, 16, 0.48);
+  --white-50: rgba(10, 12, 16, 0.5);
+  --white-52: rgba(10, 12, 16, 0.52);
+  --white-55: rgba(10, 12, 16, 0.55);
+  --white-055: rgba(10, 12, 16, 0.055);
+  --white-58: rgba(10, 12, 16, 0.58);
+  --white-60: rgba(10, 12, 16, 0.6);
+  --white-65: rgba(10, 12, 16, 0.65);
+  --white-70: rgba(10, 12, 16, 0.7);
+  --white-72: rgba(10, 12, 16, 0.72);
+  --white-75: rgba(10, 12, 16, 0.75);
+  --white-80: rgba(10, 12, 16, 0.8);
+  --white-82: rgba(10, 12, 16, 0.82);
+  --white-85: rgba(10, 12, 16, 0.85);
+  --white-88: rgba(10, 12, 16, 0.88);
+  --white-90: rgba(10, 12, 16, 0.9);
+  --white-92: rgba(10, 12, 16, 0.92);
+}
+/* 浅底下分类裸色（#FFF/#FFF700 等）对比度不足：用 color-mix 把字与描边掺黑。
+ * 注意不能用 filter: brightness()——filter 会作用于整棵子树，
+ * 徽章里的 hover tip（白底黑字）会被一起压成灰。变量 --cat 由徽章内联写入。 */
+.surface-light .meta-row .meta-chip--category {
+  color: color-mix(in srgb, var(--cat) 55%, black);
+  border-color: color-mix(in srgb, var(--cat) 55%, black);
+}
+/* 浅底下 hover 反而要加深（深底逻辑是增亮，此处反转）。
+ * 选择器带 .meta-row 提权：组件 scoped 自带 [data-v] 属性已占 (0,3,1)，平级会被后加载盖掉。 */
+.surface-light .meta-row a.meta-chip--category:hover {
+  color: color-mix(in srgb, var(--cat) 40%, black);
+  border-color: color-mix(in srgb, var(--cat) 40%, black);
+  filter: none;
+}
+
+/* S1：tooltip 形状语言（白底保留，阅读层与操控层分工）。
+ * 覆盖选择器一律 .v2tip.tooltip-box 提权，不碰全局 .tooltip-box（v1 共用）：
+ * 边框改深色 alpha（浅底上 white-10 不可见）、阴影归 lg 档（含 below 变体）、
+ * 过渡只收时长到 .18s（不加位移，跟随鼠标定位会打架）。 */
+.v2tip.tooltip-box {
+  border: 1px solid rgba(10, 12, 16, 0.1);
+  box-shadow: var(--v2-shadow-lg);
+  transition: opacity 0.18s ease;
+}
+.v2tip.tooltip-box.floating {
+  box-shadow: var(--v2-shadow-lg);
+}
+
+/* 详情底栏共享参数：card 走 BaseModal 的 .modal-footer（自带 border-top + bg），
+   sheet 走自建 .v2sheet-foot（同参数复用）—— padding 用变量单点定义，
+   改一处两处生效。 */
+:root {
+  --v2-dock-padding: 4px 12px calc(4px + env(safe-area-inset-bottom, 0px));
+}
+.v2-dock {
+  padding: var(--v2-dock-padding);
+  background: var(--color-modal-bg, #1a1a1a);
+  border-top: 1px solid var(--white-08);
+  flex-shrink: 0;
+}
+/* 抽屉面板底栏：行为是 flex 末块，紧贴底部；外观走 .v2-dock */
+.v2sheet-foot {
+  /* 占位由 .v2-dock 提供外观，自身只声明语义类 */
+}

@@ -2,6 +2,7 @@
 import { ref } from 'vue';
 import { useI18n } from '../../lib/useI18n';
 import AboutModal from '../modals/AboutModal.vue';
+import CopyrightModal from '../modals/CopyrightModal.vue';
 import ContactModal from '../modals/ContactModal.vue';
 import BulletinModal from '../modals/BulletinModal.vue';
 import TermsModal from '../modals/TermsModal.vue';
@@ -22,6 +23,7 @@ const props = defineProps<{
 const { t } = useI18n();
 
 const showAbout = ref(false);
+const showCopyright = ref(false);
 const showContact = ref(false);
 const showBulletin = ref(false);
 const showTerms = ref(false);
@@ -52,6 +54,8 @@ const showTerms = ref(false);
         <span class="ft-sep">|</span>
         <button class="ft-btn" @click="showAbout = true">{{ t('aboutLink') }}</button>
         <span class="ft-sep">|</span>
+        <button class="ft-btn" @click="showCopyright = true">{{ t('copyrightLink') }}</button>
+        <span class="ft-sep">|</span>
         <button class="ft-btn" @click="showContact = true">{{ t('contactLink') }}</button>
         <span class="ft-sep">|</span>
         <button class="ft-btn" @click="showTerms = true">{{ t('termsLink') }}</button>
@@ -66,7 +70,8 @@ const showTerms = ref(false);
     />
 
     <BulletinModal v-if="showBulletin" :bulletins="props.bulletins" @close="showBulletin = false" />
-    <AboutModal v-if="showAbout" :buildDate="props.buildDate" :entryCount="props.entryCount" @close="showAbout = false" />
+    <AboutModal v-if="showAbout" :buildDate="props.buildDate" :entryCount="props.entryCount" @close="showAbout = false" @open-copyright="showAbout = false; showCopyright = true" />
+    <CopyrightModal v-if="showCopyright" @close="showCopyright = false" />
     <ContactModal v-if="showContact" @close="showContact = false" />
     <TermsModal v-if="showTerms" @close="showTerms = false" />
   </footer>

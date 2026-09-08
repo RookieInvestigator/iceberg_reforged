@@ -9,6 +9,8 @@ defineProps<{
   showFooter?: boolean
   titleClass?: string
   titleClick?: () => void
+  /** light：阅读层浅色表面（S13 实验项）；不传或 dark 时与现在逐字一致 */
+  surface?: 'dark' | 'light'
 }>();
 
 const emit = defineEmits(['close']);
@@ -84,7 +86,7 @@ onUnmounted(() => {
   <Teleport to="body">
     <Transition name="fade-up" appear>
       <div class="modal-overlay" @click.self="$emit('close')" @touchmove.self.prevent>
-        <div ref="panelRef" :class="['modal-panel no-scrollbar', `modal-${size}`]" role="dialog" aria-modal="true" :aria-labelledby="titleId" tabindex="-1" @click.stop>
+        <div ref="panelRef" :class="['modal-panel no-scrollbar', `modal-${size}`, { 'surface-light': surface === 'light' }]" role="dialog" aria-modal="true" :aria-labelledby="titleId" tabindex="-1" @click.stop>
           
           <div class="modal-header">
             <!-- 增加 truncate 防止标题过长挤压右侧按钮 -->
