@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // V2FilterBar（/v2 专用）：搜索 + 筛选 + 层级指示三合一 morphing 导航。
-// 设计取自 TaBiAI 式变形导航：顶部全宽透明大条（h-16），滚过 160px 收成
+// 顶部全宽透明大条（h-16），滚过 160px 收成
 // 居中浮动小丸（毛玻璃 + ring + 阴影），过渡统一 var(--ease-emphatic) 700ms。
 // 层级指示器（TierNav 逻辑内迁：scroll-spy 当前层 + 下拉跳转）并入右侧，
 // v2 不再挂载 TierNav。功能与 v1 侧边栏 1:1（防抖/右键隐藏/AND-OR/特殊/收藏/恢复/摘要/清除）。

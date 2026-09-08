@@ -1,5 +1,5 @@
 // 转载模板（CC BY-NC-SA 4.0 署名要求落地）：
-// 名单取自 meta.json 的 contributors（管线与 introText 同源解析，数据更新自动同步），
+// 名单：meta.json 的 contributors（管线与 introText 同源解析，数据更新自动同步），
 // 本模块只引用轻量 meta.json，禁止引用 iceberg.json（见 CLAUDE.md 分层导入）。
 import meta from '../data/meta.json'
 
