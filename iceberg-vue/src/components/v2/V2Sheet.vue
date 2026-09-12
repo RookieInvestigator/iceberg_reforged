@@ -10,6 +10,7 @@ import { useI18n } from '../../lib/useI18n';
 import { useEntryInteractions } from '../../lib/useEntryInteractions';
 import V2EntryBody from './V2EntryBody.vue';
 import V2EntryActions from './V2EntryActions.vue';
+import EntrySearchButton from '../items/EntrySearchButton.vue';
 import { useSheetShell } from '../../lib/iceberg/v2/useSheetShell';
 import { ENTRY_IA_KEY } from '../../lib/iceberg/v2/keys';
 import type { EntryView } from '../../lib/iceberg/entryView';
@@ -136,6 +137,7 @@ function onHandleTouchCancel() {
                 :aria-label="titleCopied ? t('titleCopied') : t('copyTitle')">
                 <span class="v2-entry-title">{{ titleCopied ? t('titleCopied') : item.title }}</span>
               </button>
+              <EntrySearchButton :title="item.title" touch />
               <button type="button" class="modal-close v2sheet-head__close" :aria-label="t('close')" @click="$emit('close')">&times;</button>
             </div>
 

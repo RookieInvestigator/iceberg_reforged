@@ -134,7 +134,11 @@
 .v2tip.tooltip-box {
   border: 1px solid rgba(10, 12, 16, 0.1);
   box-shadow: var(--v2-shadow-lg);
-  transition: opacity 0.18s ease;
+  /* 消失 1.4s（出现仍走 .show 的 .18s）：鼠标离开后 tooltip 缓隐，不断阅读节奏 */
+  transition: opacity 1.4s ease, visibility 0s 1.4s;
+}
+.v2tip.tooltip-box.show {
+  transition: opacity 0.18s ease, visibility 0s 0s;
 }
 .v2tip.tooltip-box.floating {
   box-shadow: var(--v2-shadow-lg);

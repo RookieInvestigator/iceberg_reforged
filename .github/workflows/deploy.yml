@@ -19,8 +19,10 @@ permissions:
 
 # 2026-08-16 仓储治理：git 仓库根迁移至 Iceberg/（原 iceberg-vue/.git 上移），
 # 前端位于 iceberg-vue/ 子目录，所有 run 步骤与产物路径相应加 working-directory / 前缀
+# 2026-09-09：GitHub Pages 不再部署完整应用，改为跳转页——旧镜像地址
+# （含已收录的深链）自动跳到主站；主站由 Cloudflare Pages 的 GitHub 集成独立部署。
 jobs:
-  build-gh:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -52,16 +54,35 @@ jobs:
       # 否则新字无字形（回退系统字体）。--check 纯标准库， runner 自带 python3 即可。
       - name: Font subset freshness
         run: python3 ../scripts/subset_fonts.py --check
-      - run: npm run build
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      # 跳转页：保留路径/参数/hash 跳到主站同位置；meta refresh 兜底无 JS；
+      # canonical 归并主站根，旧收录随跳转转移。
+      - name: Build redirect site
+        run: |
+          set -e
+          mkdir -p redirect-dist
+          cat > redirect-dist/index.html <<'EOF'
+          <!DOCTYPE html>
+          <html lang="zh-CN">
+          <head>
+          <meta charset="UTF-8">
+          <title>中文兔子洞冰山图已搬迁</title>
+          <link rel="canonical" href="https://iceberg.hezihezi.com/">
+          <meta name="robots" content="noindex">
+          <meta http-equiv="refresh" content="0; url=https://iceberg.hezihezi.com/">
+          <script>(function(){var p=location.pathname.replace(/^\/iceberg_reforged/,'')||'/';location.replace('https://iceberg.hezihezi.com'+p+location.search+location.hash);})();</script>
+          </head>
+          <body>
+          <p>本站已搬迁至 <a href="https://iceberg.hezihezi.com/">iceberg.hezihezi.com</a>，正在跳转……</p>
+          </body>
+          </html>
+          EOF
+          cp redirect-dist/index.html redirect-dist/404.html
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: iceberg-vue/dist/
+          path: iceberg-vue/redirect-dist/
 
-  deploy-gh:
-    needs: build-gh
+  deploy:
+    needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages

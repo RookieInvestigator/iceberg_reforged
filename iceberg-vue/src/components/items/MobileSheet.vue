@@ -8,6 +8,7 @@ import { useEntryInteractions } from '../../lib/useEntryInteractions';
 import CommentPanel from './CommentPanel.vue';
 import EntryRelatedLinks from './EntryRelatedLinks.vue';
 import EntryMetaBadges from './EntryMetaBadges.vue';
+import EntrySearchButton from './EntrySearchButton.vue';
 
 const props = defineProps({ item: Object });
 const emit = defineEmits(['close', 'navigate']);
@@ -205,11 +206,12 @@ const tagList = computed<string[]>(() => {
       </div>
       <template v-if="item">
         <div ref="bodyEl" class="sheet-body no-scrollbar flex-1 min-h-0 overflow-y-auto pb-6 [-webkit-overflow-scrolling:touch]" @scroll="onBodyScroll">
-          <div class="mt-0.5 mb-2">
-            <button type="button" class="block w-full py-1.5 bg-transparent border-none text-text-primary text-left cursor-pointer touch-manipulation" @click="copyTitle(item.title)"
+          <div class="mt-0.5 mb-2 flex items-center gap-1">
+            <button type="button" class="block flex-1 min-w-0 py-1.5 bg-transparent border-none text-text-primary text-left cursor-pointer touch-manipulation" @click="copyTitle(item.title)"
               :aria-label="titleCopied ? t('titleCopied') : t('copyTitle')">
               <span class="block text-xl font-black leading-[1.3] tracking-[0.01em] [overflow-wrap:anywhere]">{{ titleCopied ? t('titleCopied') : item.title }}</span>
             </button>
+            <EntrySearchButton :title="item.title" touch />
           </div>
 
           <!-- PC 弹窗同款：先元信息徽章，再描述 -->

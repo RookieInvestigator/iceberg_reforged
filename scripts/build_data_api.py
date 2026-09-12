@@ -327,7 +327,7 @@ def build_from_api(data: dict, history: dict, old_ids_by_title: dict) -> dict:
         for old, new in list(aliases.items())[:10]:
             print(f"    {old} → {new}")
 
-    # 5. 聚合 config
+    # 5. 聚合 config（contributors 随 data 透传，供 compile_output 写 meta.json）
     config = {
         'generatedAt': NOW,
         'introText': intro_text,
@@ -336,6 +336,7 @@ def build_from_api(data: dict, history: dict, old_ids_by_title: dict) -> dict:
         'tierOrder': tier_order,
         'defaultColor': DEFAULT_COLOR,
         'idAliases': aliases,
+        'contributors': contributor_names,
     }
 
     return {
@@ -347,7 +348,7 @@ def build_from_api(data: dict, history: dict, old_ids_by_title: dict) -> dict:
 # ==========================================
 # F32：覆盖前校验（缺字段 / ID 唯一 / URL 协议 / 数量突降 / 副表孤儿）
 # ==========================================
-MIN_ITEMS = 500  # 数量下限（当前 1432；低于此值视为上游异常）
+MIN_ITEMS = 500  # 数量下限（当前 1440；低于此值视为上游异常）
 COUNT_DROP_RATIO = 0.5  # 相对上一版数量突降阈值
 
 
@@ -466,7 +467,7 @@ def compile_output(data: dict, output_dir: str):
         'tagMap': data.get('tagMap', {}),
         'tierCounts': tier_counts,
         'total': total,
-        'contributors': contributor_names,
+        'contributors': data.get('contributors', []),
     }
     meta_tmp = META_PATH + '.tmp'
     with open(meta_tmp, 'w', encoding='utf-8') as f:

@@ -8,9 +8,9 @@
 
 - 主站：https://iceberg.hezihezi.com/（Cloudflare Pages 自定义域名）
 - 同站默认域名：https://iceberg-reforged.pages.dev/
-- 镜像站（GitHub Pages）：https://rookieinvestigator.github.io/iceberg_reforged/
+- 旧镜像地址（自动跳转主站）：https://rookieinvestigator.github.io/iceberg_reforged/
 
-镜像站与主站内容完全一致，仅作备用访问入口；搜索引擎权重归并于主站。
+旧镜像地址打开后自动跳转到主站（含深链保路径跳转）；搜索引擎权重随跳转归并于主站。
 
 ## 授权许可
 

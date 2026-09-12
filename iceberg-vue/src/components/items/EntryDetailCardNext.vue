@@ -4,6 +4,7 @@ import BaseModal from '../modals/BaseModal.vue';
 import CommentPanel from './CommentPanel.vue';
 import EntryMetaBadges from './EntryMetaBadges.vue';
 import EntryRelatedLinks from './EntryRelatedLinks.vue';
+import EntrySearchButton from './EntrySearchButton.vue';
 import { ref, computed, inject, toRef, onMounted, onUnmounted } from 'vue';
 import { useI18n } from '../../lib/useI18n';
 import { useEntryInteractions } from '../../lib/useEntryInteractions';
@@ -77,6 +78,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 
 <template>
   <BaseModal v-if="item" :title="titleCopied ? t('titleCopied') : item.title" :titleClick="() => copyTitle(item.title)" size="lg" titleClass="!text-[1.25rem] font-semibold tracking-wide" @close="$emit('close')">
+    <template #header-actions>
+      <EntrySearchButton :title="item.title" />
+    </template>
 
     <!-- ── 描述区：核心（阅读）；-mt-3 抵消 modal-body 顶部 padding，压缩头部下方留白 ── -->
     <div class="-mt-3">

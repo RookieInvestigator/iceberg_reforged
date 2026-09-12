@@ -22,6 +22,8 @@ const router = createRouter({
 // 开发专用路由：构建时 tree-shake 掉
 if (import.meta.env.DEV) {
   router.addRoute({ path: '/appendix-edit', component: () => import('../views/AppendixEditView.vue') })
+  // 深潜巡游（/dive）：实验性 WebGL 页面，仅限本地开发访问，生产构建不产出路由与 chunk
+  router.addRoute({ path: '/dive', component: () => import('../views/SubmarineDiveView.vue') })
 }
 
 // P1-13：消费 404.html 重定向携带的 ?r=（原始 path + search + hash 的一次 encodeURIComponent），

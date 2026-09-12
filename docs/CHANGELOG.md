@@ -1,11 +1,38 @@
 # 更新日志
 
 
+## 2026-09-12 — 数据 1432→1440 · 管线 contributors 作用域修复 · 字体子集同步
+
+### 新增
+
+- **词条弹窗标题旁的外搜按钮**：四弹窗统一（v2 桌面卡 / v2 抽屉 / v1 桌面弹窗 / v1 抽屉），新共用 `EntrySearchButton.vue`（标题右侧 🔍，新标签页打开，`rel=noopener`；抽屉内 44px 触控目标）；桌面端复用 `BaseModal` 现有 `header-actions` 插槽，零改动 modal 本体
+- **设置新增默认搜索引擎**：百度（默认）/ Google / Bing 三选一（`searchEngine` storedAtom，`iceberg-search-engine` 持久化，导出导入兼容）；URL 拼装收敛 `lib/searchEngine.ts`（`normalizeSearchEngine` 防脏数据回退百度）+ 6 项单测；i18n 233 → 235 key
+
+### 数据
+
+- **API 同步 1432 → 1440（+8）**：T1 154→156、T2 301→302、T3 305→307、T4 269→270、T5 200→201、T6 115→116，T7/T8 不变；`meta.json` / `id-index.json` / `id_history.json` 同批原子更新；参与创作者 67 位不变；`iceberg.json` 1016KB（~993KB）、`id_history.json` ~158KB
+
+### 修复
+
+- **`build_data_api.py` contributors 作用域 bug**：`contributor_names` 是 `build_from_api()` 局部变量，`compile_output()` 直接引用全局名导致 `NameError`，且崩溃点在 `iceberg.json` 原子替换**之后**、meta/id-index 写入之前，半写状态需重跑补齐。现 `contributors` 随 `config` 透传进 `data`，`compile_output` 改读 `data.get('contributors', [])`；`MIN_ITEMS` 注释 1432→1440
+
+### 改进
+
+- **字体子集同步语料（4167→4174 字符，CJK 3782）**：新词条带 7 个新字，`--check` 失败后重跑 `subset_fonts.py`（源 OTF 取自 noto-cjk SubsetOTF），7 个 woff2 + `fonts.css` + `corpus.sha256` 已更新，`--check` 通过
+
+### 测试
+
+- 双 typecheck 通过；全套件 33 文件 / 211 用例通过（含 `meta.test.ts` 派生一致性与 `reprint.test.ts` 名单校验）
+
+
 ## v5.0.0 — 2026-09-09 — v2 转正：换代冰山图成为主界面
 
 ### 新增
 
 - **v2 转正**：`/` 改挂 v2 视图（去 DEV 限定，生产可用）；v1 旧版保留在 `/legacy`；`/v2` 跳转回 `/`；keep-alive 改缓存主视图；`?item=` 守卫与设置 v2 分组跟随新路由；预渲染 `/` 壳为纯数据驱动，无需改动；URL 不变，SEO 无重定向成本
+- **GH Pages 改跳转页**：不再部署完整应用，改发保路径/参数/hash 的 JS 跳转 + meta refresh 兜底 + canonical 归并，旧镜像收录随跳转转移主站；CI 检查（BOM/类型/测试/字体）保留
+- **NEW 标记根治（同错落病根）**：`recently-updated` 从 setup 时全量后写搬到渲染层声明式（`showNewMark` 进 `v-memo`）；探针 7 个有新词条的层级全亮（前两层 11/14，外层 12/5/9/2/2）
+- **tooltip 消失 1.4s**：v2 覆盖层出现 `.18s` / 消失 `1.4s` 两档（全局不动，v1 仍 .4s）
 
 ## v4.6.0 — 2026-09-06 — 许可证落地：代码 AGPLv3 + 内容 CC BY-NC-SA 4.0
 

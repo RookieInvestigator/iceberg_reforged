@@ -80,12 +80,12 @@ python scripts/build_data.py [html_file]   # 默认 iceberg.html
 
 | 文件 | 体积 | 用途 |
 | ---- | ---- | ---- |
-| `iceberg-vue/src/data/iceberg.json` | ~969KB | Vue 前端主数据源（构建时静态导入） |
-| `iceberg-vue/src/data/id_history.json` | ~156KB | ID 持久化历史（API uuid → 8 位 ID 锚点，标题/层级修订不换 ID，见 F30） |
+| `iceberg-vue/src/data/iceberg.json` | ~993KB | Vue 前端主数据源（构建时静态导入） |
+| `iceberg-vue/src/data/id_history.json` | ~158KB | ID 持久化历史（API uuid → 8 位 ID 锚点，标题/层级修订不换 ID，见 F30） |
 | `iceberg-vue/src/data/meta.json` | ~3.5KB | 轻量元数据：generatedAt / tierOrder / categoryColors / tagMap / tierCounts / total |
 | `iceberg-vue/src/data/id-index.json` | ~106KB | 精简索引：`id → { t: 标题, c: 分类 }` |
 
-**分层导入（重要）**：`iceberg.json`（~969KB）会被 Rollup 打成约 800KB（gzip 320KB）的 chunk，并进入首屏关键路径。**只需统计或按 id 查标题/分类的模块不得导入它**：
+**分层导入（重要）**：`iceberg.json`（~993KB）会被 Rollup 打成约 800KB（gzip 320KB）的 chunk，并进入首屏关键路径。**只需统计或按 id 查标题/分类的模块不得导入它**：
 
 - 统计口径（词条数 / 层级数 / 分类色 / 标签表 / 生成时间）→ 导入 `meta.json`
 - 按 id 查标题或分类（用户面板的收藏统计等）→ 导入 `id-index.json`
@@ -116,7 +116,7 @@ iceberg-vue/
     ├── lib/ancient-book/           # 古籍模式（types / engine / layout / render + SpreadView/SpreadPage）
     ├── lib/iceberg/                # 冰山图 composables（搜索 Worker / 相关索引 / 筛选管线 / tooltip）
     ├── lib/iceberg3d/              # 3D 引擎（engine / picking / materials / cameraFlight / prng）
-    ├── lib/i18n/                   # 翻译字典（zh / en / ja，233×3 key；`i18n.test.ts` 锁三语对齐 + 死 key）
+    ├── lib/i18n/                   # 翻译字典（zh / en / ja，235×3 key；`i18n.test.ts` 锁三语对齐 + 死 key）
     ├── styles/                     # global.css, index.css, bg.css, modal.css, ancient-book.css, themes/
     ├── views/                      # IndexView, HomeView, HandbookView, FeaturesView, FeatureDetailView,
     │                               # OnThisDayView, AncientBookView, Iceberg3DView,
@@ -159,7 +159,7 @@ iceberg-vue/
 
 ## 数据流
 
-`IndexView.vue` 构建时静态导入 `iceberg.json`（~969KB），经 `normalizeData()`（层级重命名、标点规范化、emoji/颜色注入）后通过 `provide/inject` 下发。`desc` 字段与 `renderItems` 分离存入 `Map`，降低 `v-memo` diff 开销。秒级 Unix 时间戳统一走 `lib/data.ts` 的 `formatUnixDate()`，禁止各视图手写 `*1000`。
+`IndexView.vue` 构建时静态导入 `iceberg.json`（~993KB），经 `normalizeData()`（层级重命名、标点规范化、emoji/颜色注入）后通过 `provide/inject` 下发。`desc` 字段与 `renderItems` 分离存入 `Map`，降低 `v-memo` diff 开销。秒级 Unix 时间戳统一走 `lib/data.ts` 的 `formatUnixDate()`，禁止各视图手写 `*1000`。
 
 `IcebergApp.vue` 注入数据，通过 filterStore / settingsStore 管理筛选与设置，Web Worker（Fuse.js）异步搜索，`ItemInteractivity.vue` 统一处理 tooltip / modal。
 
@@ -205,10 +205,10 @@ function storedAtom<T>(key: string, fallback: T) {
 | 常量 | 值 |
 | ---- | ---- |
 | 站点路径 | `/iceberg_reforged/`（GH Pages）；CF Pages 为根路径（`CF_PAGES_BRANCH` 自动切换） |
-| 词条总数 | 1432（API 实时同步，见 `meta.json` / `CHANGELOG` 数据条目） |
+| 词条总数 | 1440（API 实时同步，见 `meta.json` / `CHANGELOG` 数据条目） |
 | 层级 / 分类 / tagMap | 8 / 15 / 68 |
-| iceberg.json 体积 | ~969KB |
-| i18n 字典 | 233 key × 3 语言 |
+| iceberg.json 体积 | ~993KB |
+| i18n 字典 | 235 key × 3 语言 |
 | 搜索防抖 / 阈值 | 150ms / 0.3 |
 | Tooltip 延迟 | 200ms |
 

@@ -235,6 +235,8 @@ export default defineConfig({
     // （解决 SPA 首帧无内容问题，爬虫/无 JS 用户直接可见，Vue 启动后接管）。
     // 路由表与 sitemap.xml 保持一致：/ancient-book 与 /3d 同样预渲染静态壳
     //（3D 为 WebGL 交互页，静态壳仅为可索引的占位说明，客户端接管后才是完整场景）。
+    // /dive 为 DEV 专用实验页（路由在 router/index.ts 的 import.meta.env.DEV 分支内注册），
+    // 不列入预渲染，避免生产产物出现只有占位壳的公开 URL。
     vitePrerenderPlugin({
       renderTarget: '#app',
       prerenderScript: path.resolve(__dirname, 'src/prerender.ts'),

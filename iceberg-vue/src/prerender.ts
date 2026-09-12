@@ -317,6 +317,7 @@ function threeDHtml(): string {
 }
 
 export async function prerender({ url }: { url: string }) {
+  // /dive 是 DEV 专用实验页，不参与预渲染与 sitemap
   const baseLinks = new Set(['/home', '/handbook', '/features', '/on-this-day', '/ancient-book', '/3d'])
 
   if (url === '/') {
@@ -345,7 +346,6 @@ export async function prerender({ url }: { url: string }) {
   if (url === '/3d') {
     return { html: threeDHtml(), links: baseLinks, head: headFor('/3d', `3D 冰山 · ${SITE}`) }
   }
-
   // 未知路由（如 404）：渲染最小占位壳，但 canonical/标题跟随请求 URL，
   // 避免误用首页 canonical 造成搜索引擎去重误判。
   return {

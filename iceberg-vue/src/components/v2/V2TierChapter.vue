@@ -6,6 +6,8 @@
 import { useI18n } from '../../lib/useI18n';
 import { useStore } from '@nanostores/vue';
 import { floatMode } from '../../lib/settingsStore';
+import { showNewMark } from '../../lib/settingsStore';
+import { NEW_MARK_WINDOW_DAYS } from '../../lib/filterStore';
 import { floatOffsetFor } from '../../lib/iceberg/floatOffset';
 import { registerItem } from '../../lib/iceberg/itemRegistry';
 import { tierVisibleCounts } from '../../lib/iceberg/wallCounts';
@@ -21,8 +23,11 @@ defineProps<{
 
 const { t } = useI18n();
 // 错落排版渲染层输出（F1 根治：随挂载自然生效；开关切换经 v-memo 重渲染）
-// 错落排版渲染层输出（F1 根治：随挂载自然生效；开关切换经 v-memo 重渲染）
 const floatStatic = useStore(floatMode);
+// NEW 标记渲染层输出（同因：命令式 applyItemMarks 只在 setup 时扫已挂载节点，
+// 后 6 层永远拿不到 recently-updated；此处随挂载自然生效，命令式路径保留做一致性兜底）
+const showNew = useStore(showNewMark);
+const newCutoff = Date.now() / 1000 - NEW_MARK_WINDOW_DAYS * 24 * 60 * 60;
 function itemStyle(item: RenderItem): string {
   let s = `color: ${item.categoryColor}; --item-color: ${item.categoryColor}`;
   if (floatStatic.value === 'static') {
@@ -47,11 +52,11 @@ function itemStyle(item: RenderItem): string {
           :key="item.id"
           :ref="(el) => registerItem(item.id, el as unknown as HTMLElement | null)"
           v-show="!filterVisible || filterVisible.has(item.id)"
-          v-memo="[item.id, floatStatic, dimSet?.has(item.id), filterVisible ? filterVisible.has(item.id) : true]"
+          v-memo="[item.id, floatStatic, showNew, dimSet?.has(item.id), filterVisible ? filterVisible.has(item.id) : true]"
           tabindex="0"
           role="button"
           class="iceberg-item inline-flex items-center font-bold cursor-crosshair py-0.5 px-1.5 max-sm:text-[1.05rem]"
-          :class="{ dimmed: !!dimSet?.has(item.id) }"
+          :class="{ dimmed: !!dimSet?.has(item.id), 'recently-updated': showNew && (item.modifiedAt || 0) >= newCutoff }"
           :data-id="item.id"
           :data-category="item.category"
           :style="itemStyle(item)"

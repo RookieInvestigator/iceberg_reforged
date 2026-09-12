@@ -5,6 +5,7 @@
 import BaseModal from '../modals/BaseModal.vue';
 import V2EntryBody from './V2EntryBody.vue';
 import V2EntryActions from './V2EntryActions.vue';
+import EntrySearchButton from '../items/EntrySearchButton.vue';
 import { ref, toRef, provide, onMounted, onUnmounted } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { v2DetailSurface } from '../../lib/settingsStore';
@@ -48,6 +49,9 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 
 <template>
   <BaseModal v-if="item" :title="titleCopied ? t('titleCopied') : item.title" :titleClick="() => copyTitle(item.title)" size="lg" titleClass="v2-entry-title tracking-wide" :surface="surf === 'light' ? 'light' : 'dark'" @close="$emit('close')">
+    <template #header-actions>
+      <EntrySearchButton :title="item.title" />
+    </template>
     <V2EntryBody :item="item" layout="card" @navigate="emit('navigate', $event)" @comment-el="setCommentEl" />
     <template #footer>
       <V2EntryActions :item="item" layout="card" @navigate="emit('navigate', $event)" />

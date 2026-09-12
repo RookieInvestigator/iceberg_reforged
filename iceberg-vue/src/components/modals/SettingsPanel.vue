@@ -3,7 +3,7 @@ import { computed, ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useStore } from '@nanostores/vue';
 import BaseModal from './BaseModal.vue';
-import { fontSize, floatMode, filterMode, showRandomBtn, bgMode, sortMode, detailMode, showReadMark, showNewMark, immersiveMode, scatterMode, v2DetailSurface, applySimpleMode, applyStandardMode, flushPersistedWrites, cancelPersistedWrites } from '../../lib/settingsStore';
+import { fontSize, floatMode, filterMode, showRandomBtn, bgMode, sortMode, detailMode, showReadMark, showNewMark, immersiveMode, scatterMode, v2DetailSurface, searchEngine, applySimpleMode, applyStandardMode, flushPersistedWrites, cancelPersistedWrites } from '../../lib/settingsStore';
 import { lang as langAtom } from '../../lib/i18nStore';
 import { useI18n } from '../../lib/useI18n';
 
@@ -26,6 +26,7 @@ const srt = useStore(sortMode);
 const sct = useStore(scatterMode);
 const imv = useStore(immersiveMode);
 const v2ds = useStore(v2DetailSurface);
+const se = useStore(searchEngine);
 
 const fsOpts = ['xs', 'sm', 'md', 'lg', 'xl'];
 const floatOpts = ['none', 'static'];
@@ -94,6 +95,15 @@ function clearData() {
             :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', srt === o ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
             {{ t('sort' + o.charAt(0).toUpperCase() + o.slice(1).replace(/-./g, x => x[1].toUpperCase())) }}
           </button>
+        </div>
+      </div>
+
+      <div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('searchEngine') }}</div>
+        <div class="flex gap-1">
+          <button @click="searchEngine.set('baidu')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', se === 'baidu' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">百度</button>
+          <button @click="searchEngine.set('google')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', se === 'google' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">Google</button>
+          <button @click="searchEngine.set('bing')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', se === 'bing' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">Bing</button>
         </div>
       </div>
 

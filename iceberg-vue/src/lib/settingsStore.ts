@@ -1,4 +1,5 @@
 import { atom } from 'nanostores';
+import type { SearchEngine } from './searchEngine';
 
 // ── 持久化写入节流（2026-08-21）──
 // 热路径写入（已读 / 收藏 / 设置切换）合并为防抖写盘（500ms）：每次 markRead / 收藏切换
@@ -99,6 +100,8 @@ export const showNewMark = storedAtom('iceberg-show-new-mark', true);
 export const scatterMode = storedAtom('iceberg-scatter-mode', false);
 /** v2 实验：详情弹窗表面 —— 'dark' 黑底（默认，零回归）/ 'light' 浅色阅读表面（S13） */
 export const v2DetailSurface = storedAtom('iceberg-v2-detail-surface', 'dark');
+/** 默认搜索引擎：词条弹窗标题旁的外搜按钮用它拼 URL（百度默认，Google/必应可选） */
+export const searchEngine = storedAtom<SearchEngine>('iceberg-search-engine', 'baidu');
 
 export function applySimpleMode() {
   detailMode.set('tooltip'); filterMode.set('dim'); immersiveMode.set(false);
