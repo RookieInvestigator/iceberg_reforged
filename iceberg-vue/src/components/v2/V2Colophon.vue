@@ -9,6 +9,7 @@ import AboutModal from '../modals/AboutModal.vue';
 import CopyrightModal from '../modals/CopyrightModal.vue';
 import ContactModal from '../modals/ContactModal.vue';
 import TermsModal from '../modals/TermsModal.vue';
+import ExportImageButton from '../items/ExportImageButton.vue';
 
 interface Bulletin {
   title: string;
@@ -22,6 +23,7 @@ defineProps({
   entryCount: { type: Number, default: 0 },
   tierCount: { type: Number, default: 0 },
   catCount: { type: Number, default: 0 },
+  introText: { type: String, default: '' },
   bulletins: { type: Array as () => Bulletin[], default: () => [] },
 });
 
@@ -51,6 +53,7 @@ const CC_URL = 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans';
       <button type="button" class="v2colo-linklike" @click="showCopyright = true">{{ t('copyrightLink') }}</button>
       <button type="button" class="v2colo-linklike" @click="showContact = true">{{ t('contactLink') }}</button>
       <button type="button" class="v2colo-linklike" @click="showTerms = true">{{ t('termsLink') }}</button>
+      <ExportImageButton linklike class="v2colo-linklike" :coverTitle="t('siteTitle')" :coverMeta="`${buildDate} · ${entryCount} ${t('entries')}`" :coverIntro="introText" />
     </nav>
     <nav class="v2colo-nav v2colo-ext">
       <a :href="SOURCE_URL" target="_blank" rel="noopener noreferrer">IcebergThreads</a>
@@ -58,6 +61,11 @@ const CC_URL = 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans';
       <a :href="CC_URL" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a>
     </nav>
     <p class="v2colo-copy">{{ t('copyrightLine').replace('{year}', String(new Date().getFullYear())) }}</p>
+    <img
+      src="https://count.moeyy.cn/@icebergreforged?name=icebergreforged&theme=moebooru&padding=7&offset=0&align=top&scale=1&pixelated=1&darkmode=auto"
+      alt=""
+      style="display:block;margin:0.75rem auto 0"
+    />
     <BulletinModal v-if="showBulletin" :bulletins="bulletins" @close="showBulletin = false" />
     <AboutModal v-if="showAbout" :buildDate="buildDate" :entryCount="entryCount" @close="showAbout = false" @open-copyright="showAbout = false; showCopyright = true" />
     <CopyrightModal v-if="showCopyright" @close="showCopyright = false" />

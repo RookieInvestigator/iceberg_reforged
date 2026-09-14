@@ -7,10 +7,17 @@
 
 - **词条弹窗标题旁的外搜按钮**：四弹窗统一（v2 桌面卡 / v2 抽屉 / v1 桌面弹窗 / v1 抽屉），新共用 `EntrySearchButton.vue`（标题右侧 🔍，新标签页打开，`rel=noopener`；抽屉内 44px 触控目标）；桌面端复用 `BaseModal` 现有 `header-actions` 插槽，零改动 modal 本体
 - **设置新增默认搜索引擎**：百度（默认）/ Google / Bing 三选一（`searchEngine` storedAtom，`iceberg-search-engine` 持久化，导出导入兼容）；URL 拼装收敛 `lib/searchEngine.ts`（`normalizeSearchEngine` 防脏数据回退百度）+ 6 项单测；i18n 233 → 235 key
+- **历史上的今天候选脚本 `scripts/fetch_on_this_day.py`**：只调 Wikipedia `list=search`（User-Agent + 3 次重试，不抓日期条目页）；`--gaps` 全年 366 天覆盖率（现 205 条/163 天，空缺 203 天）、`--date` 防重复、`--emit` 输出 CSV 行模板（year/desc 人工核对补）；零外部依赖，任意 cwd 可运行
+- **2D 词条墙导出 PNG**：新独立模块 `src/lib/export/wallExport.ts`（归档 canvas 只做设计参考，未动归档；纯函数布局 + 直接绘制 + dpr 内存封顶 + 超高自动切片多文件 + `document.fonts` 就绪门）；FAB 下载键（v1/v2 共用，懒加载 4.3KB 独立 chunk，首屏零混入）；快照语义 = 当前筛选态（visible/dim/read/recent）；i18n 235 → 238 key
+- **导出升级为弹窗（PNG / SVG / YAML / HTML）**：页脚导出键点开 ExportModal；PNG/SVG 三档宽度（1600/1920/2560，宽=矮=dpr 余量）；SVG 矢量无限清晰（paint-order 描边同构）；YAML 可见子集数据快照；HTML 单文件带筛选条 + tooltip；题头/图例/层级分隔线/底部二维码三件套；i18n 238 → 241 key
+- **HTML 导出筛选修两处**：标签筛选用 emoji 比对（名字永远 0 命中、全黑根因）；筛选逐项 querySelector 改为一次建表 + tooltip mousemove 改 rAF 节流（CDP 实测：图例点击 100ms、输入 4ms、重置 6ms）
+- **导航层级指示改序数词**：`层级 N` → `第一层…第八层`（下拉列表同步；`lib/iceberg/tierDisplay.ts` 纯函数 + 单测，非标准名原样返回）；第一层上方（masthead 区）显示`共八层`（scroll-spy 无命中且首层仍在视口下方，原回退末层不动）
 
 ### 数据
 
+- **字体子集同步语料（4175→4176 字符，导出弹窗新文案，--check 通过）**
 - **API 同步 1432 → 1440（+8）**：T1 154→156、T2 301→302、T3 305→307、T4 269→270、T5 200→201、T6 115→116，T7/T8 不变；`meta.json` / `id-index.json` / `id_history.json` 同批原子更新；参与创作者 67 位不变；`iceberg.json` 1016KB（~993KB）、`id_history.json` ~158KB
+- **历史上的今天 205 → 207**：+ 弗拉特伍兹怪物（09-12，填补该天空缺）+ 南大碎尸案（01-19，与爱伦·坡出生同日；经维基搜索反查 66 候选词条定日）
 
 ### 修复
 

@@ -18,6 +18,7 @@ import {
 } from '../../lib/injectionKeys'
 import { FACET_COUNTS_KEY, type FacetCounts } from '../../lib/iceberg/v2/keys'
 import { useV2NavVisibility } from '../../lib/iceberg/v2/useV2NavVisibility'
+import { tierDisplayName, totalTiersText } from '../../lib/iceberg/tierDisplay'
 import { useV2SearchSuggest } from '../../lib/iceberg/v2/useV2SearchSuggest'
 
 const { t } = useI18n()
@@ -57,9 +58,15 @@ const {
   onSearchInputEvent, onSearchFocus, onSuggestKey, chooseSuggest,
 } = useV2SearchSuggest()
 const {
-  expanded, searchFocus, barVisible, stuck, curTier, tierOpen,
+  expanded, searchFocus, barVisible, stuck, curTier, atTop, tierOpen,
   barRef, progressEl, togglePanel, scrollToTier,
 } = useV2NavVisibility({ tierOrder, suggestOpen })
+// 层级指示文案：顶部显示总数（共八层），其余显示序数（第一层…）
+const curTierText = computed(() => {
+  if (atTop.value) return totalTiersText(tierOrder.length)
+  return curTier.value ? tierDisplayName(curTier.value) : t('entries')
+})
+const tierItemText = (name: string) => tierDisplayName(name)
 defineExpose({ togglePanel })
 // （滚动帧状态机已迁入 useV2NavVisibility，本组件只消费其返回的状态与函数）
 
@@ -129,11 +136,11 @@ function toggleSpecial(key: string) {
     <nav class="v2nav" aria-label="filter">
       <div class="v2nav-tier">
         <button type="button" class="v2nav-tool v2nav-tierbtn" :aria-expanded="tierOpen" @click.stop="tierOpen = !tierOpen">
-          {{ curTier || t('entries') }}
+          {{ curTierText }}
         </button>
         <transition name="tier-fade">
           <div v-if="tierOpen" class="v2nav-tierlist no-scrollbar">
-            <button v-for="name in tierOrder" :key="name" type="button" class="v2nav-tieritem" :class="{ on: name === curTier }" @click="scrollToTier(name)">{{ name }}</button>
+            <button v-for="name in tierOrder" :key="name" type="button" class="v2nav-tieritem" :class="{ on: name === curTier }" @click="scrollToTier(name)">{{ tierItemText(name) }}</button>
           </div>
         </transition>
       </div>

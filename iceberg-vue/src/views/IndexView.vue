@@ -283,7 +283,7 @@ onUnmounted(() => {
         <ScatterField v-else :items="allItemsRaw" />
       </div>
 
-      <FooterSection :buildDate="buildDate" :entryCount="allItems.length" :bulletins="bulletins" />
+      <FooterSection :buildDate="buildDate" :entryCount="allItems.length" :introText="data.introText" :bulletins="bulletins" />
     </div>
 
     <OnThisDayModal v-if="showOnThisDay" @close="showOnThisDay = false" />

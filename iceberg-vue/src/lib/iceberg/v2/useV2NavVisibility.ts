@@ -23,6 +23,8 @@ export function useV2NavVisibility(opts: { tierOrder: string[]; suggestOpen: Ref
 
   const stuck = ref(false)
   const curTier = ref('')
+  /** 第一层上方（masthead 区）：spy 无命中且首层仍在视口下方，指示器显示总数 */
+  const atTop = ref(false)
   const tierOpen = ref(false)
   const barRef = ref<HTMLElement | null>(null)
   // 阅读进度（0–1）：复用同一 rAF 循环，直接赋值（帧率即平滑，无需过渡）
@@ -40,7 +42,7 @@ export function useV2NavVisibility(opts: { tierOrder: string[]; suggestOpen: Ref
       barVisible.value = true
       return
     }
-    if (!expanded.value && !tierOpen.value && !searchFocus.value && !coarse.value) {
+    if (!expanded.value && !tierOpen.value && !searchFocus.value && !coarse.value && !suggestOpen.value) {
       barVisible.value = false
     }
   }
@@ -61,7 +63,7 @@ export function useV2NavVisibility(opts: { tierOrder: string[]; suggestOpen: Ref
       const dy = y - lastY
       lastY = y
       const inHot = hotY >= 0 && hotY < 96
-      if (!stuck.value || y < 80 || coarse.value || expanded.value || tierOpen.value || searchFocus.value || inHot) {
+      if (!stuck.value || y < 80 || coarse.value || expanded.value || tierOpen.value || searchFocus.value || suggestOpen.value || inHot) {
         barVisible.value = true
       } else if (dy < -10) {
         barVisible.value = true
@@ -81,6 +83,9 @@ export function useV2NavVisibility(opts: { tierOrder: string[]; suggestOpen: Ref
         if (r.top < vh * 0.5 && r.bottom > 0) best = el.dataset.tier || ''
       }
       curTier.value = best || tierOrder[tierOrder.length - 1] || ''
+      // 顶部判定：无命中且首层仍在视口下方 = 还在 masthead 区（底部无命中时回退末层不变）
+      const firstTop = tierEls.length ? tierEls[0].getBoundingClientRect().top : 0
+      atTop.value = best === '' && firstTop > 0
       const docH = document.documentElement.scrollHeight - vh
       // P2：进度条移出响应式（模板 :style 每帧全量重渲染）→ rAF 直写 DOM
       const p = docH > 0 ? Math.min(1, Math.max(0, window.scrollY / docH)) : 0
@@ -138,7 +143,7 @@ export function useV2NavVisibility(opts: { tierOrder: string[]; suggestOpen: Ref
   })
 
   return {
-    expanded, searchFocus, coarse, barVisible, stuck, curTier, tierOpen,
+    expanded, searchFocus, coarse, barVisible, stuck, curTier, atTop, tierOpen,
     barRef, progressEl, togglePanel, scrollToTier,
   }
 }

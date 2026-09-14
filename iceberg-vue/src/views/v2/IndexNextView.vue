@@ -195,7 +195,7 @@ onUnmounted(() => {
       <!-- 漏斗按钮在 v2 隐藏：筛选入口已收进 V2FilterBar，避免重复 -->
       <FloatingButtons :sidebarOpen="false" hideFilter @random="onRandom" @toggleSidebar="onToggleFilter" />
 
-      <V2Colophon :buildDate="buildDate" :entryCount="allItems.length" :tierCount="data.tierOrder.length" :catCount="Object.keys(data.categoryColors || {}).length" :bulletins="bulletins" />
+      <V2Colophon :buildDate="buildDate" :entryCount="allItems.length" :tierCount="data.tierOrder.length" :catCount="Object.keys(data.categoryColors || {}).length" :introText="data.introText" :bulletins="bulletins" />
     </div>
 
     <OnThisDayModal v-if="showOnThisDay" @close="showOnThisDay = false" />

@@ -6,6 +6,7 @@ import CopyrightModal from '../modals/CopyrightModal.vue';
 import ContactModal from '../modals/ContactModal.vue';
 import BulletinModal from '../modals/BulletinModal.vue';
 import TermsModal from '../modals/TermsModal.vue';
+import ExportImageButton from '../items/ExportImageButton.vue';
 
 interface Bulletin {
   title: string;
@@ -17,6 +18,7 @@ interface Bulletin {
 const props = defineProps<{
   buildDate?: string;
   entryCount?: number;
+  introText?: string;
   bulletins?: Bulletin[];
 }>();
 
@@ -59,6 +61,8 @@ const showTerms = ref(false);
         <button class="ft-btn" @click="showContact = true">{{ t('contactLink') }}</button>
         <span class="ft-sep">|</span>
         <button class="ft-btn" @click="showTerms = true">{{ t('termsLink') }}</button>
+        <span class="ft-sep">|</span>
+        <ExportImageButton linklike class="ft-btn" :coverTitle="t('siteTitle')" :coverMeta="`${props.buildDate || ''} · ${props.entryCount || 0} ${t('entries')}`" :coverIntro="props.introText || ''" />
       </div>
 
     </div>

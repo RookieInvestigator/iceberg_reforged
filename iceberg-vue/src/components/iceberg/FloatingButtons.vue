@@ -5,7 +5,10 @@ import { showRandomBtn, immersiveMode } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import SettingsPanel from '../modals/SettingsPanel.vue';
 
-const props = defineProps({ sidebarOpen: Boolean, hideFilter: Boolean });
+const props = defineProps({
+  sidebarOpen: Boolean,
+  hideFilter: Boolean,
+});
 const emit = defineEmits(['random', 'toggleSidebar']);
 
 // 响应式窗口宽度：resize / orientationchange 时重算 fabBottom（避免旋转或缩放后位置过期）

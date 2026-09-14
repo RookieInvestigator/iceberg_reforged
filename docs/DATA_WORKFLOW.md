@@ -137,6 +137,7 @@ npm run dev
 | `scripts/build_single_page.py` | 单文件 HTML 生成脚本 |
 | `scripts/extract.py` | HTML → CSV 反向导出 |
 | `scripts/quality_report.py` | 数据质量报告（原 check_links.py）：链接有效性 + 结构完整性 + 描述/标点规范 + 链接重复与质量 + 回归对比，输出 `data/reports/` 带时间戳 CSV |
+| `scripts/fetch_on_this_day.py` | 历史上的今天候选搜索：只调 Wikipedia `list=search`（不抓日期条目页），`--gaps` 看空缺日期、`--date` 防重复、`--emit` 输出 CSV 行模板（year/desc 人工补） |
 | `data/work/` | 中间产物（config.json + items/*.md，仅 HTML 管线用） |
 | `iceberg-vue/src/data/` | Vue 数据源（构建时内联） |
 | `data/archive/` | 有变化时的 work 旧数据备份 + 历史归档（legacy-2026-08 / tools-2026-08） |
