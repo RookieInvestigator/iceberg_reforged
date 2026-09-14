@@ -27,7 +27,7 @@ const layout: WallExportLayout = {
       text: '都市"A"传说', textX: 510, baseline: 218,
     }],
   }],
-  tiers: [{ tier: 'Tier 1', x: 60, y: 300, w: 1160, h: 100, count: 2, dividerY: null }],
+  tiers: [{ tier: 'Tier 1', x: 60, y: 300, w: 1160, h: 100, count: 2, headerH: 44, dividerY: null }],
   chips: [{
     id: 'a', tier: 'Tier 1', x: 100, y: 340, w: 120, h: 35,
     title: '甲 & 乙', titleW: 60, titleX: 112, baseline: 365,
