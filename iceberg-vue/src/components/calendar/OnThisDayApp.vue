@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue';
+import { ChevronLeft, ChevronRight, ArrowUpRight, ArrowRight } from '@lucide/vue';
 import { useRouter } from 'vue-router';
 import { useStore } from '@nanostores/vue';
 import { detailMode } from '../../lib/settingsStore';
@@ -141,7 +142,7 @@ onMounted(() => {
             <button @click="goPrevDay"
               class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white-45 transition-colors duration-200 hover:bg-white-08 hover:text-white-85 md:h-10 md:w-10"
               :aria-label="t('prevDay')">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+              <ChevronLeft :size="18" :stroke-width="2" />
             </button>
 
             <div class="text-center">
@@ -152,7 +153,7 @@ onMounted(() => {
             <button @click="goNextDay"
               class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white-45 transition-colors duration-200 hover:bg-white-08 hover:text-white-85 md:h-10 md:w-10"
               :aria-label="t('nextDay')">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+              <ChevronRight :size="18" :stroke-width="2" />
             </button>
           </div>
 
@@ -164,7 +165,7 @@ onMounted(() => {
             <div class="flex items-center gap-1">
               <button @click="prevMonth" :aria-label="t('prevMonth')"
                 class="flex h-10 w-10 items-center justify-center rounded-full text-white-40 transition-colors duration-200 hover:bg-white-08 hover:text-white-85 md:h-8 md:w-8">
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" /></svg>
+                <ChevronLeft :size="16" :stroke-width="2" />
               </button>
               <button @click="goToday"
                 class="flex h-10 items-center justify-center rounded-full px-3 text-xs font-medium text-white-40 transition-colors duration-200 hover:bg-white-08 hover:text-white-85 md:h-8">
@@ -172,7 +173,7 @@ onMounted(() => {
               </button>
               <button @click="nextMonth" :aria-label="t('nextMonth')"
                 class="flex h-10 w-10 items-center justify-center rounded-full text-white-40 transition-colors duration-200 hover:bg-white-08 hover:text-white-85 md:h-8 md:w-8">
-                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                <ChevronRight :size="16" :stroke-width="2" />
               </button>
             </div>
           </div>
@@ -231,12 +232,12 @@ onMounted(() => {
                     <a v-if="event.link" :href="event.link" target="_blank" rel="noopener"
                       class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white-35 transition-colors duration-200 hover:text-accent-soft">
                       <span>{{ t('source') }}</span>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M17 7H7M17 7V17"/></svg>
+                      <ArrowUpRight :size="12" :stroke-width="2" />
                     </a>
                     <a v-if="event.item" @click.prevent="goItem(event.item)" href="#"
                       class="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-white-35 transition-colors duration-200 hover:text-accent-soft">
                       <span>{{ t('explore') }}</span>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                      <ArrowRight :size="12" :stroke-width="2" />
                     </a>
                   </div>
                 </article>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { ArrowLeft } from '@lucide/vue'
 import { useRoute, useRouter } from 'vue-router'
 import { normalizeData } from '../lib/data'
 import { DiveEngine, type DiveEntry, type DiveFocus, type DiveHud } from '../lib/iceberg3d/diveEngine'
@@ -201,13 +202,10 @@ function onVisibilityChange() {
 
     <!-- HUD：深度 / 层级 / 航速 / 声呐 -->
     <div class="dive-hud">
-      <router-link to="/home" class="back-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
-        <span>{{ t('backToHome') }}</span>
-      </router-link>
+        <router-link to="/home" class="back-btn">
+          <ArrowLeft :size="16" :stroke-width="2" />
+          <span>{{ t('backToHome') }}</span>
+        </router-link>
       <div class="hud-right">
         <span class="hud-chip">{{ hud.depthM }} m</span>
         <span class="hud-chip">{{ tierName }}</span>

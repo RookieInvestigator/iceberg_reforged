@@ -4,7 +4,7 @@
 import meta from '../data/meta.json'
 
 export const REPRINT_SITE = '中文兔子洞冰山图'
-export const REPRINT_URL = 'https://iceberg.hezihezi.com'
+export const REPRINT_URL = 'https://iceberg-reforged.pages.dev'
 export const REPRINT_LICENSE = 'CC BY-NC-SA 4.0'
 
 // 与 scripts/build_data_api.py 第 3 步同正则：兼容「参与创作者：」与「参与创作者（按首字母排序）：」

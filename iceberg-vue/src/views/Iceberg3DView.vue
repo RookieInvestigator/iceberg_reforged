@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, onActivated, onDeactivated } from 'vue'
+import { ArrowLeft, ExternalLink } from '@lucide/vue'
 import { useRoute, useRouter } from 'vue-router'
 import { normalizeData } from '../lib/data'
 import { Iceberg3DEngine, type FocusState } from '../lib/iceberg3d/engine'
@@ -110,10 +111,7 @@ onUnmounted(() => {
 
     <div class="scene-ui" :class="{ 'hidden': !!selectedEntry }">
       <router-link to="/home" class="back-btn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
+        <ArrowLeft :size="16" :stroke-width="2" />
         <span>{{ t('backToHome') }}</span>
       </router-link>
 
@@ -145,7 +143,7 @@ onUnmounted(() => {
           <p class="panel-desc">{{ selectedEntry.item.desc || t('noDescription') }}</p>
 
           <a v-if="selectedEntry.item.link" :href="selectedEntry.item.link" target="_blank" rel="noopener" class="panel-link">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 2H3a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-3M11 2h3v3M8 8l6-6" /></svg>
+            <ExternalLink :size="12" :stroke-width="2" />
             {{ t('openLinkShort') }}
           </a>
 

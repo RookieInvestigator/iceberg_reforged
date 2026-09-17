@@ -1,5 +1,6 @@
 <script setup>
 import { reactive, onMounted, onUnmounted } from 'vue';
+import { ChevronDown } from '@lucide/vue';
 import BaseModal from './BaseModal.vue';
 import { useI18n } from '../../lib/useI18n';
 
@@ -29,11 +30,9 @@ onUnmounted(() => {
       <div v-for="(b, i) in bulletins" :key="i" :class="i > 0 ? 'border-t border-white/10' : ''">
         <button class="w-full text-left py-3 flex items-center justify-between gap-2 cursor-pointer select-none hover:bg-white/[0.02] transition-colors" @click="toggle(i)">
           <span class="text-sm font-bold text-white/80 truncate">{{ b.title }}</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+          <ChevronDown :size="14" :stroke-width="2"
             class="shrink-0 text-white/60 transition-transform duration-300"
-            :style="{ transform: expanded[i] ? 'rotate(180deg)' : 'rotate(0deg)' }">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
+            :style="{ transform: expanded[i] ? 'rotate(180deg)' : 'rotate(0deg)' }" />
         </button>
         <div v-if="expanded[i]" class="pb-4">
           <p v-if="b.date || b.author" class="text-[length:var(--font-micro)] text-white/45 mb-2">{{ b.date }} · {{ b.author }}</p>

@@ -48,11 +48,15 @@
 }
 .modal-header h2 { font-size: 1rem; font-weight: 700; color: var(--color-text-primary); letter-spacing: .05em; overflow-wrap: break-word; }
 .modal-header .modal-close {
-  color: var(--white-60); font-size: 1.2rem; line-height: 1;
+  /* 图标按钮统一规格（与标题旁搜索键同档）：32px 圆角盒，hover 才露底；
+     X 字形光学偏小，图标取 20px 与 16px 的搜索键找平 */
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0; width: 32px; height: 32px; border-radius: 8px;
+  color: var(--white-50);
   background: none; border: none; cursor: pointer;
-  transition: color .15s; flex-shrink: 0;
+  transition: color .15s, background-color .15s;
 }
-.modal-header .modal-close:hover { color: var(--white-90); }
+.modal-header .modal-close:hover { color: var(--white-90); background-color: var(--white-05); }
 
 /* 獨立滾動的內容區 */
 .modal-body { 

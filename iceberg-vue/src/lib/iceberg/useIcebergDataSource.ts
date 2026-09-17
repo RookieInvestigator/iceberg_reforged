@@ -2,6 +2,7 @@ import { provide, shallowRef } from 'vue'
 import raw from '../../data/iceberg.json'
 import relatedRaw from '../../data/appendix/related.csv?raw'
 import referencesRaw from '../../data/appendix/references.csv?raw'
+import overridesRaw from '../../data/appendix/overrides.csv?raw'
 import { isSafeHttpUrl, normalizeData } from '../data'
 import { parseCSV } from '../csv'
 import {
@@ -13,6 +14,7 @@ import {
   HERO_TITLES_KEY,
   RELATED_MAP_KEY,
   REFERENCES_MAP_KEY,
+  OVERRIDES_MAP_KEY,
   RENDER_ITEMS_KEY,
   TAG_MAP_KEY,
   TIER_ORDER_KEY,
@@ -59,6 +61,20 @@ export function useIcebergDataSource() {
     referencesMap.get(src)!.push({ label: label || url, url })
   }
 
+  // 副表加载：社区订正 (item_id → [{field, value, by, at}]，空表即无角标)
+  const overridesMap = new Map<string, { field: string; value: string; by: string; at: string }[]>()
+  for (const row of parseCSV(overridesRaw)) {
+    const id = (row.item_id || '').trim()
+    if (!id) continue
+    if (!overridesMap.has(id)) overridesMap.set(id, [])
+    overridesMap.get(id)!.push({
+      field: (row.field || '').trim(),
+      value: row.value || '',
+      by: (row.by || '').trim(),
+      at: (row.at || '').trim(),
+    })
+  }
+
   // 全局注入：子组件不需要 JSON.parse props
   provide(TIER_ORDER_KEY, data.tierOrder)
   provide(CATEGORY_COLORS_KEY, data.categoryColors)
@@ -69,6 +85,7 @@ export function useIcebergDataSource() {
   provide(HERO_TITLES_KEY, allItemsRaw.map((i) => i.title))
   provide(RELATED_MAP_KEY, relatedMap)
   provide(REFERENCES_MAP_KEY, referencesMap)
+  provide(OVERRIDES_MAP_KEY, overridesMap)
 
-  return { data, allItems, allItemsRaw, renderItemsRef, descMap, relatedMap, referencesMap }
+  return { data, allItems, allItemsRaw, renderItemsRef, descMap, relatedMap, referencesMap, overridesMap }
 }

@@ -116,7 +116,7 @@ iceberg-vue/
     ├── lib/ancient-book/           # 古籍模式（types / engine / layout / render + SpreadView/SpreadPage）
     ├── lib/iceberg/                # 冰山图 composables（搜索 Worker / 相关索引 / 筛选管线 / tooltip）
     ├── lib/iceberg3d/              # 3D 引擎（engine / picking / materials / cameraFlight / prng）
-    ├── lib/i18n/                   # 翻译字典（zh / en / ja，246×3 key；`i18n.test.ts` 锁三语对齐 + 死 key）
+    ├── lib/i18n/                   # 翻译字典（zh / en / ja，274×3 key；`i18n.test.ts` 锁三语对齐 + 死 key）
     ├── styles/                     # global.css, index.css, bg.css, modal.css, ancient-book.css, themes/
     ├── views/                      # IndexView, HomeView, HandbookView, FeaturesView, FeatureDetailView,
     │                               # OnThisDayView, AncientBookView, Iceberg3DView,
@@ -208,7 +208,7 @@ function storedAtom<T>(key: string, fallback: T) {
 | 词条总数 | 1440（API 实时同步，见 `meta.json` / `CHANGELOG` 数据条目） |
 | 层级 / 分类 / tagMap | 8 / 15 / 68 |
 | iceberg.json 体积 | ~993KB |
-| i18n 字典 | 246 key × 3 语言 |
+| i18n 字典 | 274 key × 3 语言 |
 | 搜索防抖 / 阈值 | 150ms / 0.3 |
 | Tooltip 延迟 | 200ms |
 

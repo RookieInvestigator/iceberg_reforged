@@ -7,13 +7,14 @@ import { bgMode, sortMode, scatterMode } from '../lib/settingsStore'
 import raw from '../data/iceberg.json'
 import relatedRaw from '../data/appendix/related.csv?raw'
 import referencesRaw from '../data/appendix/references.csv?raw'
+import overridesRaw from '../data/appendix/overrides.csv?raw'
 import { normalizeData, isSafeHttpUrl, formatUnixDate } from '../lib/data'
 import { parseCSV } from '../lib/csv'
 import { useI18n } from '../lib/useI18n'
 import { initialMountCount, nextMountCount } from '../lib/iceberg/wallMount'
 import { tierVisibleCounts } from '../lib/iceberg/wallCounts'
 import { docOrder } from '../lib/iceberg/wallState'
-import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, TIER_ORDER_KEY, CATEGORY_COLORS_KEY, TAG_MAP_KEY, DEFAULT_COLOR_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, HERO_TITLES_KEY, RELATED_MAP_KEY, REFERENCES_MAP_KEY, OPEN_ON_THIS_DAY_KEY, ID_ALIASES_KEY } from '../lib/injectionKeys'
+import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, TIER_ORDER_KEY, CATEGORY_COLORS_KEY, TAG_MAP_KEY, DEFAULT_COLOR_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, HERO_TITLES_KEY, RELATED_MAP_KEY, REFERENCES_MAP_KEY, OPEN_ON_THIS_DAY_KEY, ID_ALIASES_KEY, OVERRIDES_MAP_KEY } from '../lib/injectionKeys'
 import IcebergBg from '../components/layout/IcebergBg.vue'
 import FooterSection from '../components/layout/FooterSection.vue'
 // TEMP：hero 页暂时移除
@@ -76,6 +77,20 @@ for (const row of parseCSV(referencesRaw)) {
   referencesMap.get(src)!.push({ label: label || url, url })
 }
 
+// 副表加载：社区订正 (item_id → [{field, value, by, at}]，空表即无角标)
+const overridesMap = new Map<string, { field: string; value: string; by: string; at: string }[]>()
+for (const row of parseCSV(overridesRaw)) {
+  const id = (row.item_id || '').trim()
+  if (!id) continue
+  if (!overridesMap.has(id)) overridesMap.set(id, [])
+  overridesMap.get(id)!.push({
+    field: (row.field || '').trim(),
+    value: row.value || '',
+    by: (row.by || '').trim(),
+    at: (row.at || '').trim(),
+  })
+}
+
 // 全局注入：子组件不需要 JSON.parse props
 provide(TIER_ORDER_KEY, data.tierOrder)
 provide(CATEGORY_COLORS_KEY, data.categoryColors)
@@ -86,6 +101,7 @@ provide(DESC_MAP_KEY, descMap)
 provide(HERO_TITLES_KEY, allItemsRaw.map(i => i.title))
 provide(RELATED_MAP_KEY, relatedMap)
 provide(REFERENCES_MAP_KEY, referencesMap)
+provide(OVERRIDES_MAP_KEY, overridesMap)
 
 // 词条墙 DOM 文档序（tierOrder × 层内声明式排序）→ wallState.docOrder（单一事实源）：
 // 导航索引/随机池均由模块消费，与分片挂载兼容（不依赖 DOM 补齐状态）；sortMode 变化才重建

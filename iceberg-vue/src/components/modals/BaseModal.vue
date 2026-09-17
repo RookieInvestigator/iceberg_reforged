@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, useId } from 'vue'
+import { X } from '@lucide/vue'
 import { lockOverlay } from '../../lib/overlayLock'
 import { useI18n } from '../../lib/useI18n'
 
@@ -95,7 +96,7 @@ onUnmounted(() => {
             <!-- 动作按钮区（插槽 + 关闭按钮） -->
             <div class="flex items-center gap-3 shrink-0">
               <slot name="header-actions" />
-              <button type="button" class="modal-close" :aria-label="t('close')" @click="$emit('close')">&times;</button>
+              <button type="button" class="modal-close" :aria-label="t('close')" @click="$emit('close')"><X :size="20" :stroke-width="2" /></button>
             </div>
           </div>
 

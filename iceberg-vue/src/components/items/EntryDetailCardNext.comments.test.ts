@@ -34,7 +34,8 @@ describe('评论按钮链路', () => {
       props: { item },
       global: {
         stubs: { CommentPanel: { template: '<div class="comment-panel-stub">PANEL</div>' },
-          MessageCircle: true, Heart: true, Star: true, X: true, ChevronLeft: true, ChevronRight: true, ExternalLink: true },
+          CorrectedMark: true, FeedbackModal: true,
+          MessageCircle: true, Heart: true, Star: true, X: true, ChevronLeft: true, ChevronRight: true, ExternalLink: true, PencilLine: true },
       },
     })
     // BaseModal 内容 teleport 到 body —— 从 document.body 查询

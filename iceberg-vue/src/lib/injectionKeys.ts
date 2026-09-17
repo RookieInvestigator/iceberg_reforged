@@ -30,5 +30,14 @@ export interface ReferenceLink {
 }
 export const REFERENCES_MAP_KEY: InjectionKey<Map<string, ReferenceLink[]>> = Symbol('referencesMap')
 
+/** 社区订正（overrides.csv，workflow 回填；空表即无角标） */
+export interface OverrideRecord {
+  field: string
+  value: string
+  by: string
+  at: string
+}
+export const OVERRIDES_MAP_KEY: InjectionKey<Map<string, OverrideRecord[]>> = Symbol('overridesMap')
+
 export const OPEN_ON_THIS_DAY_KEY: InjectionKey<() => void> = Symbol('openOnThisDay')
 export const ID_ALIASES_KEY: InjectionKey<Map<string, string>> = Symbol('idAliases')

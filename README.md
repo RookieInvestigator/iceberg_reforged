@@ -6,8 +6,7 @@
 
 ## 访问地址
 
-- 主站：https://iceberg.hezihezi.com/（Cloudflare Pages 自定义域名）
-- 同站默认域名：https://iceberg-reforged.pages.dev/
+- 主站（临时）：https://iceberg-reforged.pages.dev/（Cloudflare Pages 默认域名，原自定义域名已停用）
 - 旧镜像地址（自动跳转主站）：https://rookieinvestigator.github.io/iceberg_reforged/
 
 旧镜像地址打开后自动跳转到主站（含深链保路径跳转）；搜索引擎权重随跳转归并于主站。
@@ -34,7 +33,7 @@
 ## 贡献方式
 
 - 你可以通过任何方式联系到中文兔子洞冰山图的创作者并提供建议。
-- 在https://icebergthreads.com/zh/iceberg/fel4BTCqlMAGSa2gelRJ进行提案或者评论是最方便我们看到的方式。
+- 在 https://icebergthreads.com/zh/iceberg/fel4BTCqlMAGSa2gelRJ 进行提案或者评论是最方便我们看到的方式。
 - 欢迎任何形式的贡献，包括但不限于提供参考资料，提出目前的问题、提案新词条等等。
 
 ## 本地预览

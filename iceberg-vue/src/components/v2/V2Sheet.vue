@@ -138,7 +138,6 @@ function onHandleTouchCancel() {
                 <span class="v2-entry-title">{{ titleCopied ? t('titleCopied') : item.title }}</span>
               </button>
               <EntrySearchButton :title="item.title" touch />
-              <button type="button" class="modal-close v2sheet-head__close" :aria-label="t('close')" @click="$emit('close')">&times;</button>
             </div>
 
             <V2EntryBody :item="item" layout="sheet" @navigate="emit('navigate', $event)" @comment-el="setCommentEl" />
@@ -155,12 +154,11 @@ function onHandleTouchCancel() {
 </template>
 
 <style scoped>
-/* 标题行：间距沿用原值（上 2 / 下 8）；只补偿关闭按钮的垂直对齐 ——
-   × 在 44px 内居中、中心在 22px，标题首行文字中心在 6+13=19px，故上移 4px 与首行齐平。 */
+/* 标题行：间距沿用原值（上 2 / 下 8）；移动端无 × 关闭键（下滑/点遮罩关闭），标题占满行宽 */
 .v2sheet-head {
   display: flex;
   align-items: flex-start;
-  gap: 4px;
+  gap: 8px;
   margin: 2px 0 8px;
 }
 .v2sheet-head__title {
@@ -178,16 +176,6 @@ function onHandleTouchCancel() {
   display: block;
   line-height: 1.3;
   overflow-wrap: anywhere;
-}
-/* 复用 modal.css 的 .modal-close 配色/字号，只补布局、44px 触控目标与对齐补偿 */
-.v2sheet-head__close {
-  flex-shrink: 0;
-  min-width: 44px;
-  min-height: 44px;
-  margin-top: -4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
 }
 /* 滚动区 + 渐隐遮罩 同处一栏：渐隐遮罩现在钉在滚动区底部而不是面板底部，
    否则会盖到底栏上（底栏也是 modal-bg 不透明，遮罩会把动作条蒙住）。 */

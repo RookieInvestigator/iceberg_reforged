@@ -9,11 +9,12 @@
 //
 // 自身不画分隔线/背景/留白：那是底栏（.modal-footer / .v2sheet-foot）的事，
 // 本件只出「一行按钮」，因此 card 与 sheet 两种宿位共用同一份外观。
-import { computed, inject } from 'vue';
-import { Heart, Star, Copy, Check, MessageCircle, ChevronLeft, ChevronRight } from '@lucide/vue';
+import { computed, inject, ref } from 'vue';
+import { Heart, Star, Copy, Check, MessageCircle, ChevronLeft, ChevronRight, PencilLine } from '@lucide/vue';
 import { useI18n } from '../../lib/useI18n';
 import type { EntryView } from '../../lib/iceberg/entryView';
 import { ENTRY_IA_KEY } from '../../lib/iceberg/v2/keys';
+import FeedbackModal from '../modals/FeedbackModal.vue';
 
 const props = defineProps<{
   item: EntryView
@@ -30,6 +31,7 @@ const {
   toggleItemLike, toggleFav, copyShareLink, openComments,
 } = ia
 const isFav = computed(() => (favs.value as string[]).includes(props.item.id))
+const showFeedback = ref(false)
 </script>
 
 <template>
@@ -62,6 +64,12 @@ const isFav = computed(() => (favs.value as string[]).includes(props.item.id))
         <Copy v-else :size="16" :stroke-width="1.7" />
         <span v-if="copied" class="v2act-btn__count whitespace-nowrap">{{ t('linkCopied') }}</span>
       </button>
+
+      <button v-if="supabaseReady" type="button" class="v2act-btn" @click="showFeedback = true"
+        :title="t('feedback')" :aria-label="t('feedback')">
+        <PencilLine :size="16" :stroke-width="1.7" />
+      </button>
+      <FeedbackModal v-if="showFeedback" :item="item" @close="showFeedback = false" />
     </div>
 
     <!-- 前后导航：抽屉里没有 ←/→ 语境，只在弹窗给 -->

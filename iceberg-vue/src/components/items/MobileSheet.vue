@@ -9,6 +9,8 @@ import CommentPanel from './CommentPanel.vue';
 import EntryRelatedLinks from './EntryRelatedLinks.vue';
 import EntryMetaBadges from './EntryMetaBadges.vue';
 import EntrySearchButton from './EntrySearchButton.vue';
+import FeedbackModal from '../modals/FeedbackModal.vue';
+import { PencilLine } from '@lucide/vue';
 
 const props = defineProps({ item: Object });
 const emit = defineEmits(['close', 'navigate']);
@@ -22,6 +24,21 @@ const itemId = toRef(() => (props.item as { id?: string } | null | undefined)?.i
 const { favs, copied, titleCopied, liked, likeCount, commentCount, updatingLike, commentsOpen, supabaseReady, toggleItemLike, toggleFav, copyShareLink, copyTitle, openComments } = useEntryInteractions(itemId, commentSectionEl)
 
 const panelRef = ref<HTMLElement | null>(null);
+const showFeedback = ref(false);
+// 反馈表单源（item 为宽松 Object，此处收敛为 FeedbackModal 签名）
+const feedbackSource = computed(() => {
+  const it = (props.item || {}) as {
+    id?: string; title?: string; desc?: string; category?: string; tags?: unknown; link?: string
+  };
+  return {
+    id: String(it.id || ''),
+    title: String(it.title || ''),
+    desc: String(it.desc || ''),
+    category: String(it.category || ''),
+    tags: Array.isArray(it.tags) ? it.tags.map(String) : [],
+    link: typeof it.link === 'string' ? it.link : undefined,
+  };
+});
 let sheetUnlock: (() => void) | null = null; // F20：overlay 滚动锁 token 释放函数
 
 // ===== 底部渐隐遮罩：正文可滚动且未滚到底时显示，滚到底后收起 =====
@@ -206,7 +223,7 @@ const tagList = computed<string[]>(() => {
       </div>
       <template v-if="item">
         <div ref="bodyEl" class="sheet-body no-scrollbar flex-1 min-h-0 overflow-y-auto pb-6 [-webkit-overflow-scrolling:touch]" @scroll="onBodyScroll">
-          <div class="mt-0.5 mb-2 flex items-center gap-1">
+          <div class="mt-0.5 mb-2 flex items-center gap-2">
             <button type="button" class="block flex-1 min-w-0 py-1.5 bg-transparent border-none text-text-primary text-left cursor-pointer touch-manipulation" @click="copyTitle(item.title)"
               :aria-label="titleCopied ? t('titleCopied') : t('copyTitle')">
               <span class="block text-xl font-black leading-[1.3] tracking-[0.01em] [overflow-wrap:anywhere]">{{ titleCopied ? t('titleCopied') : item.title }}</span>
@@ -217,6 +234,7 @@ const tagList = computed<string[]>(() => {
           <!-- PC 弹窗同款：先元信息徽章，再描述 -->
           <div class="mb-2.5">
             <EntryMetaBadges :tier="item.tier" :category="item.category" :categoryColor="item.color || '#fff'" :tags="tagList" />
+            <CorrectedMark :itemId="item.id" />
           </div>
 
           <p class="text-base leading-[1.7] text-white-85 whitespace-pre-wrap m-0 mb-3" :class="item.desc ? '' : 'text-white-55 italic'">
@@ -274,6 +292,11 @@ const tagList = computed<string[]>(() => {
               <Copy v-else :size="16" :stroke-width="1.7" />
               <span v-if="copied" class="text-[length:var(--font-tiny)] font-medium whitespace-nowrap">{{ t('linkCopied') }}</span>
             </button>
+            <button v-if="supabaseReady" type="button" class="min-w-11 min-h-11 inline-flex items-center justify-center gap-1 px-1.5 text-white-45 bg-transparent border-none rounded-lg cursor-pointer touch-manipulation transition-colors duration-150 enabled:hover:bg-white-05 enabled:active:bg-white-08 disabled:opacity-40 disabled:cursor-default" @click="showFeedback = true"
+              :title="t('feedback')" :aria-label="t('feedback')">
+              <PencilLine :size="16" :stroke-width="1.7" />
+            </button>
+            <FeedbackModal v-if="showFeedback && item" :item="feedbackSource" @close="showFeedback = false" />
           </div>
         </div>
       </template>

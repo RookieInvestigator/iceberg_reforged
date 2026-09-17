@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="icon" type="image/svg+xml" href="%BASE_URL%assets/iceberg.svg" />
-  <!-- SEO：canonical 与 og:url 由构建期预渲染注入（指向主站 iceberg.hezihezi.com），
+  <!-- SEO：canonical 与 og:url 由构建期预渲染注入（指向临时主站 iceberg-reforged.pages.dev），
        浏览器端 router.afterEach 同步更新。robots meta 与 google-site-verification 由
        vite.config.ts 的 seo-master-mirror 插件按构建环境注入（主站 index/follow+验证码，
        镜像 noindex/follow）。og:image 恒指主站（有意：社交卡片权重归并主站，镜像不分流）。 -->
@@ -13,14 +13,14 @@
   <meta property="og:site_name" content="中文兔子洞冰山图" />
   <meta property="og:title" content="中文兔子洞冰山图" />
   <meta property="og:description" content="社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识冰山图目录。" />
-  <meta property="og:image" content="https://iceberg.hezihezi.com/assets/og-cover.png" />
+  <meta property="og:image" content="https://iceberg-reforged.pages.dev/assets/og-cover.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:locale" content="zh_CN" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="中文兔子洞冰山图" />
   <meta name="twitter:description" content="社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识冰山图目录。" />
-  <meta name="twitter:image" content="https://iceberg.hezihezi.com/assets/og-cover.png" />
+  <meta name="twitter:image" content="https://iceberg-reforged.pages.dev/assets/og-cover.png" />
   <!-- 字体规范：正文思源黑体 Noto Sans SC（400/500/700/900）/ 古籍模式繁体思源宋体 Noto Serif TC
        （400/700/900）—— 全部按站内语料子集化自托管于 public/fonts/（脚本 scripts/subset_fonts.py），
        不再请求 Google Fonts（访客 IP 不外发 + 国内加载可靠）。
@@ -32,7 +32,7 @@
        注意：frame-ancestors 只能由 public/_headers 下发（<meta> 不支持该指令），改 CSP 时两处同步 -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Z5q8TZYONrNqyLxSr3ur3paaNHAy1TijELePKQ4UYaQ='; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://count.moeyy.cn; connect-src 'self' https://*.supabase.co wss://*.supabase.co ws://localhost:* ws://127.0.0.1:*; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'">
   <!-- 结构化数据（WebSite）：CSP 按内容哈希放行 -->
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"中文兔子洞冰山图","alternateName":"Chinese Oddities Iceberg","url":"https://iceberg.hezihezi.com/","description":"社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识冰山图目录。","inLanguage":["zh-CN","en","ja"]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"中文兔子洞冰山图","alternateName":"Chinese Oddities Iceberg","url":"https://iceberg-reforged.pages.dev/","description":"社区共建的中文互联网怪谈、都市传说、未解之谜与冷知识冰山图目录。","inLanguage":["zh-CN","en","ja"]}</script>
   <style>
     /* 首帧同步遮罩：在 Vue 与业务样式加载前覆盖页面，避免正文短暂闪现。 */
     html, body { margin: 0; min-height: 100%; background: #0a0e14; }

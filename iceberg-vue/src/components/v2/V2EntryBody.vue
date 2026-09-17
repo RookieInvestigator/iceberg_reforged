@@ -13,6 +13,7 @@ import { useI18n } from '../../lib/useI18n';
 import { normalizeTags } from '../../lib/tags';
 import type { EntryView } from '../../lib/iceberg/entryView';
 import CommentPanel from '../items/CommentPanel.vue';
+import CorrectedMark from '../items/CorrectedMark.vue';
 import EntryMetaBadges from './V2EntryMetaBadges.vue';
 import EntryRelatedLinks from './V2RelatedLinks.vue';
 import { REFERENCES_MAP_KEY, type ReferenceLink } from '../../lib/injectionKeys';
@@ -101,6 +102,7 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
       :categoryColor="item.categoryColor"
       :tags="tagList"
     />
+    <CorrectedMark :itemId="item.id" />
 
     <!-- 描述：核心阅读区（15px / 1.8 与 v1 对齐，属展示级例外，不收编进 5 阶梯） -->
     <p class="v2entry-desc" :class="[item.desc ? '' : 'v2entry-desc--empty', descSpacing]">

@@ -5,6 +5,8 @@ import CommentPanel from './CommentPanel.vue';
 import EntryMetaBadges from './EntryMetaBadges.vue';
 import EntryRelatedLinks from './EntryRelatedLinks.vue';
 import EntrySearchButton from './EntrySearchButton.vue';
+import FeedbackModal from '../modals/FeedbackModal.vue';
+import { PencilLine } from '@lucide/vue';
 import { ref, computed, inject, toRef, onMounted, onUnmounted } from 'vue';
 import { useI18n } from '../../lib/useI18n';
 import { useEntryInteractions } from '../../lib/useEntryInteractions';
@@ -47,6 +49,7 @@ const { t } = useI18n();
 
 // P2-14：交互逻辑收敛至 useEntryInteractions（收藏/点赞/评论计数/复制/评论区开关）
 const commentSectionEl = ref<HTMLElement | null>(null)
+const showFeedback = ref(false)
 const itemId = toRef(() => props.item?.id)
 const { favs, copied, titleCopied, liked, likeCount, commentCount, updatingLike, commentsOpen, supabaseReady, toggleItemLike, toggleFav, copyShareLink, copyTitle, openComments } = useEntryInteractions(itemId, commentSectionEl)
 
@@ -85,6 +88,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
     <!-- ── 描述区：核心（阅读）；-mt-3 抵消 modal-body 顶部 padding，压缩头部下方留白 ── -->
     <div class="-mt-3">
       <EntryMetaBadges :tier="item.tier" :category="item.category" :categoryColor="item.categoryColor" :tags="item.tags" />
+      <CorrectedMark :itemId="item.id" />
     </div>
 
     <!-- 描述自带上下留白（descSpacing 自适应：短描述保底大留白，长描述回归紧凑）；占位为灰色斜体 -->
@@ -158,6 +162,13 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
             <!-- 显式反馈：复制成功即显示「已复制链接」（原生 title 提示太弱） -->
             <span v-if="copied" class="text-[length:var(--font-tiny)] font-medium whitespace-nowrap">{{ t('linkCopied') }}</span>
           </button>
+
+          <button v-if="supabaseReady" @click="showFeedback = true"
+            class="entry-action-btn max-sm:min-w-[40px] max-sm:min-h-[40px] transition-colors cursor-pointer text-white/60 hover:text-white/90"
+            :title="t('feedback')" :aria-label="t('feedback')">
+            <PencilLine :size="16" :stroke-width="1.7" />
+          </button>
+          <FeedbackModal v-if="showFeedback" :item="item" @close="showFeedback = false" />
         </div>
 
         <div v-if="item.prevId || item.nextId" class="flex items-center">

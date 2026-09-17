@@ -1,6 +1,13 @@
 # 更新日志
 
 
+## 2026-09-12 — 主站切回 pages.dev（自定义域名停用）
+
+### 改进
+
+- **临时主站 `iceberg-reforged.pages.dev`**：`MASTER_ORIGIN` / 预渲染 `ORIGIN` / sitemap 全 7 条 / robots Sitemap / JSON-LD / og:image / 转载模板 URL / GH 跳转页目标全量切换；README 访问地址同步；旧域名残留仅 CHANGELOG 历史条目与转载模板防旧链断言
+
+
 ## 2026-09-12 — 数据 1432→1440 · 管线 contributors 作用域修复 · 字体子集同步
 
 ### 新增
@@ -12,6 +19,8 @@
 - **导出升级为弹窗（PNG / SVG / YAML / HTML）**：页脚导出键点开 ExportModal；PNG/SVG 三档宽度（1600/1920/2560，宽=矮=dpr 余量）；SVG 矢量无限清晰（paint-order 描边同构）；YAML 可见子集数据快照；HTML 单文件带筛选条 + tooltip；题头/图例/层级分隔线/底部二维码三件套；i18n 238 → 241 key
 - **HTML 导出筛选修两处**：标签筛选用 emoji 比对（名字永远 0 命中、全黑根因）；筛选逐项 querySelector 改为一次建表 + tooltip mousemove 改 rAF 节流（CDP 实测：图例点击 100ms、输入 4ms、重置 6ms）
 - **导航层级指示改序数词**：`层级 N` → `第一层…第八层`（下拉列表同步；`lib/iceberg/tierDisplay.ts` 纯函数 + 单测，非标准名原样返回）；第一层上方（masthead 区）显示`共八层`（scroll-spy 无命中且首层仍在视口下方，原回退末层不动）
+- **订正角标显示先行**：新共用 `CorrectedMark.vue`（v2 内容区 / v1 桌面弹窗 / v1 抽屉三处挂载，空表零渲染）；`overrides.csv`（`item_id,field,value,by,at`）+ `OVERRIDES_MAP_KEY` 双数据源接线；点图标展开改动字段与"由xxxx订正"；i18n 246 → 248 key
+- **反馈提交流实装**：`entry_feedback` 表（migration：`changes jsonb` 差异项 + `note` + 登录强制绑定 + 双索引 + RLS 三件套）+ `feedbackData.ts`（diff/post/我的列表/撤回，9 项单测）；`FeedbackModal`（整条预填：分类下拉 + 标签 pills 多选 + 说明必填，纯说明可提交；未登录嵌套登录弹窗）；入口三处（v2 动作条 / v1 弹窗底栏 / v1 抽屉操作区，铅笔键 + Supabase 守卫）；UserModal"我的反馈"（状态点 + 仅 open 可撤回）；i18n 248 → 274 key
 
 ### 数据
 

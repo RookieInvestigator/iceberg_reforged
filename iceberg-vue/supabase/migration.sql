@@ -122,3 +122,28 @@ AS $$
   FROM auth.users
   WHERE id = ANY(uids) AND raw_user_meta_data->>'display_name' IS NOT NULL;
 $$;
+
+-- 反馈/订正（2026-09-12）：整条预填 + 说明 note；匿名不可提交（无 anon 列）。
+-- changes 只收 title/desc/link/category/tags 的差异项（应用层 diff，空对象 = 纯反馈）。
+CREATE TABLE IF NOT EXISTS entry_feedback (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  item_id TEXT NOT NULL,
+  changes JSONB NOT NULL DEFAULT '{}',
+  note TEXT NOT NULL DEFAULT '',
+  user_id UUID NOT NULL REFERENCES auth.users,
+  status TEXT NOT NULL DEFAULT 'open',
+  applied BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_feedback_item ON entry_feedback (item_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_open ON entry_feedback (status) WHERE applied = false;
+ALTER TABLE entry_feedback ENABLE ROW LEVEL SECURITY;
+-- 公开读（列表查询只取非敏感列，显示名走 batch_user_display，与评论同口径）
+DROP POLICY IF EXISTS "feedback_select" ON entry_feedback;
+CREATE POLICY "feedback_select" ON entry_feedback FOR SELECT USING (true);
+-- 登录强制绑定本人（无匿名分支）
+DROP POLICY IF EXISTS "feedback_insert" ON entry_feedback;
+CREATE POLICY "feedback_insert" ON entry_feedback FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- 仅本人可撤回；管理员删改走 Supabase 后台
+DROP POLICY IF EXISTS "feedback_delete" ON entry_feedback;
+CREATE POLICY "feedback_delete" ON entry_feedback FOR DELETE USING (auth.uid() = user_id);

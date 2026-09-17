@@ -66,13 +66,13 @@ jobs:
           <head>
           <meta charset="UTF-8">
           <title>中文兔子洞冰山图已搬迁</title>
-          <link rel="canonical" href="https://iceberg.hezihezi.com/">
+          <link rel="canonical" href="https://iceberg-reforged.pages.dev/">
           <meta name="robots" content="noindex">
-          <meta http-equiv="refresh" content="0; url=https://iceberg.hezihezi.com/">
-          <script>(function(){var p=location.pathname.replace(/^\/iceberg_reforged/,'')||'/';location.replace('https://iceberg.hezihezi.com'+p+location.search+location.hash);})();</script>
+          <meta http-equiv="refresh" content="0; url=https://iceberg-reforged.pages.dev/">
+          <script>(function(){var p=location.pathname.replace(/^\/iceberg_reforged/,'')||'/';location.replace('https://iceberg-reforged.pages.dev'+p+location.search+location.hash);})();</script>
           </head>
           <body>
-          <p>本站已搬迁至 <a href="https://iceberg.hezihezi.com/">iceberg.hezihezi.com</a>，正在跳转……</p>
+          <p>本站已搬迁至 <a href="https://iceberg-reforged.pages.dev/">iceberg-reforged.pages.dev</a>，正在跳转……</p>
           </body>
           </html>
           EOF

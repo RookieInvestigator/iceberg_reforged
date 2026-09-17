@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
+import { ChevronLeft, ChevronRight } from '@lucide/vue'
 import csvRaw from '../../data/on-this-day.csv?raw'
 import { parseCSV } from '../../lib/csv'
 import { useI18n } from '../../lib/useI18n'
@@ -63,11 +64,11 @@ const getMonthName = (d: Date) => new Intl.DateTimeFormat(monthLocales[lang.valu
     <!-- 日期导航 -->
     <div class="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
       <button @click="goPrev" class="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center rounded-full hover:bg-white-08 text-white-60 hover:text-white transition-colors">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        <ChevronLeft :size="14" :stroke-width="2" />
       </button>
       <span class="text-white font-bold text-base sm:text-lg tracking-tight">{{ getMonthName(cur) }} {{ pad(cur.getDate()) }}</span>
       <button @click="goNext" class="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center rounded-full hover:bg-white-08 text-white-60 hover:text-white transition-colors">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+        <ChevronRight :size="14" :stroke-width="2" />
       </button>
       <button @click="goToday" class="min-h-11 md:min-h-8 px-2 flex items-center text-micro sm:text-tiny text-white-45 hover:text-white-80 tracking-wider ml-1">{{ t('today') }}</button>
     </div>

@@ -18,6 +18,7 @@ import {
 } from '../../lib/injectionKeys'
 import { FACET_COUNTS_KEY, type FacetCounts } from '../../lib/iceberg/v2/keys'
 import { useV2NavVisibility } from '../../lib/iceberg/v2/useV2NavVisibility'
+import { Search } from '@lucide/vue'
 import { tierDisplayName, totalTiersText } from '../../lib/iceberg/tierDisplay'
 import { useV2SearchSuggest } from '../../lib/iceberg/v2/useV2SearchSuggest'
 
@@ -146,7 +147,7 @@ function toggleSpecial(key: string) {
       </div>
       <span class="v2nav-sep" aria-hidden="true" />
       <div class="v2nav-search">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="shrink-0 opacity-40" aria-hidden="true"><circle cx="10" cy="10" r="7"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+        <Search :size="16" :stroke-width="2" class="shrink-0 opacity-40" aria-hidden="true" />
         <input
           ref="searchInputRef" type="text" :value="query" @input="onSearchInputEvent"
           :placeholder="t('search')" autocomplete="off" aria-label="search" role="combobox"

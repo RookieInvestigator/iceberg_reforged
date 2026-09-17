@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onActivated, onDeactivated, onMounted, onUnmounted, ref } from 'vue'
+import { User } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '@nanostores/vue'
 import { lang } from '../lib/i18nStore'
@@ -137,10 +138,7 @@ onUnmounted(() => {
     <!-- 左上角：登录/用户入口 + 语言切换 -->
     <div class="ds-top-left">
       <button v-if="supReady" type="button" class="ds-user" @click="showUser = true">
-        <svg v-if="!u" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-          <circle cx="12" cy="7" r="4" />
-        </svg>
+        <User v-if="!u" :size="14" :stroke-width="2" aria-hidden="true" />
         <span v-else class="ds-user-dot" aria-hidden="true"></span>
         <span>{{ u ? u.displayName : t('login') }}</span>
       </button>

@@ -143,7 +143,7 @@ export default defineConfig({
     },
     {
       // 主从镜像 SEO 策略（2026-09-05 拍板）：
-      // 主站 = 自定义域名 iceberg.hezihezi.com（Cloudflare Pages），镜像 = GitHub Pages。
+      // 主站 = 默认域名 iceberg-reforged.pages.dev（Cloudflare Pages，临时主站），镜像 = GitHub Pages。
       // 主站：index,follow + google-site-verification（让 Search Console 验证通过）。
       // 镜像：noindex,follow，无验证码 —— canonical 已指向主站，noindex 做双保险。
       // dev 模式：不注入任何标签，保持干净。
@@ -177,7 +177,7 @@ export default defineConfig({
           const robotsPath = path.join(dist, 'robots.txt')
           const sitemapPath = path.join(dist, 'sitemap.xml')
           if (fs.existsSync(robotsPath)) {
-            fs.writeFileSync(robotsPath, 'User-agent: *\nAllow: /\n\n# 镜像站（主站：iceberg.hezihezi.com）\n# 不声明 Sitemap：镜像不需要被独立索引\n')
+            fs.writeFileSync(robotsPath, 'User-agent: *\nAllow: /\n\n# 镜像站（主站：iceberg-reforged.pages.dev）\n# 不声明 Sitemap：镜像不需要被独立索引\n')
             console.log('[seo-master-mirror] 镜像模式：robots.txt Allow（无 Sitemap 声明）')
           }
           if (fs.existsSync(sitemapPath)) {

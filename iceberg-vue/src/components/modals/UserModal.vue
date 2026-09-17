@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { useStore } from '@nanostores/vue'
 import { user as userAtom, signUp, signInWithPassword, signInWithOtp, updateNickname, signOut, syncFavoritesWithCloud } from '../../lib/authStore'
 import { fetchUserStats } from '../../lib/supabaseData'
+import { fetchMyFeedback, deleteFeedback, type FeedbackRow } from '../../lib/feedbackData'
 import { isSupabaseReady } from '../../lib/supabase'
 import { useI18n } from '../../lib/useI18n'
 import type { UserStats } from '../../lib/supabaseData'
@@ -120,12 +121,27 @@ async function refreshStats() {
   }
 }
 
+// ===== 我的反馈 =====
+const myFeedback = ref<FeedbackRow[]>([])
+async function refreshFeedback() {
+  if (!isSupabaseReady()) return
+  myFeedback.value = await fetchMyFeedback()
+}
+async function withdrawFeedback(id: number) {
+  try {
+    await deleteFeedback(id)
+    myFeedback.value = myFeedback.value.filter((r) => r.id !== id)
+  } catch { /* F11 外：撤回失败静默（列表下次打开重拉） */ }
+}
+
 watch(u, (val) => {
   if (val) {
     refreshStats()
+    refreshFeedback()
   } else {
     stats.value = null
     statsError.value = false
+    myFeedback.value = []
   }
 }, { immediate: true })
 
@@ -219,6 +235,21 @@ const hl = () => heatLabel()
 
       <div v-if="cat()" class="mt-4 text-xs text-white-30 text-center">
         {{ t('favCategory') }} <span class="text-white-60 font-medium">{{ cat() }}</span>
+      </div>
+
+      <div class="mt-4 pt-4 border-t border-white-08">
+        <div class="text-micro font-bold text-white-40 uppercase tracking-[0.08em] mb-2">{{ t('myFeedback') }}</div>
+        <div v-if="!myFeedback.length" class="text-xs text-white-25 text-center py-1">{{ t('feedbackEmpty') }}</div>
+        <div v-else class="space-y-1.5 max-h-40 overflow-y-auto no-scrollbar">
+          <div v-for="fb in myFeedback" :key="fb.id" class="flex items-center gap-2 text-xs">
+            <span class="w-1.5 h-1.5 rounded-full shrink-0"
+              :class="fb.status === 'open' ? 'bg-white-30' : (fb.status === 'rejected' ? 'bg-danger' : 'bg-success')" />
+            <span class="flex-1 min-w-0 truncate text-white-60">{{ fb.note || Object.keys(fb.changes || {}).join('/') || fb.item_id }}</span>
+            <span class="shrink-0 text-white-30">{{ fb.status === 'rejected' ? t('feedbackRejected') : (fb.status === 'open' ? t('feedbackOpen') : (fb.applied ? t('feedbackApplied') : t('feedbackAccepted'))) }}</span>
+            <button v-if="fb.status === 'open'" @click="withdrawFeedback(fb.id)"
+              class="shrink-0 text-white-25 bg-transparent border-none cursor-pointer p-0 transition-colors hover:text-white-70">{{ t('delete') }}</button>
+          </div>
+        </div>
       </div>
     </template>
 
