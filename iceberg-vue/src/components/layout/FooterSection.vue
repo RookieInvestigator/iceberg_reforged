@@ -42,7 +42,7 @@ const showTerms = ref(false);
       © 2026 中文兔子洞冰山图贡献者 ·
       <a href="https://github.com/RookieInvestigator/iceberg_reforged/blob/master/LICENSE" target="_blank" rel="noopener noreferrer" class="text-white-25 hover:text-white-60 transition-colors">AGPLv3</a>
       ·
-      <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans" target="_blank" rel="noopener noreferrer" class="text-white-25 hover:text-white-60 transition-colors">CC BY-NC-SA 4.0</a>
+      <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hans" target="_blank" rel="noopener noreferrer" class="text-white-25 hover:text-white-60 transition-colors">CC BY-SA 4.0</a>
     </p>
     
     <div class="flex flex-col sm:flex-row items-center justify-center text-xs tracking-widest text-white-40">

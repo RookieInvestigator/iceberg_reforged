@@ -90,7 +90,7 @@ function collectInput(): LayoutBuildOptions | null {
       tags: Object.entries(tagMap).map(([emoji, name]) => ({ emoji, name: String(name) })),
     },
     footer: location.href,
-    footerCopy: `${t('copyrightLine').replace('{year}', String(new Date().getFullYear()))} · CC BY-NC-SA 4.0`,
+    footerCopy: `${t('copyrightLine').replace('{year}', String(new Date().getFullYear()))} · CC BY-SA 4.0`,
     style: {
       fontPx, fontFamily,
       padX: V2_EXPORT_METRICS.padX, padY: V2_EXPORT_METRICS.padY,

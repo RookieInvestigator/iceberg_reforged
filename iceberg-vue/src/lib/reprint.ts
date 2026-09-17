@@ -1,11 +1,11 @@
-// 转载模板（CC BY-NC-SA 4.0 署名要求落地）：
+// 转载模板（CC BY-SA 4.0 署名要求落地）：
 // 名单：meta.json 的 contributors（管线与 introText 同源解析，数据更新自动同步），
 // 本模块只引用轻量 meta.json，禁止引用 iceberg.json（见 CLAUDE.md 分层导入）。
 import meta from '../data/meta.json'
 
 export const REPRINT_SITE = '中文兔子洞冰山图'
 export const REPRINT_URL = 'https://iceberg-reforged.pages.dev'
-export const REPRINT_LICENSE = 'CC BY-NC-SA 4.0'
+export const REPRINT_LICENSE = 'CC BY-SA 4.0'
 
 // 与 scripts/build_data_api.py 第 3 步同正则：兼容「参与创作者：」与「参与创作者（按首字母排序）：」
 const CONTRIBUTOR_MARKER = /参与创作者(?:（[^）]*）)?：/
@@ -34,6 +34,6 @@ export function buildReprintText(title: string, url: string): string {
     `【转载自「${REPRINT_SITE}」】`,
     `原文：${title}`,
     `链接：${url}`,
-    `授权：${REPRINT_LICENSE}（署名—非商业性使用—相同方式共享）`,
+    `授权：${REPRINT_LICENSE}（署名—相同方式共享）`,
   ].join('\n')
 }

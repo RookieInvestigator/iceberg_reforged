@@ -36,7 +36,7 @@ const showTerms = ref(false);
 
 const GITHUB_URL = 'https://github.com/RookieInvestigator/iceberg_reforged';
 const SOURCE_URL = 'https://icebergthreads.com/zh/iceberg/fel4BTCqlMAGSa2gelRJ';
-const CC_URL = 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans';
+const CC_URL = 'https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hans';
 </script>
 
 <template>
@@ -58,7 +58,7 @@ const CC_URL = 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans';
     <nav class="v2colo-nav v2colo-ext">
       <a :href="SOURCE_URL" target="_blank" rel="noopener noreferrer">IcebergThreads</a>
       <a :href="GITHUB_URL" target="_blank" rel="noopener noreferrer">{{ t('aboutRepo') }}</a>
-      <a :href="CC_URL" target="_blank" rel="noopener noreferrer">CC BY-NC-SA 4.0</a>
+      <a :href="CC_URL" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>
     </nav>
     <p class="v2colo-copy">{{ t('copyrightLine').replace('{year}', String(new Date().getFullYear())) }}</p>
     <img

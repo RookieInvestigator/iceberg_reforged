@@ -32,7 +32,7 @@ function copyReprint() {
         <p class="text-center">
           <a href="https://github.com/RookieInvestigator/iceberg_reforged/blob/master/LICENSE" target="_blank" rel="noopener noreferrer" class="text-white-50 hover:text-white-80 transition-colors">AGPLv3</a>
           <span class="text-white-15"> · </span>
-          <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans" target="_blank" rel="noopener noreferrer" class="text-white-50 hover:text-white-80 transition-colors">CC BY-NC-SA 4.0</a>
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hans" target="_blank" rel="noopener noreferrer" class="text-white-50 hover:text-white-80 transition-colors">CC BY-SA 4.0</a>
         </p>
         <p>{{ t('takedownNote') }}</p>
       </div>
