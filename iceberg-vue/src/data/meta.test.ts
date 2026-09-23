@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import raw from './iceberg.json'
 import meta from './meta.json'
 import idIndex from './id-index.json'
+import categoriesRaw from './appendix/categories.csv?raw'
+import { parseCSV } from '../lib/csv'
 
 /**
  * 派生数据一致性守卫。
@@ -58,6 +60,21 @@ describe('派生数据与 iceberg.json 一致', () => {
       expect(entry, `缺少 id ${it.id} 的索引`).toBeTruthy()
       expect(entry.t).toBe(it.title)
       expect(entry.c).toBe(it.category ?? '')
+    }
+  })
+
+  it('categories.csv 副表：item_id 存在、分类合法、不与主分类重复', () => {
+    const all = Object.values(data.tiers).flat()
+    const ids = new Set(all.map((it) => it.id))
+    const mainOf = new Map(all.map((it) => [it.id, it.category ?? '']))
+    const known = new Set(Object.keys(data.categoryColors))
+    for (const row of parseCSV(categoriesRaw)) {
+      const iid = (row.item_id || '').trim()
+      const cat = (row.category || '').trim()
+      if (!iid && !cat) continue
+      expect(ids.has(iid), `副表孤儿 item_id ${iid}`).toBe(true)
+      expect(known.has(cat), `副表未知分类 ${cat}`).toBe(true)
+      expect(cat, `副表与主分类重复 ${iid}`).not.toBe(mainOf.get(iid))
     }
   })
 })

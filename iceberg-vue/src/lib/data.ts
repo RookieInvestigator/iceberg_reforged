@@ -3,6 +3,10 @@ export interface IcebergItem {
   id: string;
   title: string;
   category: string;
+  /** 多分类副表挂载：主分类 + 副分类（去重，主分类打头）；无副表时数据源回退为 [category] */
+  categories?: string[];
+  /** 多分类墙渐变：OKLCH 预插色标逗号列表（仅多分类词条由数据源预计算挂载） */
+  gradStops?: string;
   tags: string[];
   desc: string;
   link: string;

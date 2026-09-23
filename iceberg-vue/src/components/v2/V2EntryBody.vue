@@ -17,6 +17,8 @@ import CorrectedMark from '../items/CorrectedMark.vue';
 import EntryMetaBadges from './V2EntryMetaBadges.vue';
 import EntryRelatedLinks from './V2RelatedLinks.vue';
 import { REFERENCES_MAP_KEY, type ReferenceLink } from '../../lib/injectionKeys';
+import { CATEGORY_COLORS_KEY, DEFAULT_COLOR_KEY } from '../../lib/injectionKeys';
+import { extraBadges } from '../../lib/iceberg/extraCategories';
 import { TRAIL_KEY, ENTRY_IA_KEY } from '../../lib/iceberg/v2/keys';
 
 const props = defineProps<{
@@ -63,6 +65,11 @@ const hasRelated = computed(
   () => (props.item?.related?.length ?? 0) + (props.item?.recommended?.length ?? 0) > 0,
 )
 
+// 多分类副表：副分类徽章（色源与筛选栏同源）
+const categoryColors = inject(CATEGORY_COLORS_KEY, {} as Record<string, string>)
+const defaultColor = inject(DEFAULT_COLOR_KEY, '#FFFFFF')
+const extraCats = computed(() => extraBadges(props.item, categoryColors, defaultColor))
+
 // 标签归一化移出模板（原先每次渲染都跑一遍）
 const tagList = computed(() => normalizeTags(props.item.tags))
 
@@ -101,6 +108,7 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
       :category="item.category"
       :categoryColor="item.categoryColor"
       :tags="tagList"
+      :extra="extraCats"
     />
     <CorrectedMark :itemId="item.id" />
 

@@ -10,6 +10,8 @@ import { PencilLine } from '@lucide/vue';
 import { ref, computed, inject, toRef, onMounted, onUnmounted } from 'vue';
 import { useI18n } from '../../lib/useI18n';
 import { useEntryInteractions } from '../../lib/useEntryInteractions';
+import { CATEGORY_COLORS_KEY, DEFAULT_COLOR_KEY } from '../../lib/injectionKeys';
+import { extraBadges } from '../../lib/iceberg/extraCategories';
 
 export interface EntryDetailCardLink {
   label: string
@@ -28,6 +30,8 @@ export interface EntryDetailCardItem {
   tier?: string
   category: string
   categoryColor: string
+  /** 多分类副表挂载（主 + 副）；无则回退 [category] */
+  categories?: string[]
   tags: string[]
   desc: string
   link?: string
@@ -52,6 +56,11 @@ const commentSectionEl = ref<HTMLElement | null>(null)
 const showFeedback = ref(false)
 const itemId = toRef(() => props.item?.id)
 const { favs, copied, titleCopied, liked, likeCount, commentCount, updatingLike, commentsOpen, supabaseReady, toggleItemLike, toggleFav, copyShareLink, copyTitle, openComments } = useEntryInteractions(itemId, commentSectionEl)
+
+// 多分类副表：副分类徽章（色源与筛选栏同源）
+const categoryColors = inject(CATEGORY_COLORS_KEY, {} as Record<string, string>)
+const defaultColor = inject(DEFAULT_COLOR_KEY, '#FFFFFF')
+const extraCats = computed(() => extraBadges(props.item, categoryColors, defaultColor))
 
 // 参考链接：显式 references 优先，否则回退副表 referencesMap（同 ItemModal）
 const referencesMap = inject<Map<string, EntryDetailCardLink[]>>('referencesMap', new Map())
@@ -87,7 +96,7 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 
     <!-- ── 描述区：核心（阅读）；-mt-3 抵消 modal-body 顶部 padding，压缩头部下方留白 ── -->
     <div class="-mt-3">
-      <EntryMetaBadges :tier="item.tier" :category="item.category" :categoryColor="item.categoryColor" :tags="item.tags" />
+      <EntryMetaBadges :tier="item.tier" :category="item.category" :categoryColor="item.categoryColor" :tags="item.tags" :extra="extraCats" />
       <CorrectedMark :itemId="item.id" />
     </div>
 

@@ -400,8 +400,9 @@ def check_count_drop(old_data: dict | None, new_count: int) -> str | None:
     return None
 
 
-def check_orphan_relations(new_ids: set) -> list:
-    """副表孤儿关系：related.csv / references.csv 的 source_id / target_id 必须存在于新数据"""
+def check_orphan_relations(new_ids: set, known_categories: set | None = None) -> list:
+    """副表孤儿关系：related.csv / references.csv 的 source_id / target_id 必须存在于新数据；
+    categories.csv 的 item_id 必须存在、category 必须落在 categoryColors 内"""
     problems = []
     for rel_file in ('related.csv', 'references.csv'):
         path = os.path.join(OUTPUT_DIR, 'appendix', rel_file)
@@ -419,6 +420,21 @@ def check_orphan_relations(new_ids: set) -> list:
                         problems.append(f'{rel_file} 孤儿 target_id: {tgt}')
         except (OSError, ValueError) as e:
             problems.append(f'{rel_file} 读取失败: {e}')
+    # 多分类副表（叠加 OR）：孤儿 item_id 与未知分类均阻断覆盖
+    try:
+        import csv as _csv
+        cat_path = os.path.join(OUTPUT_DIR, 'appendix', 'categories.csv')
+        if os.path.exists(cat_path):
+            with open(cat_path, encoding='utf-8-sig') as f:
+                for row in _csv.DictReader(f):
+                    iid = (row.get('item_id') or '').strip()
+                    cat = (row.get('category') or '').strip()
+                    if iid and iid not in new_ids:
+                        problems.append(f'categories.csv 孤儿 item_id: {iid}')
+                    if cat and known_categories is not None and cat not in known_categories:
+                        problems.append(f'categories.csv 未知分类: {cat}')
+    except (OSError, ValueError) as e:
+        problems.append(f'categories.csv 读取失败: {e}')
     return problems
 
 
@@ -523,7 +539,10 @@ def build():
     drop = check_count_drop(old_data, total)
     if drop:
         errors.append(drop)
-    errors += check_orphan_relations({it['id'] for its in data['tiers'].values() for it in its})
+    errors += check_orphan_relations(
+        {it['id'] for its in data['tiers'].values() for it in its},
+        set(data.get('categoryColors', {}).keys()),
+    )
     if errors:
         print('ERROR: 数据校验未通过，拒绝覆盖（旧数据保留在 iceberg.json）:')
         for e in errors[:20]:

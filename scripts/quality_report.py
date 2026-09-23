@@ -232,6 +232,33 @@ def check_marketing_sources(data):
     return problems
 
 
+def check_appendix_categories(data):
+    """多分类副表（categories.csv）：孤儿 item_id / 未知分类 / 与主分类重复的行"""
+    problems = []
+    ids = {it['id'] for its in data.get('tiers', {}).values() for it in its}
+    known = set(data.get('categoryColors', {}).keys())
+    by_id = {it['id']: it.get('category', '') for its in data.get('tiers', {}).values() for it in its}
+    cat_csv = APPENDIX_DIR / 'categories.csv'
+    if not cat_csv.exists():
+        return problems
+    try:
+        with open(cat_csv, encoding='utf-8-sig') as f:
+            for row in csv.DictReader(f):
+                iid = (row.get('item_id') or '').strip()
+                cat = (row.get('category') or '').strip()
+                if not iid or not cat:
+                    continue
+                if iid not in ids:
+                    problems.append((iid, '', '', f'多分类副表孤儿 item_id: {iid}'))
+                elif cat not in known:
+                    problems.append((iid, '', '', f'多分类副表未知分类: {cat}'))
+                elif cat == by_id.get(iid):
+                    problems.append((iid, '', '', f'多分类副表与主分类重复: {cat}'))
+    except (OSError, ValueError) as e:
+        problems.append(('', '', '', f'多分类副表读取失败: {e}'))
+    return problems
+
+
 def check_regression(old_data, new_data):
     """回归对比（与上一版 .bak 快照）：删除条目 / 标题变更 / 数量层级变化"""
     problems = []
@@ -269,6 +296,7 @@ def run_static_checks(data, old_data):
         ('链接重复', check_duplicate_links(data)),
         ('链接质量', check_link_quality(data)),
         ('营销号来源', check_marketing_sources(data)),
+        ('多分类副表', check_appendix_categories(data)),
         ('回归对比', check_regression(old_data, data)),
     ]
     return [(check, *row) for check, rows in checks for row in rows]

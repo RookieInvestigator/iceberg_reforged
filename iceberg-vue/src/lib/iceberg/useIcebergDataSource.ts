@@ -3,12 +3,15 @@ import raw from '../../data/iceberg.json'
 import relatedRaw from '../../data/appendix/related.csv?raw'
 import referencesRaw from '../../data/appendix/references.csv?raw'
 import overridesRaw from '../../data/appendix/overrides.csv?raw'
+import categoriesRaw from '../../data/appendix/categories.csv?raw'
 import { isSafeHttpUrl, normalizeData } from '../data'
 import { parseCSV } from '../csv'
+import { applyExtraCategories, parseExtraCategories } from './extraCategories'
 import {
   CATEGORY_COLORS_KEY,
   DEFAULT_COLOR_KEY,
   DESC_MAP_KEY,
+  EXTRA_CATEGORIES_KEY,
   FILTER_VISIBLE_KEY,
   DIM_ITEMS_KEY,
   HERO_TITLES_KEY,
@@ -27,6 +30,12 @@ import {
  */
 export function useIcebergDataSource() {
   const data = normalizeData(raw)
+  // 多分类副表：item_id → 副分类[]（未知分类渲染时过滤，构建门才是真校验）。
+  // 装配（副分类列表 + 墙 OKLCH 渐变色标）统一走 applyExtraCategories，v1 同源；
+  // 直接挂到 data.tiers 条目上（normalize 产物）：allItemsRaw / V2Wall.tierItems /
+  // ScatterField 全经展开透传，新增墙消费方无需再单独接线。
+  const extraCategoriesMap = parseExtraCategories(categoriesRaw)
+  applyExtraCategories(data, extraCategoriesMap)
   const allItemsRaw = Object.entries(data.tiers).flatMap(([tierName, items]) =>
     items.map((item) => ({ ...item, tier: tierName })),
   )
@@ -86,6 +95,7 @@ export function useIcebergDataSource() {
   provide(RELATED_MAP_KEY, relatedMap)
   provide(REFERENCES_MAP_KEY, referencesMap)
   provide(OVERRIDES_MAP_KEY, overridesMap)
+  provide(EXTRA_CATEGORIES_KEY, extraCategoriesMap)
 
-  return { data, allItems, allItemsRaw, renderItemsRef, descMap, relatedMap, referencesMap, overridesMap }
+  return { data, allItems, allItemsRaw, renderItemsRef, descMap, relatedMap, referencesMap, overridesMap, extraCategoriesMap }
 }

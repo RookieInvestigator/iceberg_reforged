@@ -53,7 +53,8 @@
      叠在原字之下（同字体同基线），镜像层画 2px 居中 -webkit-text-stroke，
      原字 fill 天然盖住内半圈 → 可见部分 = 纯外圈 1px，真·外部描边（每字形 2 次绘制）。
      hover 语义见下方两模式分离块：tooltip 模式隐藏（marker 背景承担对比度）、
-     modal 模式保留。已知差异：emoji（.item-tag）无描边（仅光晕）。 */
+     modal 模式保留。多分类词条下该层还额外承担 text-shadow 光晕（见下方多分类块）。
+     已知差异：emoji（.item-tag）无描边（仅光晕）。 */
   .item-title { position: relative; }
   .item-title::after {
     content: attr(data-text);
@@ -62,12 +63,34 @@
     z-index: -1;
     pointer-events: none;
   }
+  /* ===== 多分类渐变字（2026-09-20 换代：逐字纯色 span → background-clip:text）=====
+     逐字纯色在短标题上退化成逐字跳变（3 字 3 色），且 span 边界打断 kerning、
+     与 ::after 镜像层字形错位；连续渐变只有 background-clip:text 能给。
+     代价是透明镂空字盖不住 text-shadow（同层绘制必洇进字形内部），故光晕从
+     .iceberg-item（文字层）下沉到 ::after 镜像层 —— 该层本就是 attr(data-text)
+     同构副本、字形位置与正文重合，阴影落点不变；其 -webkit-text-fill-color 继承
+     transparent（该属性可继承），只画描边 + 阴影，不双绘文字，正文的不透明渐变
+     填充照旧盖住描边内半圈。色标由构建期在 OKLCH 空间预插（--grad-stops），
+     变量缺失时回退 --item-color 单色：任何情况下都不会是整字全透明的空标题。 */
+  .multi-cat .item-title { transition: color 0.2s, -webkit-text-fill-color 0.2s; }
+  @supports ((-webkit-background-clip: text) or (background-clip: text)) {
+    .multi-cat .item-title {
+      background-image: linear-gradient(90deg, var(--grad-stops, var(--item-color)));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: none; /* 光晕让位给 ::after，避免镂空区洇色 */
+    }
+    .multi-cat .item-title::after {
+      text-shadow: 4px 3px 4px var(--shadow-color, rgba(0,0,0,.6));
+    }
+  }
   .iceberg-item.dimmed { opacity: 0.15; pointer-events: none; transition: opacity 0.2s ease; }
   /* P1-6/7: 键盘焦点环（仅 :focus-visible，鼠标点击不出现） */
   .iceberg-item:focus-visible { outline: 2px solid var(--white-90); outline-offset: 2px; border-radius: 4px; z-index: 10; }
   /* CJK 字形在行盒中偏下（字形顶部空隙 > 底部），用不对称 padding 补偿上下空隙 */
   /* 半透明白底（--white-80）+ 黑字：能微微透出 hover 分类色底（::before z-index:-1）；不用 backdrop-filter（移动端性能开销大） */
-  .iceberg-item.recently-updated { background: var(--white-80); border-radius: 4px; color: #1a1a1a; padding: 1px 0.4rem 6px; }
+  .iceberg-item.recently-updated { background: var(--white-80); border-radius: 4px; padding: 1px 0.4rem 6px; }
   .iceberg-item.read { opacity: 0.35; transition: opacity 0.3s ease; }
   .iceberg-item::before {
     content: ""; position: absolute; inset: 0;
@@ -94,6 +117,15 @@
     html:not([data-detail="modal"]) .iceberg-item.tooltip-active .item-title,
     html:not([data-detail="modal"]) .iceberg-item:hover .item-tag,
     html:not([data-detail="modal"]) .iceberg-item.tooltip-active .item-tag { color: #000 !important; }
+    /* 多分类渐变字：字形填充由 -webkit-text-fill-color 承担（color 在 clip 模式下
+       不参与填充），hover 黑字必须改它，与上条同语义；去掉 background-image
+       免得抗锯齿边缘渗出渐变彩边 */
+    html:not([data-detail="modal"]) .iceberg-item.multi-cat:hover .item-title,
+    html:not([data-detail="modal"]) .iceberg-item.multi-cat.tooltip-active .item-title {
+      background-image: none;
+      -webkit-text-fill-color: #000 !important;
+      color: #000 !important;
+    }
     /* —— modal 模式：描边/光晕保持原样 —— */
     html[data-detail="modal"] .iceberg-item { cursor: pointer; }
     html[data-detail="modal"] .iceberg-item:hover { opacity: 0.8; }

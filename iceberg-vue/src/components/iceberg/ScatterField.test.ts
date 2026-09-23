@@ -83,3 +83,30 @@ describe('ScatterField（无层级模式）', () => {
     expect(container.classes()).toContain('py-10')
   })
 })
+
+// 多分类渐变（2026-09-20 起为 background-clip:text + --grad-stops，
+// 不再是逐字纯色 span：逐字方案在短标题上退化成跳变，且打断 kerning）
+describe('多分类渐变', () => {
+  const multi = [
+    { ...items[0], id: 'm1', title: '黑弥撒', gradStops: '#FF3333, #CB8BFB, #85D6FF' },
+    items[1],
+  ]
+
+  it('有 gradStops：带 multi-cat 类 + 挂 --grad-stops，标题保持整段文本（无逐字子元素）', () => {
+    const w = mount(ScatterField, { props: { items: multi } })
+    const el = w.find('.iceberg-item[data-id="m1"]')
+    expect(el.classes()).toContain('multi-cat')
+    const title = el.find('.item-title')
+    expect(title.attributes('style')).toContain('--grad-stops')
+    expect(title.text()).toBe('黑弥撒')
+    expect(title.element.children.length).toBe(0)
+    expect(title.attributes('data-text')).toBe('黑弥撒')
+  })
+
+  it('无 gradStops：不带 multi-cat 类，也不写 style（走普通单色渲染路径）', () => {
+    const w = mount(ScatterField, { props: { items: multi } })
+    const el = w.find('.iceberg-item[data-id="1"]')
+    expect(el.classes()).not.toContain('multi-cat')
+    expect(el.find('.item-title').attributes('style')).toBeUndefined()
+  })
+})

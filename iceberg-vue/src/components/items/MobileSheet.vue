@@ -4,6 +4,8 @@ import { Star, Heart, MessageCircle, Copy, Check } from '@lucide/vue';
 import { useI18n } from '../../lib/useI18n';
 import { lockOverlay } from '../../lib/overlayLock';
 import { REFERENCES_MAP_KEY, type ReferenceLink } from '../../lib/injectionKeys';
+import { CATEGORY_COLORS_KEY, DEFAULT_COLOR_KEY } from '../../lib/injectionKeys';
+import { extraBadges } from '../../lib/iceberg/extraCategories';
 import { useEntryInteractions } from '../../lib/useEntryInteractions';
 import CommentPanel from './CommentPanel.vue';
 import EntryRelatedLinks from './EntryRelatedLinks.vue';
@@ -22,6 +24,14 @@ const open = computed(() => !!props.item);
 const commentSectionEl = ref<HTMLElement | null>(null)
 const itemId = toRef(() => (props.item as { id?: string } | null | undefined)?.id)
 const { favs, copied, titleCopied, liked, likeCount, commentCount, updatingLike, commentsOpen, supabaseReady, toggleItemLike, toggleFav, copyShareLink, copyTitle, openComments } = useEntryInteractions(itemId, commentSectionEl)
+
+// 多分类副表：副分类徽章（色源与筛选栏同源；sheet 载荷无 categories 时回退空）
+const categoryColors = inject(CATEGORY_COLORS_KEY, {} as Record<string, string>)
+const defaultColor = inject(DEFAULT_COLOR_KEY, '#FFFFFF')
+const extraCats = computed(() => extraBadges(
+  { category: (props.item as any)?.category || '', categories: (props.item as any)?.categories },
+  categoryColors, defaultColor,
+))
 
 const panelRef = ref<HTMLElement | null>(null);
 const showFeedback = ref(false);
@@ -233,7 +243,7 @@ const tagList = computed<string[]>(() => {
 
           <!-- PC 弹窗同款：先元信息徽章，再描述 -->
           <div class="mb-2.5">
-            <EntryMetaBadges :tier="item.tier" :category="item.category" :categoryColor="item.color || '#fff'" :tags="tagList" />
+            <EntryMetaBadges :tier="item.tier" :category="item.category" :categoryColor="item.color || '#fff'" :tags="tagList" :extra="extraCats" />
             <CorrectedMark :itemId="item.id" />
           </div>
 

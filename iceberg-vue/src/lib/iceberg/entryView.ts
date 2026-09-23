@@ -18,6 +18,8 @@ export interface EntryView {
   desc: string
   category: string
   categoryColor: string
+  /** 多分类副表挂载（主 + 副）；无则回退 [category]，见 extraCategories.itemCategories */
+  categories?: string[]
   tags?: string[]
   link?: string
   references?: EntryLink[]
@@ -36,6 +38,7 @@ interface EntryRaw {
   desc?: string
   category: string
   categoryColor: string
+  categories?: string[]
   tags?: string[]
   link?: string
   references?: EntryLink[]
@@ -58,6 +61,7 @@ export function toEntryView(
     desc: raw.desc || '',
     category: raw.category,
     categoryColor: raw.categoryColor,
+    categories: raw.categories,
     tags: raw.tags || [],
     link: raw.link,
     references: raw.references,

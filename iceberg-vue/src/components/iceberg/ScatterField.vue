@@ -37,12 +37,12 @@ const ordered = ref<any[]>([])
       v-show="!filterVisible || filterVisible.has(item.id)"
       v-memo="[item.id, dimSet?.has(item.id), filterVisible ? filterVisible.has(item.id) : true]"
       class="iceberg-item inline-flex items-center font-bold cursor-crosshair py-0.5 px-1.5 max-sm:text-[1.05rem]"
-      :class="{ dimmed: !!dimSet?.has(item.id) }"
+      :class="{ dimmed: !!dimSet?.has(item.id), 'multi-cat': !!item.gradStops }"
       :data-id="item.id"
       :data-category="item.category"
       :style="`font-size: 1.15em; color: ${item.categoryColor}; --item-color: ${item.categoryColor}`"
     >
-      <span class="item-title transition-colors duration-200" :data-text="item.title">{{ item.title }}</span>
+      <span class="item-title transition-colors duration-200" :data-text="item.title" :style="item.gradStops ? { '--grad-stops': item.gradStops } : undefined">{{ item.title }}</span>
       <span
         v-for="(e, ei) in item.emojis"
         :key="ei"

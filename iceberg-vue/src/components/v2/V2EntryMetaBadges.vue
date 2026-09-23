@@ -15,6 +15,8 @@ const props = defineProps<{
   category: string
   categoryColor: string
   tags?: string[]
+  /** 多分类副表：副分类徽章（不含主分类，由调用方经 extraBadges 解析） */
+  extra?: Array<{ category: string; color: string }>
 }>()
 
 interface Badge {
@@ -60,6 +62,14 @@ const badges = computed<Badge[]>(() => {
       to: handbookLink('criteria', props.category, from),
       desc: descOf(props.category),
     },
+    ...(props.extra || []).map((e) => ({
+      key: `c:${e.category}`,
+      kind: 'category' as const,
+      label: e.category,
+      color: e.color,
+      to: handbookLink('criteria', e.category, from),
+      desc: descOf(e.category),
+    })),
     ...normalizeTags(props.tags).map((tag) => ({
       key: `g:${tag}`,
       kind: 'tag' as const,

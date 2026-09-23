@@ -4,6 +4,7 @@ import { activeCategories, activeTags, tagFilterMode, hiddenCategories, hiddenTa
 import { favorites, readItems, showReadMark, showNewMark, filterMode } from '../settingsStore'
 import { tierVisibleCounts } from './wallCounts'
 import { buildNavIndex, docOrder, navIndex, wallMatched } from './wallState'
+import { itemCategories } from './extraCategories'
 import type { RenderItem } from '../injectionKeys'
 
 interface PipelineOptions {
@@ -52,9 +53,11 @@ export function useFilterPipeline(allItems: RenderItem[], opts: PipelineOptions)
     else if (spl === 'isNew') { if ((item.modifiedAt || 0) < newCutoff) return false; }
     else if (spl === 'noLinkNoDesc') { if (item.link || item.desc) return false; }
     if (favF && !fList.includes(item.id)) return false;
-    if (hCats.length > 0 && hCats.includes(item.category)) return false;
+    // 多分类副表（叠加 OR）：隐藏看任一分类，选中看交集
+    const catsOf = itemCategories(item);
+    if (hCats.length > 0 && hCats.some(c => catsOf.includes(c))) return false;
     if (hTags.length > 0 && hTags.some(t => (item.emojis || []).includes(t))) return false;
-    if (cats.length > 0 && !cats.includes(item.category)) return false;
+    if (cats.length > 0 && !cats.some(c => catsOf.includes(c))) return false;
     if (tags.length > 0) {
       return tagMode === 'AND'
         ? tags.every(t => (item.emojis || []).includes(t))

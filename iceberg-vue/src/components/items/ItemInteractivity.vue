@@ -101,11 +101,11 @@ function setModalItem(raw: RenderItem) {
   const { explicit, recommended } = pickRelated(raw);
   // 手机端底部抽屉不再展示左右箭头，无需构建前后导航 id（也省去移动端 1432 节点扫描）
   if (window.innerWidth < 1024) {
-    openSheet({ id: raw.id, title: raw.title, tier: raw.tier, desc: raw.desc, category: raw.category, color: raw.categoryColor, tags: raw.tags || [], link: raw.link, related: explicit, recommended });
+    openSheet({ id: raw.id, title: raw.title, tier: raw.tier, desc: raw.desc, category: raw.category, categories: raw.categories, color: raw.categoryColor, tags: raw.tags || [], link: raw.link, related: explicit, recommended });
     return;
   }
   const nav = navIdsFor(raw);
-  modalItem.value = { id: raw.id, title: raw.title, tier: raw.tier, desc: raw.desc, category: raw.category, categoryColor: raw.categoryColor, tags: raw.tags || [], link: raw.link, related: explicit, recommended, ...nav };
+  modalItem.value = { id: raw.id, title: raw.title, tier: raw.tier, desc: raw.desc, category: raw.category, categories: raw.categories, categoryColor: raw.categoryColor, tags: raw.tags || [], link: raw.link, related: explicit, recommended, ...nav };
 }
 
 function onModalNav(item: { id: string }) {
@@ -114,7 +114,7 @@ function onModalNav(item: { id: string }) {
   if (window.innerWidth < 1024) {
     markRead(full.id);
     const { explicit, recommended } = pickRelated(full);
-    openSheet({ id: full.id, title: full.title, tier: full.tier, desc: full.desc, category: full.category, color: full.categoryColor, tags: full.tags || [], link: full.link, related: explicit, recommended });
+    openSheet({ id: full.id, title: full.title, tier: full.tier, desc: full.desc, category: full.category, categories: full.categories, color: full.categoryColor, tags: full.tags || [], link: full.link, related: explicit, recommended });
   } else {
     setModalItem(full);
   }
@@ -181,7 +181,7 @@ function onClick(e: Event) {
   if (window.innerWidth < 1024) {
     markRead(item.id);
     const { explicit, recommended } = pickRelated(item);
-    openSheet({ id: item.id, title: item.title, tier: item.tier, desc: item.desc, category: item.category, color: item.categoryColor, tags: item.tags || [], link: item.link, related: explicit, recommended });
+    openSheet({ id: item.id, title: item.title, tier: item.tier, desc: item.desc, category: item.category, categories: item.categories, color: item.categoryColor, tags: item.tags || [], link: item.link, related: explicit, recommended });
     return;
   }
   if (dm.value === 'modal') {

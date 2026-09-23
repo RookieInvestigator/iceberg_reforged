@@ -34,6 +34,8 @@ const TYPES: AppendixDef[] = [
     headers: ['source_id', 'target_id'], idColumn: 'source_id' },
   { key: 'references', label: '参考链接', file: 'references.csv',
     headers: ['source_id', 'label', 'url'], idColumn: 'source_id' },
+  { key: 'categories', label: '多分类', file: 'categories.csv',
+    headers: ['item_id', 'category'], idColumn: 'item_id' },
 ]
 
 // ==========================================
@@ -372,8 +374,17 @@ function rowCount(def: AppendixDef): number {
               <tbody>
                 <tr v-for="(row, idx) in getRows(def)" :key="idx">
                   <td v-for="h in def.headers" :key="h">
+                    <select
+                      v-if="def.key === 'categories' && h === 'category'"
+                      :value="row[h] || ''"
+                      @change="setCell(def, idx, h, ($event.target as HTMLSelectElement).value)"
+                      class="cell-inp"
+                    >
+                      <option value="">— 选择分类 —</option>
+                      <option v-for="c in Object.keys(data.categoryColors)" :key="c" :value="c">{{ c }}</option>
+                    </select>
                     <input
-                      v-if="h !== def.idColumn"
+                      v-else-if="h !== def.idColumn"
                       :value="row[h] || ''"
                       @input="setCell(def, idx, h, ($event.target as HTMLInputElement).value)"
                       class="cell-inp"

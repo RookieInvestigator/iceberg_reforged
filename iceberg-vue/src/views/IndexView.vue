@@ -8,13 +8,15 @@ import raw from '../data/iceberg.json'
 import relatedRaw from '../data/appendix/related.csv?raw'
 import referencesRaw from '../data/appendix/references.csv?raw'
 import overridesRaw from '../data/appendix/overrides.csv?raw'
+import categoriesRaw from '../data/appendix/categories.csv?raw'
 import { normalizeData, isSafeHttpUrl, formatUnixDate } from '../lib/data'
 import { parseCSV } from '../lib/csv'
+import { applyExtraCategories, parseExtraCategories } from '../lib/iceberg/extraCategories'
 import { useI18n } from '../lib/useI18n'
 import { initialMountCount, nextMountCount } from '../lib/iceberg/wallMount'
 import { tierVisibleCounts } from '../lib/iceberg/wallCounts'
 import { docOrder } from '../lib/iceberg/wallState'
-import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, TIER_ORDER_KEY, CATEGORY_COLORS_KEY, TAG_MAP_KEY, DEFAULT_COLOR_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, HERO_TITLES_KEY, RELATED_MAP_KEY, REFERENCES_MAP_KEY, OPEN_ON_THIS_DAY_KEY, ID_ALIASES_KEY, OVERRIDES_MAP_KEY } from '../lib/injectionKeys'
+import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, TIER_ORDER_KEY, CATEGORY_COLORS_KEY, TAG_MAP_KEY, DEFAULT_COLOR_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, HERO_TITLES_KEY, RELATED_MAP_KEY, REFERENCES_MAP_KEY, OPEN_ON_THIS_DAY_KEY, ID_ALIASES_KEY, OVERRIDES_MAP_KEY, EXTRA_CATEGORIES_KEY } from '../lib/injectionKeys'
 import IcebergBg from '../components/layout/IcebergBg.vue'
 import FooterSection from '../components/layout/FooterSection.vue'
 // TEMP：hero 页暂时移除
@@ -25,6 +27,10 @@ import IcebergApp from '../components/iceberg/IcebergApp.vue'
 import ScatterField from '../components/iceberg/ScatterField.vue'
 
 const data = normalizeData(raw)
+// 多分类副表：装配唯一入口（与 v2 数据源同源，见 extraCategories.applyExtraCategories），
+// allItemsRaw / tierItems / ScatterField 全经展开透传
+const extraCategoriesMap = parseExtraCategories(categoriesRaw)
+applyExtraCategories(data, extraCategoriesMap)
 const allItemsRaw = Object.entries(data.tiers).flatMap(([tierName, items]) =>
   items.map(item => ({ ...item, tier: tierName }))
 )
@@ -36,6 +42,7 @@ const descMap = new Map(allItemsRaw.map(i => [i.id, (i as any).desc || '']))
 
 // 声明式排序：按 sortMode 生成每层有序数组（替代命令式 DOM 重排，避免被 keyed diff 纠正回模板序）
 const srt = useStore(sortMode)
+// 墙渲染走 tierItems（源自 data.tiers，categories 已在上方挂载，展开即透传）
 const tierItems = computed(() => {
   const out: Record<string, any[]> = {}
   for (const [tn, items] of Object.entries(data.tiers as Record<string, any[]>)) {
@@ -102,6 +109,7 @@ provide(HERO_TITLES_KEY, allItemsRaw.map(i => i.title))
 provide(RELATED_MAP_KEY, relatedMap)
 provide(REFERENCES_MAP_KEY, referencesMap)
 provide(OVERRIDES_MAP_KEY, overridesMap)
+provide(EXTRA_CATEGORIES_KEY, extraCategoriesMap)
 
 // 词条墙 DOM 文档序（tierOrder × 层内声明式排序）→ wallState.docOrder（单一事实源）：
 // 导航索引/随机池均由模块消费，与分片挂载兼容（不依赖 DOM 补齐状态）；sortMode 变化才重建
@@ -280,12 +288,12 @@ onUnmounted(() => {
                     tabindex="0"
                     role="button"
                     class="iceberg-item inline-flex items-center font-bold cursor-crosshair py-0.5 px-1.5 max-sm:text-[1.05rem]"
-                    :class="{ dimmed: !!dimSet?.has(item.id) }"
+                    :class="{ dimmed: !!dimSet?.has(item.id), 'multi-cat': !!item.gradStops }"
                     :data-id="item.id"
                     :data-category="item.category"
                     :style="`font-size: 1.15em; color: ${item.categoryColor}; --item-color: ${item.categoryColor}`"
                   >
-                    <span class="item-title transition-colors duration-200" :data-text="item.title">{{ item.title }}</span>
+                    <span class="item-title transition-colors duration-200" :data-text="item.title" :style="item.gradStops ? { '--grad-stops': item.gradStops } : undefined">{{ item.title }}</span>
                     <span v-for="(e, ei) in item.emojis" :key="ei" class="item-tag text-[0.625em] ml-[0.3em] relative -top-[0.08em] inline-flex items-center justify-center transition-colors duration-200">{{ e }}</span>
                   </span>
                 </div>

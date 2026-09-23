@@ -6,7 +6,7 @@
 
 ## 访问地址
 
-- 主站（临时）：https://iceberg-reforged.pages.dev/（Cloudflare Pages 默认域名，原自定义域名已停用）
+- 主站：https://iceberg.hezihezi.com/（自定义域名，Cloudflare Pages 部署）
 - 旧镜像地址（自动跳转主站）：https://rookieinvestigator.github.io/iceberg_reforged/
 
 旧镜像地址打开后自动跳转到主站（含深链保路径跳转）；搜索引擎权重随跳转归并于主站。

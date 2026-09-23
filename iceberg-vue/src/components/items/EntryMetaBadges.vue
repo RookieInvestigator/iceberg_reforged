@@ -7,6 +7,8 @@ const props = defineProps<{
   category: string
   categoryColor: string
   tags?: string[] | string
+  /** 多分类副表：副分类徽章（不含主分类，由调用方经 extraBadges 解析） */
+  extra?: Array<{ category: string; color: string }>
 }>()
 
 // 兼容 tags 可能是数组或字符串（旧数据/历史 payload）的情况，统一转成数组
@@ -32,6 +34,11 @@ const tagList = computed<string[]>(() => {
     <span class="text-[length:var(--font-tiny)] font-medium px-1.5 py-[1px] rounded border bg-white/[0.03]"
           :style="{ color: categoryColor, borderColor: categoryColor }">
       {{ category }}
+    </span>
+    <span v-for="e in (extra || [])" :key="e.category"
+          class="text-[length:var(--font-tiny)] font-medium px-1.5 py-[1px] rounded border bg-white/[0.03]"
+          :style="{ color: e.color, borderColor: e.color }">
+      {{ e.category }}
     </span>
     <div class="flex flex-wrap items-center gap-1.5">
       <span v-for="tag in tagList" :key="tag" class="text-[length:var(--font-tiny)] text-white/55">#{{ tag }}</span>

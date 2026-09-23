@@ -39,5 +39,8 @@ export interface OverrideRecord {
 }
 export const OVERRIDES_MAP_KEY: InjectionKey<Map<string, OverrideRecord[]>> = Symbol('overridesMap')
 
+/** 多分类副表（categories.csv，`item_id → 副分类[]`，不含主分类；叠加 OR 语义） */
+export const EXTRA_CATEGORIES_KEY: InjectionKey<Map<string, string[]>> = Symbol('extraCategories')
+
 export const OPEN_ON_THIS_DAY_KEY: InjectionKey<() => void> = Symbol('openOnThisDay')
 export const ID_ALIASES_KEY: InjectionKey<Map<string, string>> = Symbol('idAliases')

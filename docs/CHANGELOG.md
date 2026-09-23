@@ -1,6 +1,76 @@
 # 更新日志
 
 
+## 2026-09-24 — 主站切回 iceberg.hezihezi.com · 数据 1442→1446
+
+### 改进
+
+- **主站回切自定义域名**：`MASTER_ORIGIN` / 预渲染 `ORIGIN` / sitemap 全 7 条（+ lastmod）/ robots Sitemap / JSON-LD / og:image 与 twitter:image / 转载模板 URL / GH 跳转页目标 / README 访问地址全量回切；主站模式构建已验证（index,follow + 验证码 + canonical 自指新域名）
+- **API 同步 1442 → 1446（+4）**：T2 302→303、T3 308→309、T4 271→273；`meta.json` / `id-index.json` / `id_history.json` 同批原子更新；副表孤儿门通过（含 categories.csv 2 行试点）
+
+### 数据
+
+- **历史上的今天 + 瘦长鬼影献祭案**（05-31，两名 12 岁女孩为献祭 Slender Man 将好友连刺 19 刀，受害人幸存）
+
+
+## 2026-09-21 — 副分类首批扩充（2 → 15 行）
+
+### 新增
+
+- **13 条双分类落盘**（1442 条中 15 条 ≈ 1.0%），均经 handbook 正交维度规则 + 逐条读 `desc` 人工复核：
+  - 艺术・创作物 → 网络怪谈・奇闻：`b3066ca2` 绝室好书、`2637633d` 杜默言
+  - 真实犯罪・事故 → 民俗・信仰・方术：`9bfa44fc` 峨眉山三霄洞惨案、`8a0099c1` 高雄一家六人中邪
+  - 神话・志怪・传奇 → 民俗・信仰・方术：`bf3c2776` 猫鬼案、`30d61455` 髑髅神・耳报・樟柳神
+  - 历史疑案・假说 → 民俗・信仰・方术：`fe130d41` 长城沿线的代人木牌
+  - 神秘物件・现象 → 民俗・信仰・方术：`c06fce46` 收眼睛收蛊
+  - 都市传说・超自然事件・超常经历 → 心理・社会现象：`c94ebf6f` 德惠县「讨药」事件、`aac6b50e` 叫魂（集体恐慌）、`0426c509` 中国的投毒恐慌、`50d315ee` 86 版《西游记》记忆错乱、`9f3e906a` 80 版《画皮》
+
+### 已知取舍
+
+- **神话・志怪 ↔ 民俗・信仰・方术 的分类色极近**（`#F0EFB2` vs `#FFF700`，同色相 ≈99°/100°、ΔL ≈ 0.02），这一对词条的墙渐变视觉上几乎不可辨，只有详情多徽章能体现双分类。要拉开只能改分类色（影响全站），本批不动
+
+### 测试
+
+- `meta.test.ts` 副表三道门（孤儿 item_id / 未知分类 / 与主分类重复）通过；全量 vitest 40 文件 283 用例通过
+
+
+## 2026-09-20 — 多分类渐变换代：逐字纯色 → background-clip:text
+
+### 改进
+
+- **渐变连续化**：逐字纯色 span 在短标题上退化成逐字跳变（3 字 3 色），改为 OKLCH 空间预插 9 个等距色标（`gradientStops`，构建期算、模板零计算）+ `background-clip:text` 连续渲染；实测「黑弥撒」由 `#FF3333 #CB8BFB #85D6FF` 三块跳变变为 9 色标铺满整条标题，每字内部自带渐变
+- **两端固有色平台**：色标区间由 `[0%,100%]` 内缩到 `[10%,90%]`（`GRADIENT_EDGE_HOLD`），首末色标之外由浏览器按规范以该色标颜色填充 —— 两端各留一段纯分类色，端点固有色不再一闪即过；调参只改这一个常量（钳制上限 45%，两侧平台不会吃掉整段渐变区）
+- **光晕下沉到 `::after` 镜像层**：透明镂空字盖不住 `text-shadow`（同层绘制必洇进字形内部），故 `.multi-cat .item-title` 关掉自身光晕，交由已有的 `attr(data-text)` 描边镜像层承担 —— 该层本就是同构副本、字形位置与正文重合，阴影落点不变；不新增伪元素（`::before` 是 hover 色块），hover 让位语义（tooltip 隐藏 / modal 保留）原样继承
+- **兼容与兜底**：`background-clip:text` 整块包在 `@supports` 内，不支持的引擎退回单色（无视觉回归）；`linear-gradient(90deg, var(--grad-stops, var(--item-color)))` 双保险，变量缺失即回退主分类色，不可能出现整字全透明
+- **装配收敛**：v1 `IndexView.vue` 与 v2 `useIcebergDataSource.ts` 两份逐行相同的装配代码合并为 `extraCategories.applyExtraCategories`（返回渐变命中数，可测）
+- **字段换代**：`gradSpans: {ch,color}[]` → `gradStops: string`（逗号列表挂 `--grad-stops`）；空串为假值，模板 `v-if` 与 `.multi-cat` 判定同门 —— "加了 multi-cat 类却渲染空串"的空标题路径被结构性消除
+
+### 移除
+
+- **逐字 span 与 `Intl.Segmenter` 依赖**：字形簇切分、每字 span、逐字 `transition-colors` 全部移除（DOM 节点数与渲染路径双双简化）；span 边界打断 kerning、与镜像层字形错位的隐患随之消失
+
+### 测试
+
+- `extraCategories.test.ts` 12 → 19 用例（色标数 / 端点贴合 / 两端平台位置与等距 / `edgeHold = 0` 退化 / 钳制 / 短标题色标互不相同 / 中段不脏 / 未知分类回退 + `applyExtraCategories` 2 例）；`ScatterField.test.ts` 10 → 12（`multi-cat` 类与 `--grad-stops` 真实挂载、无梯度时不写 `style`）
+- `vue-tsc`（app / test 双 tsconfig）通过；全量 41 文件 284 用例通过
+
+
+## 2026-09-20 — 多分类副表（categories.csv）
+
+### 新增
+
+- **副表 `categories.csv(item_id,category)`**：一词多行，给词条叠加副分类（叠加 OR，主分类保留；空表上线，零视觉回归）
+- **词条墙多分类渐变**：标题按字拆 span 逐字取色（`gradientSpans`，OKLCH 空间插值，中段不脏；字形簇切分不断裂 emoji）；字全不透明，阴影/描边镜像/hover 黑字与普通词条走完全相同的渲染路径（**当日稍后换代为 `background-clip:text` 连续渐变，见上条**）
+- **详情多徽章**：`EntryMetaBadges` / `V2EntryMetaBadges` 新增 `extra` 徽章（v2 附术语表深链 + 释义 tip）
+- **DEV 副表编辑器**：`TYPES` 注册 `categories`，分类列走下拉（数据源 `categoryColors` 键，禁自由文本）
+- **校验**：`build_data_api.py` 孤儿门（孤儿 item_id / 未知分类阻断覆盖）+ `quality_report.py` 新增 `多分类副表` 检查（含与主分类重复行）+ `meta.test.ts` 一致性单测 + `extraCategories.test.ts`（解析/渐变/徽章 10 用例）
+
+### 移除
+
+- **`recently-updated` 死代码**：`index.css` 的 `color: #1a1a1a`（内联分类色优先级更高，从未生效；实际只有白胶囊底）
+- **`IndexNextView` 死导入**：`raw` / `related.csv` / `references.csv` / `parseCSV` / `normalizeData` / `isSafeHttpUrl`（数据源已收敛 `useIcebergDataSource`）
+
+
 ## 2026-09-12 — 内容许可去 NC：CC BY-NC-SA 4.0 → CC BY-SA 4.0
 
 ### 改进
