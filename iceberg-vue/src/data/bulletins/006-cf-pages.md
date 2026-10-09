@@ -2,6 +2,7 @@
 date: 2026-07-30
 author: AAA冰山图除锈
 title: 站点现已部署至 Cloudflare Pages
+hidden: true
 ---
 
 即日起，冰山图在 GitHub Pages 之外新增 Cloudflare Pages 部署：`iceberg-reforged.pages.dev`。全球 CDN 加速，国内访问体验大幅提升。

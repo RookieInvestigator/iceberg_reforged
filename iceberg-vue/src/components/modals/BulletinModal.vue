@@ -3,6 +3,7 @@ import { reactive, onMounted, onUnmounted } from 'vue';
 import { ChevronDown } from '@lucide/vue';
 import BaseModal from './BaseModal.vue';
 import { useI18n } from '../../lib/useI18n';
+import { markBulletinSeen } from '../../lib/bulletins';
 
 const props = defineProps({
   bulletins: { type: Array, default: () => [] },
@@ -17,6 +18,10 @@ function toggle(idx) { expanded[idx] = !expanded[idx]; }
 onMounted(() => {
   document.getElementById('iceberg-bg')?.classList.add('paused');
   if (props.bulletins.length > 0) expanded[0] = true;
+  // 打开即视为已读最新一条：自动弹窗与手动打开走同一组件，已读指针不会漏记
+  // （公告条是否隐藏只看「是否被手动关闭」，与已读无关，见 lib/bulletins.ts）
+  const latest = props.bulletins[0];
+  if (latest && latest.id) markBulletinSeen(latest.id);
 });
 onUnmounted(() => {
   document.getElementById('iceberg-bg')?.classList.remove('paused');

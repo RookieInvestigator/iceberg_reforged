@@ -25,6 +25,7 @@ import ScatterField from '../../components/iceberg/ScatterField.vue'
 import V2Wall from '../../components/v2/V2Wall.vue'
 
 import { useIcebergDataSource } from '../../lib/iceberg/useIcebergDataSource'
+import { loadBulletins } from '../../lib/bulletins'
 
 // 数据源（normalize + 副表 + 全套 provide，见 useIcebergDataSource；facetCounts 为 v2 专有，留在此处）
 const { data, allItems, allItemsRaw } = useIcebergDataSource()
@@ -84,20 +85,9 @@ function onToggleFilter() { filterBarRef.value?.togglePanel('fab') }
 
 const buildDate = formatUnixDate(data.generatedAt)
 
-// Bulletins
-const bulletinModules = import.meta.glob('../data/bulletins/*.md', { query: '?raw', import: 'default', eager: true })
-const bulletins = computed(() =>
-  Object.entries(bulletinModules).map(([p, raw]) => {
-    const m = (raw as string).match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/)
-    if (!m) return null
-    const fm: Record<string, string> = {}
-    for (const line of m[1].split('\n')) {
-      const [k, ...v] = line.split(':')
-      if (k) fm[k.trim()] = v.join(':').trim()
-    }
-    return { title: fm.title, date: fm.date, author: fm.author, content: m[2].trim() }
-  }).filter(Boolean).sort((a: any, b: any) => (b?.date || '').localeCompare(a?.date || '')) as any[]
-)
+// 公告：解析 / schema 校验 / 排序 / 已读判定统一收敛在 lib/bulletins（v1 同源），
+// 顶部公告条（AppShell）与公告板弹窗共用同一份数据，本视图只负责透传给跋。
+const bulletins = loadBulletins()
 
 // 背景模式
 const bg = useStore(bgMode)

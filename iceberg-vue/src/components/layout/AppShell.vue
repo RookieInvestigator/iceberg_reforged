@@ -1,6 +1,15 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import router from '../../router'
+import BulletinBanner from './BulletinBanner.vue'
+import BulletinModal from '../modals/BulletinModal.vue'
+import {
+  dismissBulletinBanner,
+  loadBulletins,
+  pendingBulletin,
+  readBulletinState,
+  shouldShowBanner,
+} from '../../lib/bulletins'
 
 // 首帧加载页（#app-shield）生命周期。
 // 视觉样式全部内联在 index.html（首帧无 JS 也能渲染），这里只负责「何时显示/隐藏」：
@@ -13,6 +22,41 @@ const SHIELD_FADE_OUT_DELAY = 140
 let shieldTimer = 0
 let shieldHidden = false
 
+// ── 公告（2026-10）──────────────────────────────────────────────
+// 公告此前只藏在页脚「公告板」按钮后面：不主动点就完全不知道有公告，等于没有公告系统。
+// 现在给两条可见路径，判定与状态全在 lib/bulletins.ts：
+//   ① 顶部条幅（BulletinBanner，全站）：显示最新一条，只有用户手动关闭才让位 ——
+//      「已读」不隐藏条幅，这是公告不再隐蔽的关键；
+//   ② 最新一条既未读也未被关闭时，进站自动弹一次公告板（每份公告只弹一次）。
+// 「已读」指针由 BulletinModal 打开时前移（自动弹窗与手动打开同一条路径，不会漏记）。
+const bulletins = loadBulletins()
+const bulletinState = readBulletinState()
+const bannerBulletin = ref(shouldShowBanner(bulletins, bulletinState) ? bulletins[0] : null)
+const showBulletin = ref(false)
+
+function onBulletinDismiss() {
+  const id = bannerBulletin.value?.id
+  if (id) dismissBulletinBanner(id)
+  bannerBulletin.value = null
+}
+
+// 自动弹窗时机：等首帧加载页真正让位之后再弹 —— 遮罩 z-index 高于弹窗，提前弹会被盖住，
+// 用户只会看到遮罩消失后凭空出现一个弹窗。故由 hideShield 成功后触发，只触发一次。
+const BULLETIN_AUTO_DELAY = 350
+let bulletinPopupScheduled = false
+let bulletinTimer = 0
+
+function scheduleBulletinPopup() {
+  if (bulletinPopupScheduled) return
+  bulletinPopupScheduled = true
+  // 定向深链（?item= / #hash）自身会打开词条弹窗，不要再叠一层公告
+  if (/[?&]item=/.test(window.location.search) || !!window.location.hash) return
+  if (!pendingBulletin(bulletins, bulletinState)) return
+  bulletinTimer = window.setTimeout(() => {
+    if (!showBulletin.value) showBulletin.value = true
+  }, BULLETIN_AUTO_DELAY)
+}
+
 function getShield(): HTMLElement | null {
   return document.getElementById('app-shield')
 }
@@ -23,6 +67,7 @@ function hideShield(delay = 0) {
     if (shieldHidden) return
     shieldHidden = true
     getShield()?.classList.add('hidden')
+    scheduleBulletinPopup()
   }, delay)
 }
 
@@ -76,11 +121,22 @@ onUnmounted(() => {
   document.removeEventListener('route-ready', onRouteReady)
   window.removeEventListener('pageshow', onPageshow)
   window.clearTimeout(shieldTimer)
+  window.clearTimeout(bulletinTimer)
 })
 </script>
 
 <template>
+  <!-- 顶部公告条：全站可见（含所有路由），关闭状态按公告 id 记忆 -->
+  <BulletinBanner
+    v-if="bannerBulletin"
+    :bulletin="bannerBulletin"
+    @open="showBulletin = true"
+    @dismiss="onBulletinDismiss"
+  />
   <slot />
+
+  <!-- 公告板：页脚 / 条幅 / 进站自动弹窗共用同一实例入口 -->
+  <BulletinModal v-if="showBulletin" :bulletins="bulletins" @close="showBulletin = false" />
 </template>
 
 <style>

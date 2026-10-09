@@ -25,6 +25,7 @@ import Header from '../components/iceberg/Header.vue'
 import TierNav from '../components/iceberg/TierNav.vue'
 import IcebergApp from '../components/iceberg/IcebergApp.vue'
 import ScatterField from '../components/iceberg/ScatterField.vue'
+import { loadBulletins } from '../lib/bulletins'
 
 const data = normalizeData(raw)
 // 多分类副表：装配唯一入口（与 v2 数据源同源，见 extraCategories.applyExtraCategories），
@@ -161,20 +162,9 @@ function unbindWallListeners() {
 
 const buildDate = formatUnixDate(data.generatedAt)
 
-// Bulletins
-const bulletinModules = import.meta.glob('../data/bulletins/*.md', { query: '?raw', import: 'default', eager: true })
-const bulletins = computed(() =>
-  Object.entries(bulletinModules).map(([p, raw]) => {
-    const m = (raw as string).match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/)
-    if (!m) return null
-    const fm: Record<string, string> = {}
-    for (const line of m[1].split('\n')) {
-      const [k, ...v] = line.split(':')
-      if (k) fm[k.trim()] = v.join(':').trim()
-    }
-    return { title: fm.title, date: fm.date, author: fm.author, content: m[2].trim() }
-  }).filter(Boolean).sort((a: any, b: any) => (b?.date || '').localeCompare(a?.date || '')) as any[]
-)
+// 公告：解析 / schema 校验 / 排序统一收敛在 lib/bulletins（此前 v1/v2 各有一份逐行相同的
+// 手写解析，无校验无单测）；顶部公告条与公告板弹窗共用同一份数据，本视图只负责透传给页脚。
+const bulletins = loadBulletins()
 
 // 背景模式
 const bg = useStore(bgMode)

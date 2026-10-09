@@ -7,13 +7,7 @@ import ContactModal from '../modals/ContactModal.vue';
 import BulletinModal from '../modals/BulletinModal.vue';
 import TermsModal from '../modals/TermsModal.vue';
 import ExportImageButton from '../items/ExportImageButton.vue';
-
-interface Bulletin {
-  title: string;
-  date: string;
-  author: string;
-  content: string;
-}
+import type { Bulletin } from '../../lib/bulletins';
 
 const props = defineProps<{
   buildDate?: string;

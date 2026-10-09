@@ -2,6 +2,7 @@
 date: 2026-06-13
 author: AAA冰山图除锈
 title: 推荐使用 Chrome 浏览器
+hidden: true
 ---
 
 推荐使用 Chrome 浏览器，PC 端浏览以获得最佳体验。

@@ -119,6 +119,7 @@ export default {
 	recommendedItem: '推荐词条',
 	bulletinLink: '公告板',
 	bulletinTitle: '公告板',
+	bulletinLatest: '最新公告',
 	source: '来源',
 	explore: '查看词条',
 	highlightNew: '高亮最近更新',

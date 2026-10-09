@@ -2,6 +2,7 @@
 date: 2026-06-02
 author: AAA冰山图除锈
 title: 古籍模式 尝鲜上线
+hidden: true
 ---
 
 古籍模式尝鲜上线！

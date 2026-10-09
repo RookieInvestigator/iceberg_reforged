@@ -2,6 +2,7 @@
 date: 2026-05-25
 author: AAA冰山图除锈
 title: 网站尚在开发中
+hidden: true
 ---
 
 部分功能暂未实装：

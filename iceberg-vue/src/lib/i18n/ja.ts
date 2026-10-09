@@ -119,6 +119,7 @@ export default {
 	recommendedItem: 'おすすめ',
 	bulletinLink: 'お知らせ',
 	bulletinTitle: 'お知らせ',
+	bulletinLatest: '最新のお知らせ',
 
 
 	source: 'ソース',

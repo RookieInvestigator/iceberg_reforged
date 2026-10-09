@@ -119,6 +119,7 @@ export default {
 	recommendedItem: 'You may also like',
 	bulletinLink: 'Notice',
 	bulletinTitle: 'Bulletin Board',
+	bulletinLatest: 'Latest notice',
 	source: 'Source',
 	explore: 'Explore',
 	highlightNew: 'Highlight Recent Updates',
