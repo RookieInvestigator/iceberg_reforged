@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
+import type { HtmlTagDescriptor } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import compression from 'vite-plugin-compression'
@@ -8,6 +9,9 @@ import fsp from 'node:fs/promises'
 import path from 'node:path'
 
 const MAX_APPENDIX_BODY = 2 * 1024 * 1024 // JSON body 大小限制：2MB
+
+// Cloudflare Web Analytics 站点 token（CF 控制台 → Web Analytics → 站点 → 「JS 片段」里的 token）
+const CF_ANALYTICS_TOKEN = 'ab9b42c938f9456988f0d5bb4a4bd191'
 
 /** first-screen-preload 的注入幂等标记：已注入的入口 HTML 相对路径（closeBundle 每次构建会触发多次） */
 const preloadInjected = new Set<string>()
@@ -187,6 +191,36 @@ export default defineConfig({
         } catch (e) {
           console.warn('[seo-master-mirror] skipped:', e)
         }
+      },
+    },
+    {
+      // Cloudflare Web Analytics（手工 JS 片段嵌入，token 见上方常量）。
+      // 为什么在构建期注入而不是写死进 index.html：dev 服务与本地 preview 的 hostname（localhost）
+      // 与 CF 侧登记的站点域名不匹配，beacon 上报会被 CORS 拒绝并在控制台报错
+      // （CF FAQ：“is not allowed by Access-Control-Allow-Origin … hostname of the site loading
+      // the analytics does not match the name of the analytics site”）。构建期注入让 dev 保持
+      // 零第三方请求，生产 HTML 即 CF 片段本身（属性值由 JSON 序列化，等价形态）。
+      // 注入方式：走 Vite 的结构化标签 API（injectTo: 'body'），不用 html.replace('</body>', …) ——
+      // 后者会被 HTML 注释文本里的同名片段截胡（实测：标签落进注释、beacon 静默不加载），
+      // 并连带打乱 first-screen-preload 的 html.replace('<script type="module"', …) 首个匹配位置。
+      // CSP 联动（改 token / 换站点 / 卸载片段时三处一并处理）：script-src 需放行
+      // https://static.cloudflareinsights.com/beacon.min.js，connect-src 需放行
+      // https://cloudflareinsights.com（手工嵌入上报到 cloudflareinsights.com/cdn-cgi/rum）；
+      // 两处 CSP（index.html 的 meta 与 public/_headers）由 src/lib/csp.test.ts 守着不许分叉。
+      name: 'cf-web-analytics',
+      apply: 'build',
+      transformIndexHtml(): HtmlTagDescriptor[] {
+        return [
+          {
+            tag: 'script',
+            attrs: {
+              type: 'module',
+              src: 'https://static.cloudflareinsights.com/beacon.min.js',
+              'data-cf-beacon': JSON.stringify({ token: CF_ANALYTICS_TOKEN }),
+            },
+            injectTo: 'body',
+          },
+        ]
       },
     },
     {
