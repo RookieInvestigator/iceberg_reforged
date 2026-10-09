@@ -140,6 +140,6 @@ npm run dev
 | `scripts/fetch_on_this_day.py` | 历史上的今天候选搜索：只调 Wikipedia `list=search`（不抓日期条目页），`--gaps` 看空缺日期、`--date` 防重复、`--emit` 输出 CSV 行模板（year/desc 人工补） |
 | `data/work/` | 中间产物（config.json + items/*.md，仅 HTML 管线用） |
 | `iceberg-vue/src/data/` | Vue 数据源（构建时内联） |
-| `data/archive/` | 有变化时的 work 旧数据备份 + 历史归档（legacy-2026-08 / tools-2026-08） |
+| `data/archive/` | 有变化时的 work 旧数据备份 + 历史归档（legacy-2026-08 / tools-2026-08 / **legacy-v1-2026-10** —— 第一代前端 v1 的 13 个文件，含恢复步骤 README） |
 | `iceberg-vue/dist/` | Vue 生产构建输出 |
 | `docs/` | 项目文档（plans/ 规划、audits/ 巡检） |

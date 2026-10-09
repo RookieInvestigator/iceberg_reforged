@@ -54,7 +54,7 @@ Vue 3 使用 `<script setup>` 无需显式导出，文件名即组件名：
 
 ```vue
 <script setup>
-// HeroSection.vue
+// V2EntryCard.vue
 </script>
 ```
 

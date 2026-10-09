@@ -11,22 +11,23 @@ Iceberg/                  ← git 仓库根
 ├── .github/workflows/deploy.yml   ← CI（working-directory: iceberg-vue）
 ├── package.json          ← 根构建 shim（CF Pages：构建 iceberg-vue 并镜像 dist 到根）
 ├── CLAUDE.md / docs/     ← 协作指引 + 文档（docs/plans/ 规划、docs/audits/ 巡检为内部文档，git 忽略）
-├── scripts/              ← 数据管线脚本（11 个 Python + build-cf.mjs / scroll-probe.mjs / tooltip-probe.mjs 探针；Python 路径基于脚本位置推导，任意 cwd 可运行）
+├── scripts/              ← 数据管线脚本（15 个 Python：管线 build_data / build_data_api / quality_report / subset_fonts，反馈落地 apply_feedback / export_overrides / link_source_report，其余为工具；+ build-cf.mjs / scroll-probe.mjs / tooltip-probe.mjs / v2-sim-check.mjs 探针；Python 路径基于脚本位置推导，任意 cwd 可运行）
 ├── data/                 ← 数据工作区（git 忽略）
 │   ├── work/             ← 词条工作文件（config.json + items/*.md）
-│   ├── archive/          ← 历史快照 + legacy-2026-08 + tools-2026-08 归档
+│   ├── archive/          ← 历史快照 + legacy-2026-08 + tools-2026-08 + legacy-v1-2026-10（第一代冰山图）归档
 │   └── reports/          ← quality_report.py 输出（时间戳 CSV）
 └── iceberg-vue/          ← 前端代码（唯一活跃项目）
 ```
 
 根 `.gitignore` 规则：`scripts/` 与 `docs/` 的 `CHANGELOG.md`、`DATA_WORKFLOW.md`、`STYLE_GUIDE.md` 纳入版本控制；`docs/TODO.md`、`docs/plans/`、`docs/audits/` 为内部开发文档，git 忽略；`data/`、`iceberg.yaml`、`font/`、历史项目、工具产物忽略。内部治理计划详见本地 `docs/plans/REPO_GOVERNANCE_PLAN.md`。
 
-> ⚠️ 历史项目 `iceberg-astro/`、`iceberg-react/` 已压缩归档至 `data/archive/legacy-2026-08/` 并删除原目录；工具产物（`.shots/` 等）归档于 `data/archive/tools-2026-08/`。
+> ⚠️ 历史项目 `iceberg-astro/`、`iceberg-react/` 已压缩归档至 `data/archive/legacy-2026-08/` 并删除原目录；工具产物（`.shots/` 等）归档于 `data/archive/tools-2026-08/`；第一代前端（v1：`IndexView` + `IcebergApp`/`ItemInteractivity`/`EntryDetailCardNext`/`MobileSheet` 等 13 个文件）于 2026-10-09 归档至 `data/archive/legacy-v1-2026-10/`（含恢复步骤）。
 
 ## 协作规则
 
 - **Git 提交**：仅在用户明确要求时执行，不要自动提交或推送。
 - **更新日志**：有意义的改动实时追加到 `docs/CHANGELOG.md`，按「新增 / 改进 / 修复 / 移除」分类。
+- **一个能力只实现一次**：v1 归档后 v2 是唯一实现；新增能力不得再开第二套平行组件（历史上的 v1/v2 双轨让每个功能都要改 3~4 处）。
 
 ## 项目概述
 
@@ -91,7 +92,7 @@ python scripts/build_data.py [html_file]   # 默认 iceberg.html
 - 按 id 查标题或分类（用户面板的收藏统计等）→ 导入 `id-index.json`
 - 需要词条正文（`desc` / `link` / `related`）→ 才导入 `iceberg.json`
 
-当前 `iceberg.json` 的合法消费方：`IndexView.vue`、`Iceberg3DView.vue`、`AncientBookView.vue`、`AppendixEditView.vue`（DEV）、`prerender.ts`（构建期）。新增消费方前请先确认是否可用上两级替代。
+当前 `iceberg.json` 的合法消费方：`views/v2/IndexNextView.vue`（经 `lib/iceberg/useIcebergDataSource.ts`）、`Iceberg3DView.vue`、`AncientBookView.vue`、`prerender.ts`（构建期）、以及 DEV 路由的 `AppendixEditView.vue` / `FeedbackReviewView.vue` / `SubmarineDiveView.vue`。新增消费方前请先确认是否可用上两级替代。
 
 **ID 稳定性（F30）**：API 词条自带稳定 UUID，构建脚本仅将其作为 `id_history.json` 的内部锚点，输出的 8 位 MD5 ID 在标题/层级修订时保持不变；变更条目输出 `idAliases`（旧 → 新）写入 `iceberg.json`，前端分享 hash / 深链 / 收藏 / 已读解析时自动重定向。
 
@@ -106,26 +107,36 @@ iceberg-vue/
 └── src/
     ├── main.ts / App.vue
     ├── prerender.ts                 # 构建期预渲染脚本（vite-prerender-plugin 调用，Node 内生成各路由静态快照）
-    ├── router/index.ts             # 10+2 条路由（10 正式 + 2 DEV；懒加载 + keep-alive）
-    ├── data/                       # iceberg.json, meta.json, id-index.json, on-this-day.csv, bulletins/
+    ├── router/index.ts             # 12 条正式路由（含 3 个 redirect + 404）+ 3 条 DEV；懒加载 + keep-alive
+    ├── data/                       # iceberg.json, meta.json, id-index.json, on-this-day.csv, bulletins/, appendix/（六张副表）
     ├── lib/                        # data.ts, filterStore.ts, settingsStore.ts, i18nStore.ts,
-    │                               # useI18n.ts, search.worker.ts, csv.ts, baseUrl.ts,
+    │                               # useI18n.ts, search.worker.ts, csv.ts, baseUrl.ts, bulletins.ts,
+    │                               # sourceLabel.ts（外链来源站点识别）, feedbackReview.ts（反馈工作台）,
+    │                               # fitTip.ts（气泡 tooltip 超界归位，徽章与标记共用）,
     │                               # supabase.ts, supabaseData.ts, authStore.ts, userState.ts,
     │                               # injectionKeys.ts, useEntryInteractions.ts, overlayLock.ts,
-    │                               # report.ts, liquidGradient.ts, shaderCanvas.ts, md.ts, pinyin.ts
+    │                               # report.ts, liquidGradient.ts, shaderCanvas.ts, pinyin.ts,
+    │                               # handbook.ts（术语表解析 + 描述强调分段 segmentDesc）
     ├── lib/ancient-book/           # 古籍模式（types / engine / layout / render + SpreadView/SpreadPage）
-    ├── lib/iceberg/                # 冰山图 composables（搜索 Worker / 相关索引 / 筛选管线 / tooltip）
-    ├── lib/iceberg3d/              # 3D 引擎（engine / picking / materials / cameraFlight / prng）
-    ├── lib/i18n/                   # 翻译字典（zh / en / ja，274×3 key；`i18n.test.ts` 锁三语对齐 + 死 key）
-    ├── styles/                     # global.css, index.css, bg.css, modal.css, ancient-book.css, themes/
-    ├── views/                      # IndexView, HomeView, HandbookView, FeaturesView, FeatureDetailView,
-    │                               # OnThisDayView, AncientBookView, Iceberg3DView,
-    │                               # AppendixEditView, NotFoundView, IndexNextView（/v2 换代实验，仅 DEV）
+    ├── lib/iceberg/                # 冰山图 composables（数据源 useIcebergDataSource / 副表 appendix+overrides /
+    │                               # 副表编辑器 useAppendixEditor / 链接归一 entryLinks / 搜索 Worker /
+    │                               # 相关索引 / 筛选管线 / tooltip）
+    ├── lib/iceberg3d/              # 3D 引擎（engine / picking / materials / cameraFlight / prng / diveEngine）
+    ├── lib/i18n/                   # 翻译字典（zh / en / ja，277×3 key；`i18n.test.ts` 锁三语对齐 + 死 key）
+    ├── styles/                     # global.css, index.css, bg.css, modal.css, ancient-book.css, v2.css, themes/
+    ├── views/                      # v2/IndexNextView（`/` 主图，唯一实现）, HomeView, HandbookView,
+    │                               # FeaturesView, FeatureDetailView, OnThisDayView, AncientBookView,
+    │                               # Iceberg3DView, NotFoundView（以上为正式路由）,
+    │                               # AppendixEditView / FeedbackReviewView / SubmarineDiveView（仅 DEV）
     └── components/
-        ├── layout/                 # AppShell, IcebergBg, LiquidBg, LiquidGradient, FooterSection
-        ├── iceberg/                # IcebergApp, Header, HeroSection（暂时下线）, TierNav, FloatingButtons, ScatterField
-        ├── items/                  # ItemInteractivity, ItemTooltip, EntryDetailCardNext, MobileSheet,
-        │                           # CommentPanel, EntryMetaBadges, EntryRelatedLinks
+        ├── ui/                     # TipBubble（气泡 tooltip 唯一实现：徽章释义 + 标记备注共用）
+        ├── appendix/               # 副表编辑器（Sidebar / EntryEditor / RawRows / EntryPicker，仅 DEV 路由用）
+        ├── review/                 # 反馈审核工作台（ReviewList / ReviewDetail / TagPicker，仅 DEV 路由用）
+        ├── v2/                     # 主图全套（V2Header / V2FilterBar / V2Wall / V2TierChapter / V2Interactivity /
+        │                           # V2EntryCard / V2EntryBody / V2Sheet / V2Tooltip / V2EntryMetaBadges / V2Colophon…）
+        ├── layout/                 # AppShell（含公告条 + 公告弹窗）, IcebergBg, LiquidBg, LiquidGradient
+        ├── iceberg/                # FloatingButtons, ScatterField（v1 同批组件已归档，这两个仍被 v2 复用）
+        ├── items/                  # CommentPanel, EntryMarks（标记图标行）, EntrySearchButton, ExportImageButton
         ├── modals/                 # BaseModal, SettingsPanel, AboutModal, ContactModal, LinksModal, BulletinModal, TermsModal, UserModal, GeoAvatar
         ├── calendar/               # OnThisDayApp, OnThisDayModal
         └── home/                   # IcebergParticles
@@ -135,7 +146,7 @@ iceberg-vue/
 
 ## 测试与类型检查约定
 
-- **测试文件 colocated**：`*.test.ts` 与被测文件同目录（如 `src/lib/supabaseData.test.ts`、`src/components/items/CommentPanel.test.ts`），vitest include 为 `src/**/*.test.ts`。
+- **测试文件 colocated**：`*.test.ts` 与被测文件同目录（如 `src/lib/supabaseData.test.ts`、`src/lib/iceberg/appendix.test.ts`），vitest include 为 `src/**/*.test.ts`。
 - **tsconfig 分层**：`tsconfig.base.json` 存共享 compilerOptions；`tsconfig.app.json`（构建类型检查，排除 `*.test.ts`）与 `tsconfig.test.json`（测试类型检查，带 `vitest/globals`）均 extends base；根 `tsconfig.json` 仅供 IDE 全量索引。
 - **运行**：`npm run typecheck`（-p tsconfig.app.json）/ `npm run typecheck:test` / `npm run test`。
 
@@ -143,25 +154,29 @@ iceberg-vue/
 
 | 路径 | 视图 | 说明 |
 | ---- | ---- | ---- |
-| `/` | `IndexView.vue` | 主冰山图 |
+| `/` | `views/v2/IndexNextView.vue` | 主冰山图（唯一实现） |
+| `/legacy` | redirect → `/` | v1 已归档（`data/archive/legacy-v1-2026-10/`），保留重定向让老书签不 404 |
 | `/home` | `HomeView.vue` | 首页导航 |
 | `/handbook` | `HandbookView.vue` | 术语表 |
 | `/features` | `FeaturesView.vue` | 功能特性列表 |
 | `/features/:slug` | `FeatureDetailView.vue` | 功能特性详情 |
 | `/minimal` | redirect → `/` | 极简模式入口 |
+| `/v2` | redirect → `/` | 换代实验旧入口（保留外链） |
 | `/on-this-day` | `OnThisDayView.vue` | 历史上的今天 |
 | `/ancient-book` | `AncientBookView.vue` | 古籍线装书模式 |
 | `/3d` | `Iceberg3DView.vue` | Three.js 3D 冰山 |
 | `/:pathMatch(.*)*` | `NotFoundView.vue` | 404 |
 | `/appendix-edit` | `AppendixEditView.vue` | 副表编辑器（仅 DEV） |
+| `/feedback-review` | `FeedbackReviewView.vue` | 反馈审核工作台（仅 DEV） |
+| `/dive` | `SubmarineDiveView.vue` | 深潜巡游（仅 DEV，实验 WebGL） |
 
 **`?r=` 深链（P1-13）**：部署层 `public/404.html` 把原始 `path+search+hash` 编码进 `?r=` 跳回 SPA；router 全局守卫（`lib/redirectGuard.ts` + `lib/deepLink.ts`）还原目标路由并 replace 跳转，地址栏 `r` 参数同时移除。
 
 ## 数据流
 
-`IndexView.vue` 构建时静态导入 `iceberg.json`（~993KB），经 `normalizeData()`（层级重命名、标点规范化、emoji/颜色注入）后通过 `provide/inject` 下发。`desc` 字段与 `renderItems` 分离存入 `Map`，降低 `v-memo` diff 开销。秒级 Unix 时间戳统一走 `lib/data.ts` 的 `formatUnixDate()`，禁止各视图手写 `*1000`。
+`views/v2/IndexNextView.vue` 经 `lib/iceberg/useIcebergDataSource.ts` 构建时静态导入 `iceberg.json`（~993KB），走 `normalizeData()`（层级重命名、标点规范化、emoji/颜色注入）+ 六张副表装配（`lib/iceberg/appendix.ts` 解析 → overrides / extraCategories / contributors / extra），再通过 `provide/inject` 下发。`desc` 字段与 `renderItems` 分离存入 `Map`，降低 `v-memo` diff 开销。秒级 Unix 时间戳统一走 `lib/data.ts` 的 `formatUnixDate()`，禁止各视图手写 `*1000`。
 
-`IcebergApp.vue` 注入数据，通过 filterStore / settingsStore 管理筛选与设置，Web Worker（Fuse.js）异步搜索，`ItemInteractivity.vue` 统一处理 tooltip / modal。
+`components/v2/V2Interactivity.vue` 注入数据，通过 filterStore / settingsStore 管理筛选与设置，Web Worker（Fuse.js）异步搜索，统一处理 tooltip / 弹窗 / 抽屉（`V2EntryCard` / `V2Sheet`）。
 
 ## 状态管理（Nano Stores）
 
@@ -183,15 +198,16 @@ function storedAtom<T>(key: string, fallback: T) {
 
 ## 关键设计点
 
-- **Hero 页面**：已暂时下线（`IndexView.vue` 中 TEMP 注释保留组件与挂载点，恢复时还原三处注释即可）；恢复时需一并处理响应式背景图与 preload。
-  ⚠️ `HeroSection.vue` 引用的背景图 `public/assets/annie-spratt-Tno1Zd3T6yY-unsplash.webp`（1.44MB）已于 2026-08-30 随死重清理删除（Hero 下线期间无任何引用），**恢复 Hero 前需用 `git restore` 取回该文件**；其用的 Noto Serif SC（200/300）同样随字体自托管下线，恢复时重跑 `scripts/subset_fonts.py` 加回该家族
+- **v1 已归档（2026-10-09）**：第一代主图（`IndexView` + `IcebergApp` / `Header` / `TierNav` / `HeroSection` / `ItemInteractivity` / `ItemTooltip` / `EntryDetailCardNext` / `MobileSheet` / `EntryMetaBadges`(items) / `EntryRelatedLinks`(items) / `FooterSection`）已移出仓库并归档到 `data/archive/legacy-v1-2026-10/`（含逐文件说明与 `git restore` 恢复步骤）。`/legacy` 保留为重定向。**`HeroSection` 同批归档**：其背景图 `public/assets/annie-spratt-Tno1Zd3T6yY-unsplash.webp`（1.44MB）已于 2026-08-30 删除、Noto Serif SC 200/300 已随字体自托管下线，恢复 Hero 需按归档 README 的三步走（取回文件 + 还原注释 + 重跑 `scripts/subset_fonts.py` 并加回字重）
+- **气泡 tooltip 唯一实现**：`components/ui/TipBubble.vue` + `styles/v2.css` 的 `.tip-anchor` / `.tip-bubble`（徽章释义与标记备注共用）；外观与所处表面反相（`--tip-*` 令牌在 `.surface-light` 里翻面），超界归位走 `lib/fitTip.ts`
+- **副表（appendix）一表一域**：`data/appendix/` 六张表 —— `overrides`（标量）/ `categories`（分类）/ `references`（链接）/ `related`（关联）/ `contributors`（署名）/ `extra`（标记：警示 / 需补充 + note）。唯一解析入口 `lib/iceberg/appendix.ts`；编辑器 `useAppendixEditor.ts` + `components/appendix/`（仅 DEV）
 - **古籍模式**：独立子系统，声明式 Vue 渲染（`SpreadView` / `SpreadPage`），分 4 模块（types / engine / layout / render），两种模式（分类/层级）
 - **公告板**：`bulletins/*.md`，YAML frontmatter，构建时 `import.meta.glob` 自动加载
 - **拼音表**：`lib/pinyin.ts` 的汉字→首字母映射存为**定长字符串**（索引 = 码点 − 0x4E00，`'-'` 表示空位），非对象字面量——后者 218KB，是 `HandbookView` chunk 的主要体积来源；转换脚本 `scripts/compact_pinyin.py`（幂等，任意 cwd 可运行）。重新导出时先生成对象字面量再跑该脚本，改后运行 `src/lib/pinyin.test.ts` 校验
 - **字体自托管**：Noto Sans SC（400/500/700/900）+ Noto Serif TC（400/700/900）按站内语料子集化存于 `public/fonts/`（SIL OFL 1.1，见同目录 `OFL.txt`，随包分发），`src/styles/fonts.css` 由 `global.css` 首行引入，替代 Google Fonts CDN（访客 IP 不外发 + 国内加载可靠）。转换脚本 `scripts/subset_fonts.py --src <OTF目录>`（幂等，任意 cwd 可运行，需 fonttools + brotli；源 OTF 见脚本头注释，不入库）。语料变化（新词条/新文案）后重跑；竖排特性 vrt2/vert 由 pyftsubset 默认保留，勿加 layout 裁剪参数
 - **预渲染静态壳不得依赖构建期时间**：`prerender.ts` 禁止用 `new Date()` 决定静态内容（内容会被冻结在构建日，非每日部署即长期错误）。`/on-this-day` 的静态壳因此渲染**全年档案**（205 条 / 163 个日期），而非「今天」
 - **补间一律走 `lib/iceberg3d/tween.ts`**：项目已移除 GSAP，改用 `@tweenjs/tween.js` 薄封装（`to` / `fromTo` / `killTweensOf` / `isTweening`）。**不要再引入 GSAP**——它为 4 个 API 付出了 27KB gzip。语义细节（秒制、kill 不触发 onComplete、`back.out(1.4)` 的 overshoot）见该文件头注释与 `tween.test.ts`
-- **主题**：仅暗色主题，`base.css` + `dark.css`，CSS 变量体系
+- **主题**：暗色主题为主（`base.css` + `dark.css`）；另有**阅读浅色表面**开关（设置面板「v2 详情表面」→ `settingsStore.v2DetailSurface`），由 `V2EntryCard` / `V2Sheet` / `BaseModal` 挂 `.surface-light`，在作用域内重映射全部白色 alpha 阶梯与 `--tip-*`（漏一个就是白上白隐形）
 - **设计令牌**：白色透明度统一用 `var(--white-XX)`（XX = 百分比整数，定义于 `themes/base.css` 的 White-alpha ramp，如 `--white-30` = 30% 白）；强调色统一 `--color-accent` / `--color-accent-bright` / `--color-accent-soft`，收藏 `--color-fav`，NEW `--color-new`；小字号只允许 `--font-micro/tiny/xs/sm/base` 五个阶梯（最小 10px）；字重只允许 400/500/700/900（600/800 已归一，200/300 与 Serif SC 已删除，见字体条）；过渡曲线统一 `--ease-out/standard/emphatic/hero/float`；焦点环 `--focus-ring`。禁止新写 `rgba(255,255,255,α)` 或任意字号硬编码（canvas JS 颜色除外）；白色透明度统一走 `text-white-XX` / `bg-white-XX` ramp，禁止 `white/NN` 斜杠写法（遗留页面逐步收敛中）
 - **焦点与动效**：全局 `:focus-visible` 统一焦点环，组件不得裸写 `outline: none`；`prefers-reduced-motion` 由 global.css 全站屏蔽 CSS 动画/过渡，3D 自动旋转与相机飞行在 JS 侧同步关闭/瞬移
 - **搜索**：Web Worker Fuse.js，双索引（标题/全文），threshold 0.3，防抖 150ms
@@ -205,10 +221,10 @@ function storedAtom<T>(key: string, fallback: T) {
 | 常量 | 值 |
 | ---- | ---- |
 | 站点路径 | `/iceberg_reforged/`（GH Pages）；CF Pages 为根路径（`CF_PAGES_BRANCH` 自动切换） |
-| 词条总数 | 1440（API 实时同步，见 `meta.json` / `CHANGELOG` 数据条目） |
-| 层级 / 分类 / tagMap | 8 / 15 / 68 |
+| 词条总数 | 1454（API 实时同步，见 `meta.json` / `CHANGELOG` 数据条目） |
+| 层级 / 分类 / tagMap | 8 / 15 / 69 |
 | iceberg.json 体积 | ~993KB |
-| i18n 字典 | 274 key × 3 语言 |
+| i18n 字典 | 277 key × 3 语言 |
 | 搜索防抖 / 阈值 | 150ms / 0.3 |
 | Tooltip 延迟 | 200ms |
 

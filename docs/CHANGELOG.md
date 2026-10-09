@@ -1,6 +1,253 @@
 # 更新日志
 
 
+## 2026-10-09 — 反馈审核工作台（一键落盘 + 回填）· 链接副表升级 · 链接来源识别
+
+### 新增
+
+- **反馈审核工作台 `/feedback-review`**（DEV 专用，生产不产出）：原本文档里的审阅流程是「在 Supabase 后台逐条改 status」，189 条积压后不可行。工作台把「看当前值 vs 建议值 → 采纳/驳回/待定」搬进本地页面 —— Supabase REST 实时读取或离线导入 CSV、左栏清单（类型/域名/库状态标记 + 搜索筛选）、右栏并排 diff、键盘 `J K / A R S / Backspace`、决定后自动前进、进度条与「已决 N / 总数」
+- **五字段均可就地编辑**：标题 / 描述 / 分类（下拉）/ 标签（69 项 pills 多选 + 搜索）/ 链接；编辑只写 `data/feedback/decisions.json` 的 `edits`，**绝不回写 Supabase**（RLS 也不允许改他人行）；空编辑=撤销，未动过的字段不产生编辑
+- **一键落盘 + 状态回填**：底部「预演（不落盘）」「生成副表」两个按钮 → dev 中间件调 `scripts/apply_feedback.py`（不在 Node 里重写一遍规则），写 `appendix/` 两个 CSV（原文件另存 `.bak`）并输出合入清单；配了 `SUPABASE_SERVICE_ROLE_KEY` 时同一动作把采纳行回填为 `status=accepted, applied=true`、驳回行 `rejected`（`entry_feedback` 无 UPDATE 策略，只能走 service_role；key 只在 Node/Python 侧读，不进浏览器包）
+- **拉取范围可切换**：`open / accepted / rejected / 全部` 直接作为查询过滤 —— 回填后 open 里查不到已审条目，现在可以回看已审并看到「已采纳 / 已驳回 / 已合入」标记
+- **链接副表升级**（`references.csv` 增列 `role`）：`role=main` **覆盖词条主链接**（改 URL）、`label` **覆盖显示名**（留空则自动识别）、`role=ref`/缺省 = 附加参考链接。于是「主链接换地址」「站名写错要改」「补更权威的来源」都能只靠副表完成，不动上游主数据；旧文件无 `role` 列行为完全不变
+- **链接来源自动识别**（`lib/sourceLabel.ts`，词条链接与参考链接共用）：精确表 200 域名 + **父域回退**（`news.sina.com.cn` → 新浪）+ 家族规则（`foo.fandom.com` → Foo Wiki、`de.wikipedia.org` → 维基百科）+ 后缀规则（`*.edu.cn` / `*.gov.cn` / `*.gov.tw` / `*.github.io` …），都不命中则老实显示域名、不编造站名。实测覆盖率：未识别宿主 **195 → 22**（链接 344 → 32；口径修正见下一节）
+- **`scripts/link_source_report.py`**：覆盖率报告（按频次列出未识别宿主 + 示例 URL），维护域名表用
+- **`scripts/export_overrides.py`**：本地订正 → 上游可导入/可提交的产物（按 `id_history.json` 反向映射成上游 uuid；字段名对齐上游 item，附上游现值对照；另出人工提交清单与参考链接表）
+
+### 改进
+
+- **词条链接与参考链接统一表现**：同为「站点名（下划线）+ 域名（弱化）+ 外链图标」的一列，**「参考链接」分组字样取消**（仅 `sr-only` 保留给读屏）；v2 卡片/抽屉与 v1 桌面弹窗、v1 抽屉四处一致
+- **`lib/csv.ts` 重写为 RFC 4180 子集**：引号内的逗号/换行/`""` 转义不再解坏整行（Supabase 导出的 note/描述含换行），并修掉 BOM 污染首个表头名
+- **`lib/feedbackReview.ts` 与工作台**：状态/署名解析（`batch_user_display`）、库状态标记、`tab` 目录式筛选
+- **`docs/FEEDBACK_WORKFLOW.md` 对齐现实**：两条 workflow 标注「未落地」，补「本地审核工作台」与「状态自动回填（service role key）」两节；`applied` 回填改由脚本执行
+- **`AppendixEditView`**：副表编辑器里的「参考链接」改为「链接（主链接覆盖 / 附加参考）」，表头加 `role`
+
+### 说明
+
+- 审核决定落 `data/feedback/decisions.json`（`data/` gitignore，不入库）；`service_role` key 写在 `iceberg-vue/.env`（同样 gitignore）
+- 已知缺口：`entry_feedback` 没有「驳回理由」列，工作台填的理由暂存本地；要回传需先 `ALTER TABLE entry_feedback ADD COLUMN IF NOT EXISTS review_note TEXT NOT NULL DEFAULT '';`
+- Python 侧不再复制域名表：`apply_feedback.py` 直接解析 `sourceLabel.ts` 的 `SOURCE_LABELS`（沿用 `pinyin_sort.py` 读 `lib/pinyin.ts` 的先例），落盘 label 与前端派生结果不会漂
+
+### 测试
+
+- `vue-tsc`（app tsconfig）通过；全量 **46 文件 347 用例**通过（新增 `bulletins` / `feedbackReview` / `overrides` / `sourceLabel` / `entryLinks` 五组）。⚠️ 当时漏跑 `tsconfig.test.json`：`feedbackReview.test.ts` 的行工厂少写 `applied`，vitest 不做类型检查所以用例全绿、tsc 却报 TS2322（见下一节「测试」）
+
+
+## 2026-10-09 — 术语表不再自动强调引号 / 书名号
+
+### 修复
+
+- **引号与书名号不再自动高亮**（用户反馈）：`HandbookView` 的描述强调解析此前把 `「」『』“”‘’《》` 也当作强调定界符（「便捷写法」），于是正文里任何引号、书名号都被染色 —— 术语表里这类符号太常见（如「所谓“东方世界”」「《东方学》」「《奇迹课程》、《与神对话》、《一的法则》」），结果是整段被染花、反而看不出「哪里是真正被强调的」。现在**强调只认显式的 `==...==`**，引号原样输出
+- 顺带把这段解析从视图搬进 `lib/handbook.ts` 的 `segmentDesc()`（纯函数、可测）：这段逻辑有明确行为约定（标记不出现在输出里、嵌套可开可关、未闭合的 `==` 一路高亮到末尾），值得单测锁住 —— 而视图层在本仓库没有测试。补 6 条用例，其中一条专锁「引号/书名号不再自动高亮」（含引号里套 `==` 只高亮 `==` 部分、引号必须原样保留）
+
+### 验证
+
+- 浏览器实测 `/handbook`（生产构建）：逐个标签页收集 `.hb-em` 段，共 **12 段全部是 `==` 标记的内容**（`邪教组织`、`目前`、`实况角色扮演游戏`、`新纪元运动（New Age movement）`…），**书名号/引号单独成段的违规数为 0**
+- `vue-tsc`（app/test）通过 · **47 文件 386 用例**通过（+6）· 字体门一致 · `npm run build` 通过
+
+
+## 2026-10-09 — 收敛：v1 归档 · v2 成为唯一实现
+
+### 移除
+
+- **第一代主图（v1）整批归档**（13 个文件 / 2339 行）：`views/IndexView.vue`、`components/iceberg/{IcebergApp,Header,TierNav,HeroSection}.vue`、`components/items/{ItemInteractivity,ItemTooltip,EntryDetailCardNext,MobileSheet,EntryMetaBadges,EntryRelatedLinks}.vue`、`components/layout/FooterSection.vue`，以及随卡片归档的 `EntryDetailCardNext.comments.test.ts`。全部移出仓库，归档到 `data/archive/legacy-v1-2026-10/`（含逐文件说明 + `git restore` 恢复步骤 + 恢复后必须做的三件事）
+- **`/legacy` 不再是页面**：改为 `redirect: '/'`，老书签与外部链接不 404
+
+### 改进
+
+- **先量化再动手**：写了一次性可达性分析（从生产入口 + 3 个 DEV 工具视图出发解析 import 图），确认这 13 个文件**只被 `/legacy` 链路引用**，且 `HeroSection.vue`（726 行，全项目最大组件）**只被两处注释引用** = 真死代码；`src` 下其余 139 个非测试文件全部可达（唯一"不可达"的 `search.worker.ts` 是 `new Worker(new URL(...))` 的误报）
+- **删掉 v1 之后立刻暴露的两处真问题**：
+  - `App.vue` 的 `keep-alive` 排除表里还留着 `'IndexView'`（组件已不存在）；
+  - i18n 死 key 守卫报出 `hasLink / hasDesc / isNew / needComplete` —— 根因是 `V2FilterBar` 把 `[filter, labelKey]` 写成**元组**，守卫只认 `labelKey: '…'` 属性写法，此前这四个 key 是被 v1 顺手引用才没暴露。改成对象数组（顺带更可读）
+- 生产文件里指向 v1 的注释/说明全部校正（`IndexNextView` 头注释、`V2Interactivity` 注入来源、`IcebergBg`、`SettingsPanel`、`injectionKeys`、`filterStore`、`useFilterPipeline`、`useIcebergDataSource`、`extraCategories`），并删掉两处 Hero 的 TEMP 注释
+- `CLAUDE.md` 重写相关段落：新增协作规则「**一个能力只实现一次**」（v1 归档后不得再开第二套平行组件）、结构树/路由表/数据流/关键常量（i18n 274 → **277** key）对齐现状；`docs/TODO.md` 记入收敛批并归档已完成项；`docs/STYLE_GUIDE.md` 的示例文件名改为现存文件；`docs/DATA_WORKFLOW.md` 归档表补 legacy-v1-2026-10
+
+### 验证
+
+- `vue-tsc`（app / test 双 tsconfig）通过 · **47 文件 380 用例**通过（少掉的 1 个是随 v1 归档的卡片用例）· 字体门 `--check` 仍一致（v1 文案的字形是现存语料的子集，无需重跑）· `npm run build` 通过
+- 浏览器逐路由实测（生产构建 + 无头 Chrome）：`/` 渲染 1454 条词条、`/legacy` **落到 `/`**（重定向生效）、`/home` `/handbook` `/features` `/on-this-day` `/ancient-book` `/3d` `/appendix-edit` `/feedback-review` 全部正常渲染，**十个路由零控制台报错**（无未解析组件、无缺失 chunk）
+- 归档后复跑可达性分析：`src` 下已无 v1 独有文件
+
+
+## 2026-10-09 — 标记副表 extra.csv（警示 / 需补充）· 词条卡片标记图标行
+
+### 新增
+
+- **标记副表 `extra.csv`（`item_id,flag,note`）**：第六张副表。**行的存在即标记为真**（删行 = 取消），`flag ∈ {warn, need}`（警示 / 需补充，以后加标记只改 `EXTRA_FLAGS` 一处 + 三语文案），`note` 是该标记 hover 的提示文案。加表时把「读副表」统一走 `readAppendixRaw()`，所以新表自动进入渲染层、编辑器与保存路径
+- **词条卡片标记图标行 `EntryMarks`**（v2 卡 / 移动抽屉 / v1 弹窗三处统一）：警示 ⚠、需补充 ◌、社区贡献 ✎ 三个 22px 小圆图标**并列在元信息徽章行尾**（层级 / 分类 / 标签之后，同一行），各自带气泡 tooltip —— 有 `note` 就用 `note`，没有就用默认文案（「内容存疑，请谨慎参考」/「信息不完整，欢迎补充」）。触屏点一下也能展开（hover 之外的第二条路径）。**社区贡献 tooltip 只给名字、不带日期**（`contributorLabel`，日期仍是 `contributors.csv` 的存档列）
+- 三语新增 `markWarn` / `markNeed`；`corrections`（社区订正）改作图标行的 aria-label
+- 为把图标放进徽章行，两个 `EntryMetaBadges`（v2 的 ul 版与 v1 的 div 版）各开一个尾槽：v2 用 `<li>` 包一层（ul 里不能直接放 div）
+
+### 改进
+
+- **气泡 tooltip 提取为唯一实现**（`components/ui/TipBubble.vue` + `styles/v2.css` 的 `.tip-anchor` / `.tip-bubble`）：此前徽章释义与标记备注各写一套 —— 一个白底黑字居中、一个深底白字左对齐，截断行数（6 vs 不限）、过渡时长（0.15s vs 0.12s）、z-index（5 vs 60）也都不一样，看着就不是一回事。现在**同一组件、同一份 CSS**：底/字/圆角/内距/阴影/字号/行高/6 行截断/过渡/z-index 全一致，展开路径（hover / 键盘聚焦 / 触屏点击）与超界归位（`lib/fitTip.ts`）也统一。实测两处 tip 的计算样式逐项相同（`DIFF_DARK []` / `DIFF_LIGHT []`）
+- **与黑白（深/浅阅读表面）双模兼容**：气泡改为**与所处表面反相** —— 深底浅泡、浅底深泡（新增 `--tip-bg/fg/border/shadow` 令牌，`.surface-light` 里翻面）。原来徽章 tip 写死白底，浅色阅读表面上白底白泡等于隐形；实测浅底下两处 tip 一起翻成 `rgb(23,25,30)` 深泡 + 白字
+- **署名文案改为「由 X 补充」**（`contributedBy`：zh 补充 / en Supplemented by / ja さんの補足）
+- 编辑器同步支持标记：所见即所得里一行两个布尔 chip（警示 / 需补充，点一下开、再点关）+ 各自 note 输入框；原始行模式给 `extra.csv` 单独的表体（flag 下拉 + note），行首只出该表真有的列
+
+### 修复
+
+- 徽章 tooltip 的 hover 逻辑从组件内的 `mouseover/mouseout` + `closest('a.meta-chip')` 手工查找，改为由 `TipBubble` 的 `.tip-anchor` 统一承载（少一处易漂移的事件代码）
+- **tooltip 会被容器裁掉**（用户反馈「不要被边界截断了」）：
+  - 气泡改到图标**下方** —— 图标行贴着卡片顶部，往上会顶出 `.modal-body` 被裁；
+  - 横向归位复用既有的 `lib/fitTip.ts`（`fitTipIntoView` / `clearTipFit` 加了 selector 参数，徽章与标记共用一套）；
+  - ⚠️ **锚点方向踩坑**：气泡原本 `right: 0` 锚定，而 helper 用 `margin-left` 平移 —— 绝对定位下右锚定时 `margin-left` 会把它往**左**推（方向相反），320px 宽实测被推出视口（`x=-215`，`insideHost: false`）。改成 `left: 0` 锚定后两个方向都正确；随后统一到 `TipBubble` 的居中锚点，同样两个方向都对
+  - 实测三档宽度（320 / 420 / 1280）：tooltip 均 `insideHost: true` 且 `insideViewport: true`
+
+- **`MobileSheet` 引用了 `EntryByline` 却从未 import**：移动抽屉的署名行一直是「未解析组件」静默不渲染（vue-tsc 不报，页面也不报错）。换 `EntryMarks` 时补上 import —— 三处调用点现在都有 import
+
+### 验证
+
+- 前端实测（只读 + 临时数据两种方式）：`b8b7ed6d` 渲染 **3 个图标**（warn / need / who），**与徽章同一行**（`markInRow: true`，位于分类/标签之后）；tooltip 分别为自定义 note / 默认文案 / 「由 DoneyTon **补充**」（无日期），aria-label 与 tooltip 一致；三档视口 tooltip 均未被裁
+- **两处 tooltip 计算样式逐项比对**：深色表面 `DIFF_DARK []`、浅色表面 `DIFF_LIGHT []`（底/字/圆角/内距/字体/阴影/边框/截断/z-index/过渡全同）；浅底下两者一起翻成深泡白字
+- 编辑器集成测试新增：开标记 → 载荷出现 `b8b7ed6d,warn,<note>`；再点一下 → 该表回到只剩表头
+- `vue-tsc`（app/test）通过 · **48 文件 381 用例**通过 · 字体子集重跑（`bcd4606bf876…`）· `npm run build` 通过
+
+
+## 2026-10-09 — 署名独立成副表（contributors.csv）· 详情页脚署名行 · 编辑器拆分重构
+
+### 新增
+
+- **署名副表 `contributors.csv`（`item_id,by,at`）**：原先「谁贡献的」散在 `overrides.csv` / `categories.csv` 的 `by`/`at` 列里 —— 同一块数据两个家，正是一表一域要消灭的形态。现在署名独立成表（键 `(item_id,by)`，同键保留较晚的 `at`），`overrides.csv` 变成 `item_id,field,value`、`categories.csv` 变成 `item_id,category,role`；存量 2 条署名已迁移，`quality_report` 新增「副表列名」检查，谁把 `by`/`at` 写回去就点名
+- **词条详情页脚署名行（`EntryByline`）**：v2 卡 / 移动抽屉 / v1 弹窗三处统一，位置从徽章行右侧的小铅笔图标**移到正文页脚**，文案笼统 —— 「由 DoneyTon · 2026-09-27 提供」，多人时「A、B 等 3 人」，**不再逐条列出改了哪些字段**（审计信息，读者不需要）。i18n 新增 `contributedBy`（三语），死掉的 `correctedBy` 一并删除（死 key 守卫抓到）
+
+### 改进
+
+- **副表编辑器拆分重构**（原先一个 900 行 SFC，越写越乱）：
+  - 编辑模型 → `lib/iceberg/useAppendixEditor.ts`（载入五张表、行读写、按区域分派的写入口、dirty/保存/越界）
+  - 界面 → `components/appendix/`：`AppendixSidebar`（左栏）、`AppendixEntryEditor`（所见即所得）、`AppendixRawRows`（原始行）、`EntryPicker`（词条选择器）
+  - `views/AppendixEditView.vue` 只剩 100 行：建模型、切模式、拼三块
+  - 顺带把「读副表」统一走 `appendix.ts` 的 `readAppendixRaw()`，不再各自 glob
+- **所见即所得里补齐选择器**：标签改用审核工作台的 `TagPicker`（69 个标签 + emoji + 搜索），副分类用分类浮层（排除已选），关联词条用 `EntryPicker`（搜索 + 层级/分类），链接「显示名」加 220 个已知站点名的候选（`sourceLabel.SOURCE_LABELS`）；并把上一版塞在界面里的说明文字（关系图、逐表提示、字段解释）全部撤掉 —— 那些属于代码注释，不该占版面
+
+### 修复
+
+- **🔴 保存会删掉「半空行」——真实数据丢了 4 行**：保存时按「整行只填了 id 就丢弃」清理新建的垃圾行，但历史副表里本来就有这种形态的真实行 —— `related.csv` 里 4 条 `5374c017,`（source_id 有、target_id 空）。用户一次保存就少了 4 行。规则改为**只丢「本次新建且仍空白」的行**（`shouldDropOnSave(def, row, isFresh)`，新建由 `addRow` 记进 WeakSet 显式告知），`serializeAppendixTable` 不再自己丢行；4 行已从 git 恢复（与 HEAD 逐字一致），并补集成测试 `useAppendixEditor.test.ts` 用 stub fetch 捕获保存载荷、断言这些行必须还在（这条测试同时能拦住下面的 glob 事故）
+- **🔴 编辑器显示「所有副表都是空的」**（我引入的回归）：拆分时把 `import.meta.glob('../data/appendix/*.csv')` 从 `views/` 搬进 `lib/iceberg/`，路径没跟着改成 `../../`，glob 匹配 0 个文件 → 五张表全空；**此时点保存会把副表清空**。改为复用 `readAppendixRaw()` 并加注释说明为什么不能再写一份 glob
+- **原始行模式的幽灵控件**：`contributors.csv` 没有 `role` 列，模板却按「非 related 就有 role 下拉」渲染出空下拉，行体还落进关联选择器分支多出一个词条搜索框。改为**按表声明渲染**（`has(headers,'role') && roleOptions[key]` 才出下拉；行体按 `def.key` 精确分支）
+- 类名 `.main` 与布局类冲突（链接行「主」徽章被拉满整行）——改名 `role-main`；`references.csv` 没有 `by`/`at` 却渲染出输入框 ——按声明渲染
+
+### 验证
+
+- 编辑器实测（DEV 构建 + headless Chrome 驱动）：`b8b7ed6d` 计数 4 行（字段 1 / 链接 2 / 署名 1），署名 chip「DoneyTon 2026-09-27」，主链接显示覆盖后的「互联网档案馆」；改标题 → 计数 5 且出现「原 古树流血」，还原 → 回 4；**原始行控件审计：署名表 0 个 select、0 个词条搜索框，只有 by/at 输入框**
+- 详情页脚署名实测：`b8b7ed6d` 渲染「由 DoneyTon · 2026-09-27 提供」且位于描述/关联之下；无署名的词条 `87fbcd52` 不渲染（`byline: null`）
+- Python（子代理做、我复核）：`py_compile` 通过；dry-run 摘要新增「署名 → contributors.csv：新增 3，覆盖 0」；临时副本 `--write` 后两张表表头确为 3 列、contributors 去重成功、真实文件 sha256 前后一致；新门对孤儿/空 by/重复署名/非法 at 逐条报出；`quality_report` 完整跑 exit 0 且新检查 0 命中
+- `vue-tsc`（app/test）通过 · **48 文件 377 用例**通过（新增 `useAppendixEditor.test.ts`：保存载荷必须带真实数据、必须保留半空历史行、表头恒等于声明、空白新行不落盘）· 字体子集重跑（`086686182b42…`，`correctedBy` 出 `contributedBy` 进）· `npm run build` 通过
+
+
+## 2026-10-09 — 副表编辑器改成所见即所得（WYSIWYG）· 可读性 · 原值对照
+
+### 改进
+
+- **编辑模式改成「所见即所得」**（默认，`/appendix-edit`）：右栏直接渲染词条在站点上的样子 —— 大标题、层级/分类/标签徽章、正文段落、链接列（站点名下划线 + 域名弱化）、关联 chips —— 每一处**就地可改**，改动按区域写进对应副表：
+  | 在预览里改什么 | 落到哪张表 |
+  | --- | --- |
+  | 标题 / 描述 / 标签（增删） | `overrides.csv`（field=title / desc / tags，同键 upsert） |
+  | 主分类（分类 chip 本身是下拉） | `categories.csv` `role=main`（每词条一条，选回上游值即删行） |
+  | ＋副分类 / chip 上的 × | `categories.csv` `role=extra` |
+  | 主链接「编辑」（URL + 显示名） | `references.csv` `role=main` |
+  | ＋参考链接 / 编辑 / 删除 | `references.csv` `role=ref` |
+  | 关联词条（搜索回车添加、chip × 删除） | `related.csv` |
+  「副表原始行」模式保留（模式开关在顶部）：`role`、`by`/`at`、越界这些 WYSIWYG 表达不了的仍在那边改
+- **原值始终可见**：每个被副表覆盖的字段下方出现一行灰字「原 …」+「还原」按钮（点它 = 删掉那行副表记录，回到上游值）。原值一律取 `iceberg.json`（编辑器**不做**副表叠加），所以「本来是什么」与「副表改成了什么」同屏可比 —— 例如 `b8b7ed6d` 的 desc 反馈其实是**从无到有**，这里直接写「（上游此字段为空 —— 这条反馈是从无到有）」
+- **可读性（此前「一通黑」）**：底色由 `--color-surface`(#050505) 改为 `--color-modal-bg`(#111)，再叠面板/字段两层白，形成三级明度；正文透明度一律 ≥ 0.55（原为 0.13~0.35）；字号 11px → 12/14px，行高 1.6~1.8；输入框改浅底深字。**实测 WCAG 对比度**（把 `--white-XX` 叠到实际底色上算）：
+
+  | 元素 | 旧 | 新 |
+  | --- | --- | --- |
+  | 区域说明 | 1.75:1 | **5.29:1** |
+  | 字段标签 | 1.63:1 | **5.26:1** |
+  | 左栏词条名 | 3.48:1 | **8.19:1** |
+  | 左栏层级 | 1.36:1 | **4.6:1** |
+  | 词条描述 | 3.12:1 | **9.04:1** |
+  | 区域标题 | 5.32:1 | **15.55:1** |
+  | 输入框文字 | 7.30:1 | **14.05:1** |
+
+- 左栏每项带**改动行数徽章**，顶部显示**全站四表行数**与模式开关；标题栏显示「已修改 N 张表」与保存按钮
+
+### 修复
+
+- **类名 `.main` 与布局类冲突**：链接行的「主」徽章用了 `class="link-role main"`，撞上本文件的布局类 `.main { flex: 1 }`（scoped 只加属性选择器、不隔离类名）→ 徽章被拉满整行，显示成一条橙色横条。改名 `role-main` 并加注释说明为什么不能叫 `main`
+- **`references.csv` 没有 `by` / `at` 列，模板却按「所有表都有」渲染** → 出现改了也不落盘的幽灵输入框。改为按 `def.headers` 声明渲染（`v-if="def.headers.includes('by')"`）
+
+### 验证
+
+- DEV 构建（`vite build --mode development`，让 `/appendix-edit` 进包）+ headless Chrome **驱动 UI 实测「改哪里 → 落哪张表」**（全程只改内存、不点保存，仓库文件零改动，已用 `git diff --stat` 复核）：标题→计数 2→3 且出现「原 古树流血」、还原→回 2 且原行消失、描述→原地覆盖（计数不变）、主分类→3 且出现「原 主分类 …」、＋副分类→4、标签→5 且出现「原 标签 母题」、参考链接→6、关联词条（搜「九鼎」回车）→7 且 chip 出现；截图存 `outputs/appendix-editor-wysiwyg.png`
+- `vue-tsc` 通过；`npm run build` 通过；**`subset_fonts.py --check` 这次真的红了**（新界面文案带入 1 个新字符）→ 已重跑子集（语料 4215 → 4216 字符，指纹 `ccff2d4985f9…`）后转绿
+
+
+## 2026-10-09 — 副表重组：一表一域（分类不再两处写）· 编辑器补齐四表 · 工作台筛选提纯
+
+### 改进
+
+- **副表「一表一域」重组**：四张副表此前有一块数据两个入口 —— 分类既能由 `overrides.csv` 的 `field=category` 改主分类、又能由 `categories.csv` 加副分类，于是渲染层不得不再打一个补丁（改主分类时顺手把 `categories[0]` 换掉防主/副打架）。现在边界写死：
+  | 区域 | 表 | 列 | 键 |
+  | --- | --- | --- | --- |
+  | 标量字段 | `overrides.csv` | `item_id,field,value,by,at` | `(item_id,field)`，`field ∈ {title,desc,tags}` |
+  | 分类 | `categories.csv` | `item_id,category,role,by,at` | `(item_id,category)`，`role=main` 覆盖主分类 / `extra`（缺省）追加副分类 |
+  | 链接 | `references.csv` | `source_id,label,url,role` | `(source_id,url,role)` |
+  | 关联词条 | `related.csv` | `source_id,target_id` | `(source_id,target_id)` |
+  `category` / `link` / `related` 是**保留字段**：写进通用表不生效，但四处都会报（前端 `console.warn`、构建门、质量报告、前端测试的「零越界」），不再静默躺在 CSV 里
+- **单一事实源 `lib/iceberg/appendix.ts`**：表定义 / 列名 / 键 / 角色 / 越界判定 / CSV 序列化都在这里，**v1、v2、副表编辑器三处共用**（此前各写一遍 parse，导致 role 只在一处生效过）。装配按区域分派：标量 → `overrides.ts`（category 分支与其补丁一并删除）、分类 → `extraCategories.ts`（新增 `role=main` 覆盖主分类 + 色与渐变色标重算）、链接/关联 → Map
+- **副表编辑器补齐第四张表**：`/appendix-edit` 现在四张表齐全（此前缺 `overrides.csv`，也就是「全数据手动编辑」那一张），`field` / `role` 改下拉枚举（不再手打），每个区域配一句边界说明 + 顶部一张关系图；越界行标红并**拒绝保存**；保存改用 `serializeAppendixTable`（与 `parseCSV` 对称、空行丢弃、列序恒等于声明）并**沿用各文件原有的 BOM / 行尾**（Excel 风格的 BOM+CRLF 不被改写成 LF）
+- **工作台「看已审」两个口径分开**：拉取范围（`open/已采纳/已驳回/全部`）走 Supabase 查询过滤，`只看未决` 走本地 `decisions.json`；筛选逻辑提为纯函数 `filterReviewRows`（顺序固定 库状态→类型→未决→关键词）并由 6 条新用例锁定；统计行新增「筛选后 N 条 · 涉及 M 个词条」（条数≠词条数）
+- **`data/appendix/categories.csv` 迁移**：18 行补 `role=extra` 与空的 `by/at`（保留原 BOM+CRLF）；`references.csv` 补齐声明里的 `role` 列（12 行全 `ref`，与 `apply_feedback` 的写出口径一致）
+
+### 修复
+
+- **订正角标（`CorrectedMark`）改读跨表汇总，修掉重组引入的「静默订正」**：角标原先只读 `overrides.csv`，分类订正改由 `categories.csv` 承载后，被改过分类的词条在页面上**毫无标记**（正是这套系统要消灭的静默）。新增 `correctionsOf()`：`overrides.csv` 全部 + `categories.csv` 的 `role=main` + `references.csv` 的 `role=main` 都计入；纯新增（`role=extra` 副分类、`role=ref` 参考链接、`related.csv` 关联）不算订正，不产生角标。注入键随之改为 `CORRECTIONS_MAP_KEY`（跨表汇总，不再是「overrides 专用」）
+- **`build_data_api.py` 的 `related.csv` 孤儿检查一直是空转**：该文件带 UTF-8 BOM，脚本按 `encoding='utf-8'` 读 → 首列名变成 `\ufeffsource_id` → `source_id` 永远取不到，检查静默通过（BOM 只在第一个单元格上）。改 `utf-8-sig`；`quality_report.py` 读 `references.csv` 处同样改掉（否则编辑器一保存就埋下同一个坑）
+- **`apply_feedback.py` 不再剔除 `overrides.csv` 里的保留字段行**：原实现把它们从写回内容里去掉，只留 `.bak` —— 而 `.bak` 下次运行就被覆盖，等于不可逆的数据丢失。现在**原样保留**（内容一字不改），越界交给构建门 / 质量报告 / 前端测试去报，由人迁到专表
+- **副表编辑器不再被公告条顶出视口**：`.root` 的 `100vh` 改为 `calc(100vh - var(--bulletin-offset, 0px))`（沿用顶部条幅那套变量），底部 section 与左栏列表不再溢出
+
+### 数据 / 测试
+
+- 分类副表主分类覆盖**实测**：临时给 `87fbcd52` 写一行 `role=main`（都市传说… → 鬼宅・异常地点）→ 重新构建后全量比对词条墙 1454 条 `data-id → data-category`，**差异恰好 1 条**，且目标词条的新分类与预期一致；数据文件随即还原并校验 sha256 与备份一致
+- `vue-tsc`（app / test 双 tsconfig）通过；全量 **47 文件 364 用例**通过（新增 `appendix.test.ts` 17 条：表定义自洽、保留字段归属、真实副表零越界、表头与声明逐字一致、序列化往返、BOM/行尾沿用）；`subset_fonts.py --check` 通过；`npm run build` 通过
+- 质量报告新增「副表字段归属」「副表角色」两项检查（当前数据 0 命中）；构建门新增 `overrides.csv` 保留字段检查与 `categories.csv` 的 role / 重复 main / extra 撞主分类检查（合成脏数据验证逐条命中）
+
+
+## 2026-10-09 — 公告条顶端接缝修复 · 外链站名人工认领 20 条 · 字体再同步
+
+### 修复
+
+- **静态背景模式下公告条顶端有一条硬边**：公告条在文档流里排在页面内容之前，而「冰山」背景是画在视图根节点 `#capture-area`（`position: relative`）里的绝对层 —— 视图从 y=58 才开始，于是 y=0..58 露出 body 底色 `#0a0e14`，在橙色天空前形成一条横贯全宽的暗带（液态背景是 `fixed` 铺满视口，只有静态模式有问题）。现由 AppShell 量出条幅实测高度写进 `--bulletin-offset`，`bg.css` 用它把 `.bg-root` 向上顶出同样高度（`top: calc(-1 * var(--bulletin-offset, 0px))`）。**不写死 58px**：移动端断点与 `env(safe-area-inset-top)` 都会改变高度，用 `ResizeObserver` 跟随。修后实测背景层 top 58 → 0、高度 +58px，橙色自 y=0 连续（截图 `outputs/bulletin-seam-before.png` / `-after.png`，液态对照 `outputs/bulletin-liquid.png`）
+- **`--bulletin-offset` 的清理**：条幅被手动关闭后 `nextTick` 重新测量（量不到元素即移除变量），`onUnmounted` 一并移除，避免残留在 `documentElement` 上
+
+### 改进
+
+- **外链站点名人工认领 20 条**（`lib/sourceLabel.ts`）：未识别宿主 **22 → 2**（链接 32 → 2，覆盖率 197/219 → **217/219**）。每条都逐站核对**页面自称名**（title / og:site_name / 页脚版权行），不从域名猜；直连失败的 4 个（fx361.cc、loveufo.com、tianya.at、pulung.com）取该站自身页面的 Wayback 快照。子域站点一律登记父域、交给父域回退兜住：`5000yan.com` → 5000言（含 `taiping.5000yan.com`）、`99wat.com` → เก้าสิบเก้าวัด（含 `aon-aukkara.99wat.com`）
+  - 两个匿名版分支已核实为**不同站**：`nmbxd1.com` = X岛揭示板、`aweidao1.com` = 阿苇岛；`ohsir.tw` = 疑案辦（页脚与 logo 独立复核）
+  - 仍留空 2 个：`mcvlcssbc.us`（现为域名续费占位页，无自称名）、`missing.shiroki-y.top`（页面自称「福安家常菜馆」，与该词条主题不符，存疑）—— 按「宁可露域名也不编造站名」的口径不填
+- **测试同步**：`sourceLabel.test.ts` 原先用 `aweidao1.com` 断言「未识别 → 露域名」的兜底行为，该站认领后改用仍未认领的 `mcvlcssbc.us`，并补 4 条认领后抽样（阿苇岛 / X岛揭示板 / 疑案辦 / 父域回退 5000言）
+
+### 数据
+
+- **字体子集再同步**（`python scripts/subset_fonts.py --src <OTF目录>`）：语料去重 **4194 → 4215 字符**（CJK 3798 → 3806），7 个 woff2 合计 4416 KB，指纹 `97fc9fd65cdd…`，`--check` 通过 —— 增量来自认领站名里的生僻字（苇 / 辦 / 閣 / 幢…）与泰文站名（Noto Sans SC 无泰文字形，该标签回退系统字体，与不子集化时表现一致）
+- **生产构建验证**：`npm run build` 通过（`vue-tsc` + `vite build` + 预渲染），据此用 headless Chrome + CDP 对本地 `dist` 截图核对两种背景（**未启动任何 dev server**，用户自有 5173）
+
+### 测试
+
+- `vue-tsc -p tsconfig.app.json` 通过；全量 **46 文件 347 用例**通过；`subset_fonts.py --check` 通过；`link_source_report.py` 复算覆盖率 217/219
+- **补跑 `tsconfig.test.json` 抓到一处真错**：`feedbackReview.test.ts` 的行工厂漏了必填的 `applied`（TS2322）。vitest 走 esbuild 不做类型检查，所以 347 个用例全绿也发现不了 —— 已补 `applied: false`，两个 tsconfig 现在都干净。**教训：`npm test` 绿 ≠ 类型干净，测试文件也要过 `typecheck:test`**
+
+
+## 2026-10-09 — 链接来源报告口径修正 · 文档同步
+
+### 修复
+
+- **`scripts/link_source_report.py` 的家族规则与渲染层不同口径**：维基系在 `sourceLabel.ts` 里靠 `familyLabel()` 命中（`SOURCE_LABELS` 故意不写 `wikipedia.org`，只列与通用名不同的语种），Python 侧却改成回查精确表 → `mapped.get(parent, "")` 返回空串，`zh.m.wikipedia.org` 被报成「未识别」。报告因此**虚报 1 个宿主 / 2 条链接**（上层 2026-10-09 记录的「未识别 23」应为 **22**，已回改）。现两边同规则：`*.fandom.com` / `*.wikidot.com` → `Xxx Wiki`、`*.wikipedia.org` → 维基百科、`*.wikisource.org` → 维基文库
+- 复算覆盖率：**954 条链接 / 219 个宿主，已识别 197，未识别 22（32 条）**——剩下的全是「域名的确不认识」，需要人工认领站名
+
+### 改进
+
+- **协作指引口径同步（不改任何行为）**：`CLAUDE.md` 路由表与实际 router 对齐（`/` 是 `views/v2/IndexNextView.vue`，`IndexView.vue` 在 `/legacy`；补 `/v2`、`/dive`、`/feedback-review`）；关键常量 1440 → **1454**、tagMap 68 → **69**；项目结构补 `components/review/`、`lib/iceberg/` 的 useIcebergDataSource / overrides / entryLinks、`lib/` 的 bulletins / sourceLabel / feedbackReview，scripts 11 → 15 个 Python
+- `iceberg-vue/README.md` 的「1343+ 词条 / 16 分类」→ **1454 / 15**；`index.html` 的 `<noscript>` 收录数 1446 → **1454**；`docs/TODO.md` 两处计数去数字化（避免再次漂）
+
+### 测试
+
+- `vue-tsc -p tsconfig.app.json` 通过；全量 **46 文件 347 用例**通过；`subset_fonts.py --check` 通过（指纹 `a22fd2f1a5e2…`，`index.html` 只改数字、未引入新字符）
+
+
 ## 2026-10-08 — 字体子集同步语料（4194 字符 · CJK 3798）
 
 ### 数据
