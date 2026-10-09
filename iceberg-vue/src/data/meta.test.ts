@@ -3,7 +3,9 @@ import raw from './iceberg.json'
 import meta from './meta.json'
 import idIndex from './id-index.json'
 import categoriesRaw from './appendix/categories.csv?raw'
+import handbookRaw from './handbook.md?raw'
 import { parseCSV } from '../lib/csv'
+import { parseSections } from '../lib/handbook'
 
 /**
  * 派生数据一致性守卫。
@@ -76,5 +78,30 @@ describe('派生数据与 iceberg.json 一致', () => {
       expect(known.has(cat), `副表未知分类 ${cat}`).toBe(true)
       expect(cat, `副表与主分类重复 ${iid}`).not.toBe(mainOf.get(iid))
     }
+  })
+})
+
+/**
+ * 术语表覆盖守卫（2026-10-08）。
+ *
+ * 背景：tagMap 由 API 管线产出（现 69 个），handbook.md 的「划定标准」节是它的释义侧。
+ * 管线加标签时术语表不会自动跟随，此前就积了 57 个只有标签、没有词条的缺口 ——
+ * 徽章 hover 与术语表页都查不到释义，且没有任何报错。这里把它变成硬门：
+ * 管线新增标签而未补术语表条目时 CI 立刻失败。
+ *
+ * 注意判定口径与渲染一致：`parseSections` 只收录**释义非空**的条目（`if (name && desc)`），
+ * 因此只有 `### 名称` 而没写正文的条目不算「有」，占位写「待补充。」才算真正可见。
+ */
+describe('术语表覆盖（tagMap / categoryColors → handbook.md）', () => {
+  const entries = parseSections(handbookRaw).get('划定标准') || {}
+
+  it('每个标签都在术语表「划定标准」节里有可见条目', () => {
+    const missing = Object.values(meta.tagMap).filter((name) => !entries[name])
+    expect(missing, `术语表缺标签释义：${missing.join('、')}`).toEqual([])
+  })
+
+  it('每个分类都在术语表「划定标准」节里有可见条目', () => {
+    const missing = Object.keys(meta.categoryColors).filter((name) => !entries[name])
+    expect(missing, `术语表缺分类释义：${missing.join('、')}`).toEqual([])
   })
 })
