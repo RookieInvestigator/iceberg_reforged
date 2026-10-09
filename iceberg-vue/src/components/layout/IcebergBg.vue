@@ -2,7 +2,7 @@
 /**
  * IcebergBg —— 冰山图页面背景（bgMode 分发）。
  * 'static'（冰山）/'black'：纯静态 SVG 场景（2026-08-19 取消全部动态，
- * 云层/波动/光晕动画已移除；black 模式由 IndexView 的 v-if 整体卸载）；
+ * 云层/波动/光晕动画已移除；black 模式由宿主视图（IndexNextView）的 v-if 整体卸载）；
  * 'liquid'：挂 LiquidBg（WebGL 液态渐变 + 滚动沉海）。
  * bgMode 来自 settingsStore 的 storedAtom（legacy 'dynamic' 由设置面板归一为 static）。
  */

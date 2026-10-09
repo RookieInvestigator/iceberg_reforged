@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getShortMap, parseSections, stripMdEm } from './handbook'
+import { getShortMap, parseSections, segmentDesc, stripMdEm } from './handbook'
 
 const MD = [
   '# 术语表',
@@ -43,5 +43,52 @@ describe('getShortMap', () => {
     })
     expect(getShortMap(MD2)['乙类']).toBeUndefined()
     expect(getShortMap(MD2)['丁']).toBeUndefined()
+  })
+})
+
+describe('segmentDesc（术语表描述强调解析）', () => {
+  const plain = (t: string) => segmentDesc(t).map((s) => s.text).join('')
+  const emText = (t: string) => segmentDesc(t).filter((s) => s.em).map((s) => s.text).join('|')
+
+  it('==...== 只切换高亮，标记不进输出', () => {
+    expect(segmentDesc('这是==强调==文本')).toEqual([
+      { text: '这是', em: false },
+      { text: '强调', em: true },
+      { text: '文本', em: false },
+    ])
+    expect(plain('这是==强调==文本')).toBe('这是强调文本')
+  })
+
+  it('嵌套 ==：内层关闭后回到高亮，标记同样不输出', () => {
+    expect(emText('a==b==c==d==e')).toBe('b|d')
+    expect(plain('a==b==c==d==e')).toBe('abcde')
+  })
+
+  it('未闭合的 == 一路高亮到末尾（标记仍不输出）', () => {
+    const segs = segmentDesc('前==后')
+    expect(segs).toEqual([
+      { text: '前', em: false },
+      { text: '后', em: true },
+    ])
+    expect(plain('前==后')).toBe('前后')
+  })
+
+  it('🔒 引号 / 书名号**不再**自动高亮（用户反馈：正文引号太常见，自动强调把整段染花）', () => {
+    const s = '俗称「鬼打墙」，见《山海经》与“民间传说”，另有『异闻』与‘讹传’'
+    expect(segmentDesc(s)).toEqual([{ text: s, em: false }])
+    expect(emText(s)).toBe('')
+    // 引号必须原样保留（不是定界符，也不该被吞掉）
+    expect(plain(s)).toBe(s)
+  })
+
+  it('引号里套 == 时只有 == 部分高亮', () => {
+    expect(emText('「这是==重点==的」')).toBe('重点')
+    expect(plain('「这是==重点==的」')).toBe('「这是重点的」')
+  })
+
+  it('空串 / 纯引号 / 纯 == 都安全', () => {
+    expect(segmentDesc('')).toEqual([])
+    expect(segmentDesc('「」《》')).toEqual([{ text: '「」《》', em: false }])
+    expect(segmentDesc('====')).toEqual([])
   })
 })

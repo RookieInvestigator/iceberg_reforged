@@ -1,35 +1,53 @@
-// 轻量 CSV 解析
+// 轻量 CSV 解析（RFC 4180 子集）
+//
+// 2026-10-08：原实现按 '\n' 切行后逐行解析，**引号内的换行会把整行解坏** ——
+// 反馈/订正副表的值来自用户输入（描述可含段落、note 可换行），Supabase 导出即引号包裹的多行字段，
+// 一旦落盘就会被解成一条残缺行 + 一条垃圾行（后者可能带着合法列位混进渲染）。
+// 现改为整文本状态机：引号内的逗号 / 换行 / `""` 转义都按规范处理；
+// 语义保持向后兼容（表头取自首行、值 trim、空行跳过、短行补空串、<2 行返回空数组）。
 export function parseCSV(text: string): Record<string, string>[] {
-  const raw = text.trim();
-  if (!raw) return [];
-  const lines = raw.split('\n');
-  if (lines.length < 2) return [];
-  const headers = parseLine(lines[0]);
-  return lines.slice(1).filter(l => l.trim()).map(line => {
-    const values = parseLine(line);
-    const row: Record<string, string> = {};
-    headers.forEach((h, i) => { row[h.trim()] = (values[i] || '').trim(); });
-    return row;
-  });
+  const rows = parseRows(text.replace(/^\uFEFF/, '')) // BOM 防御（Excel/导出常见）
+  if (rows.length < 2) return []
+  const headers = rows[0].map((h) => h.trim())
+  return rows
+    .slice(1)
+    .filter((r) => r.some((v) => v.trim()))
+    .map((r) => {
+      const row: Record<string, string> = {}
+      headers.forEach((h, i) => { row[h] = (r[i] ?? '').trim() })
+      return row
+    })
 }
 
-function parseLine(line: string): string[] {
-  const fields: string[] = [];
-  let cur = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
+function parseRows(s: string): string[][] {
+  const rows: string[][] = []
+  let row: string[] = []
+  let cur = ''
+  let inQuotes = false
+  let started = false // 字段是否已开始：引号只在字段起始处开启（字段中间的 " 是普通字符）
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i]
     if (inQuotes) {
       if (ch === '"') {
-        if (line[i + 1] === '"') { cur += '"'; i++; }
-        else inQuotes = false;
-      } else cur += ch;
-    } else {
-      if (ch === '"') inQuotes = true;
-      else if (ch === ',') { fields.push(cur); cur = ''; }
-      else cur += ch;
+        if (s[i + 1] === '"') { cur += '"'; i++ } // "" → 字面引号
+        else inQuotes = false
+      } else if (ch === '\r' && s[i + 1] === '\n') {
+        cur += '\n'; i++ // 引号内 CRLF 归一为 LF
+      } else {
+        cur += ch
+      }
+      continue
     }
+    if (ch === '"' && !started) { inQuotes = true; started = true; continue }
+    if (ch === ',') { row.push(cur); cur = ''; started = false; continue }
+    if (ch === '\r' || ch === '\n') {
+      if (ch === '\r' && s[i + 1] === '\n') i++
+      row.push(cur); rows.push(row); row = []; cur = ''; started = false
+      continue
+    }
+    cur += ch
+    started = true
   }
-  fields.push(cur);
-  return fields;
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row) }
+  return rows
 }

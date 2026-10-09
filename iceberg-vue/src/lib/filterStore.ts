@@ -52,7 +52,7 @@ export interface ActiveFilterSnapshot {
   favF: boolean
 }
 
-/** 是否存在生效筛选（IndexView / IcebergApp 唯一判定源，替代两处手写同义 computed） */
+/** 是否存在生效筛选（唯一判定源：词条墙与筛选条共用，替代各处手写同义 computed） */
 export function hasActiveFilter(s: ActiveFilterSnapshot): boolean {
   return !!(
     s.query ||

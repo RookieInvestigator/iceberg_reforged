@@ -24,12 +24,12 @@ import V2Tooltip from './V2Tooltip.vue';
 const V2EntryCard = defineAsyncComponent(() => import('./V2EntryCard.vue'));
 const V2Sheet = defineAsyncComponent(() => import('./V2Sheet.vue'));
 
-// ── 注入（IndexView 提供）──
+// ── 注入（宿主视图 IndexNextView 提供）──
 const renderItemsRef = inject(RENDER_ITEMS_KEY)
 const descMap = inject(DESC_MAP_KEY, new Map<string, string>())
 const relatedMap = inject(RELATED_MAP_KEY, new Map<string, string[]>())
 const filterVisible = inject(FILTER_VISIBLE_KEY, null)
-// perf：dim 模式变暗集合（IndexView 提供，模板 :class 消费）
+// perf：dim 模式变暗集合（宿主视图提供，模板 :class 消费）
 const dimItems = inject(DIM_ITEMS_KEY, null)
 // F30：旧 ID → 新 ID 重定向表（标题/层级修订后，分享 hash / 深链 / 收藏旧 id 仍可解析）
 const idAliases = inject(ID_ALIASES_KEY, new Map<string, string>())

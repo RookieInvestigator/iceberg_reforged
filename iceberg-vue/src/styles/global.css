@@ -10,6 +10,18 @@
 /* style 审计：全局键盘焦点环（:focus-visible 统一出口；局部样式仍可覆盖颜色/偏移） */
 :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
 
+/* ── 原生表单控件基线（2026-10-09）──────────────────────────────────────
+   问题：全站暗色，但 <select> 的**下拉弹层由浏览器原生绘制**，不声明 color-scheme 时按浅色
+   渲染（白底 + 蓝色高亮 + 大片空白），与站点割裂 —— 反馈工作台、副表编辑器（.sel）、
+   反馈表单（.fb-input）里的下拉全中招（.sel/.fb-input 只能管闭合态）。
+   修法两层：
+   1) color-scheme: dark —— 唯一能作用到弹层/滚动条/日期选择器等原生 UI 的手段
+      （它们不受 CSS 盒模型与选择器控制）；
+   2) `option` 的底色/字色兜底 —— 部分引擎不完整支持 color-scheme，但认 option 样式。
+   注意：颜色用令牌；`:root` 声明不影响浅色阅读表面（.surface-light）里的正文排版。 */
+:root { color-scheme: dark; }
+select option { background-color: #0b0e13; color: var(--white-85); }
+
 /* style 审计：reduced-motion 全覆盖 —— 屏蔽 CSS 动画/过渡/平滑滚动（canvas JS 动画另行处理） */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

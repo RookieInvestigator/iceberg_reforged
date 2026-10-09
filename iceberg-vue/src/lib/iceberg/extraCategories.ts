@@ -1,10 +1,18 @@
-import { parseCSV } from '../csv'
+import type { CategoryRecord } from './appendix'
 
 /**
- * 多分类副表（appendix/categories.csv，`item_id,category` 一词多行）。
+ * 分类副表（appendix/categories.csv）的**渲染层装配** —— 分类区域的唯一实现。
  *
- * 语义（冻结）：叠加 OR —— 主 `category` 保留，副分类额外命中筛选；
- * 词条墙 `.item-title` 走左右渐变，详情区打多徽章；3D / 古籍 / 导出 / 预渲染
+ * 语义（2026-10-09 重组后由 `role` 表达，一张表一个区域）：
+ *   · `role=main`  覆盖主分类（每词条至多一条，多行 last-wins）—— 同时重算 categoryColor；
+ *   · `role=extra` 追加副分类：主 `category` 保留，副分类额外命中筛选（叠加 OR）；
+ *   · 缺省 role = extra，故**旧文件（无 role 列）行为完全不变**。
+ *
+ * 重组前「改主分类」写在 overrides.csv 的 `field=category`，「加副分类」写在 categories.csv，
+ * 两张表都能动分类，装配层只好在改主分类时顺手把 `categories[0]` 一起换掉（防主/副打架）。
+ * 那是补丁：现在主/副同表同列，装配一次算清，不再有第二个入口。
+ *
+ * 词的渲染侧（词条墙 `.item-title` 左右渐变、详情区多徽章）不变；3D / 古籍 / 导出 / 预渲染
  * 仍按主分类（零口径扩散）。
  *
  * 渐变实现（2026-09-20 换代）：由「逐字纯色 span」改为「OKLCH 预插色标 +
@@ -13,21 +21,8 @@ import { parseCSV } from '../csv'
  * 透明镂空字盖不住 text-shadow 的问题改由 ::after 镜像层承接，见 styles/index.css。
  */
 
-export type ExtraCategoriesMap = Map<string, string[]>
-
-/** 解析副表：保序去重，空 id / 空分类直接丢弃（与 related/references 同风格） */
-export function parseExtraCategories(csvRaw: string): ExtraCategoriesMap {
-  const out: ExtraCategoriesMap = new Map()
-  for (const row of parseCSV(csvRaw)) {
-    const id = (row.item_id || '').trim()
-    const cat = (row.category || '').trim()
-    if (!id || !cat) continue
-    const list = out.get(id) || []
-    if (!list.includes(cat)) list.push(cat)
-    out.set(id, list)
-  }
-  return out
-}
+/** item_id → 分类记录（含 main 与 extra），由 lib/iceberg/appendix.ts 解析 */
+export type CategoriesMap = Map<string, CategoryRecord[]>
 
 export interface CategorizedItem {
   category: string
@@ -38,6 +33,8 @@ export interface CategorizedItem {
 interface GradableItem extends CategorizedItem {
   id: string
   gradStops?: string
+  /** 主分类色（normalizeData 已算过；role=main 覆盖主分类时需重算） */
+  categoryColor?: string
 }
 
 interface GradableData {
@@ -46,22 +43,45 @@ interface GradableData {
   defaultColor: string
 }
 
+export interface CategoryApplyStat {
+  /** 生效的主分类覆盖数 */
+  main: number
+  /** 生效的副分类词条数（至少追加了一个副分类） */
+  extra: number
+  /** 挂上渐变色标的词条数 */
+  gradient: number
+}
+
 /**
- * 副表装配唯一入口：把 categories.csv 的副分类与墙渐变色标挂到 data.tiers 条目上。
+ * 副表装配唯一入口（分类区域）：把 categories.csv 的主分类覆盖 / 副分类 与墙渐变色标挂到
+ * data.tiers 条目上。装配唯一入口：v1（IndexView.vue）与 v2（useIcebergDataSource.ts）**曾**各写一份
+ * 逐行相同的装配代码，任何口径调整都要改两遍，是漂移源；v1 归档后只剩 useIcebergDataSource 一个消费方。
  *
- * v1（IndexView.vue）与 v2（useIcebergDataSource.ts）共用此一处 —— 两份逐行相同的
- * 装配代码曾并存，任何口径调整都要改两遍，是漂移源。
- * 返回命中渐变的词条数（仅供调用方/测试观测，无其他副作用）。
+ * 未知分类的处理刻意不对称：
+ *   · `role=main` 是**权威指定**，照用（颜色回退 defaultColor，构建门才拦未知分类）；
+ *   · `role=extra` 只是「额外命中筛选」，未知分类直接丢弃（不制造点不开的筛选桶）。
  */
-export function applyExtraCategories(data: GradableData, extra: ExtraCategoriesMap): number {
+export function applyCategories(data: GradableData, records: CategoriesMap): CategoryApplyStat {
   const knownCats = new Set(Object.keys(data.categoryColors || {}))
-  let hits = 0
+  const stat: CategoryApplyStat = { main: 0, extra: 0, gradient: 0 }
+
   for (const items of Object.values(data.tiers)) {
     for (const item of items) {
-      const cats = buildCategories(
-        item.category,
-        (extra.get(item.id) || []).filter((c) => knownCats.has(c)),
-      )
+      const rows = records.get(item.id) || []
+      // 主分类覆盖：同 item 多条 main 时最后一条生效（与 overrides 的 last-wins 同约定）
+      const mainRow = [...rows].reverse().find((r) => r.role === 'main')
+      const main = (mainRow?.category || '').trim()
+      if (main) {
+        item.category = main
+        item.categoryColor = data.categoryColors[main] || data.defaultColor
+        stat.main++
+      }
+      const extras = rows
+        .filter((r) => r.role === 'extra')
+        .map((r) => r.category)
+        .filter((c) => knownCats.has(c))
+      if (extras.length) stat.extra++
+      const cats = buildCategories(item.category, extras)
       item.categories = cats
       // 墙渐变色标在此预计算（色源构建期静态），模板零计算。
       // 空串（单分类）不挂字段：模板 v-if 与 .multi-cat 判定都以它为真值门，
@@ -70,12 +90,12 @@ export function applyExtraCategories(data: GradableData, extra: ExtraCategoriesM
         const stops = gradientStops(cats, data.categoryColors, data.defaultColor)
         if (stops) {
           item.gradStops = stops
-          hits++
+          stat.gradient++
         }
       }
     }
   }
-  return hits
+  return stat
 }
 
 /** 归一化分类列表：无副表数据时回退 `[主分类]` */

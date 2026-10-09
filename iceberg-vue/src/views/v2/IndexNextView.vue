@@ -1,9 +1,10 @@
 <script setup lang="ts">
-// IndexNext（/v2，仅 DEV）：主冰山图换代实验 —— v2 全套专用组件
+// IndexNext（`/`）：主冰山图 —— v2 全套专用组件
 // （V2Header / V2FilterBar / V2Wall / V2TierChapter / V2Interactivity /
-// V2EntryCard / V2Sheet / V2Tooltip），v1 文件一律不动。
-// 数据 provide / 深链 / 入场 / 背景沿用 IndexView 模式；过滤管线与搜索 Worker 复用 lib 层。
-// 通过验收后：用本文件替换 IndexView.vue，并把 V2* 组件转正更名。
+// V2EntryCard / V2Sheet / V2Tooltip）。
+// 数据 provide / 深链 / 入场 / 背景沿用原 v1 模式；过滤管线与搜索 Worker 复用 lib 层。
+// v1（IndexView 及其 IcebergApp / ItemInteractivity / EntryDetailCardNext / MobileSheet 等）
+// 已于 2026-10-09 归档（data/archive/legacy-v1-2026-10/），本文件是唯一主图实现。
 import { shallowRef, ref, computed, onMounted, provide, watch, watchEffect, onUnmounted } from 'vue'
 import OnThisDayModal from '../../components/calendar/OnThisDayModal.vue'
 import { useRoute } from 'vue-router'
@@ -15,8 +16,6 @@ import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, TIER_ORDER_KEY, CATEGORY_COLORS_KEY,
 import { FACET_COUNTS_KEY, type FacetCounts } from '../../lib/iceberg/v2/keys'
 import IcebergBg from '../../components/layout/IcebergBg.vue'
 import V2Colophon from '../../components/v2/V2Colophon.vue'
-// TEMP：hero 页暂时移除
-// import HeroSection from '../../components/iceberg/HeroSection.vue'
 import V2Header from '../../components/v2/V2Header.vue'
 import V2FilterBar from '../../components/v2/V2FilterBar.vue'
 import V2Interactivity from '../../components/v2/V2Interactivity.vue'
@@ -118,7 +117,7 @@ const route = useRoute()
 // 监听 ?item=xxx 触发词条弹窗（支持从其他地方跳转过来）；定时器在卸载/重复触发时清理
 let itemTimer = 0
 watch(() => route.query.item, (itemId) => {
-  // 只在主冰山图（/）消费 ?item=；/legacy 与 3D 等页面各管各的 query，不能串台
+  // 只在主冰山图（/）消费 ?item=；3D / 古籍等页面各管各的 query，不能串台
   if (route.path !== '/') return
   if (itemId) {
     clearTimeout(itemTimer)
@@ -165,8 +164,6 @@ onUnmounted(() => {
 <template>
   <div id="capture-area" class="w-full min-h-screen relative overflow-x-clip bg-black">
     <IcebergBg v-if="showBg" />
-    <!-- TEMP：hero 页暂时移除 -->
-    <!-- <HeroSection /> -->
 
     <div id="iceberg-content" class="relative z-10 w-full mx-auto flex flex-col pt-20 pb-8 max-sm:pt-10 max-sm:pb-4" style="max-width: var(--max-width)">
       <V2Header :buildDate="buildDate" :entryCount="allItems.length" :introText="data.introText" />

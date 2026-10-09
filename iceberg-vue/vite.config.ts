@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config'
 import type { HtmlTagDescriptor } from 'vite'
+import { spawnSync } from 'node:child_process'
 import vue from '@vitejs/plugin-vue'
 import tailwindcss from '@tailwindcss/vite'
 import compression from 'vite-plugin-compression'
@@ -221,6 +222,162 @@ export default defineConfig({
             injectTo: 'body',
           },
         ]
+      },
+    },
+    {
+      // 反馈审核工作台的决定落盘（DEV 工具，配合 /feedback-review 页）：
+      // data/feedback/decisions.json 存 { 反馈 id: { decision, reason, at } }。
+      // 为什么落 data/：该目录整体 gitignore，审核决定属于本地操作痕迹，不入库；
+      // 为什么由中间件写而不是浏览器下载：刷新/换浏览器不丢，apply_feedback.py 直接读该文件。
+      name: 'feedback-decisions',
+      configureServer(server) {
+        const file = path.resolve(__dirname, '../data/feedback/decisions.json')
+        server.middlewares.use('/__feedback-decisions', (req, res) => {
+          const send = (code: number, body: unknown) => {
+            res.statusCode = code
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify(body))
+          }
+          if (req.method === 'GET') {
+            try {
+              if (!fs.existsSync(file)) return send(200, { decisions: {} })
+              send(200, JSON.parse(fs.readFileSync(file, 'utf-8')))
+            } catch (e: any) {
+              send(500, { error: e.message })
+            }
+            return
+          }
+          if (req.method !== 'POST') return send(405, { error: 'method not allowed' })
+          const chunks: Buffer[] = []
+          let size = 0
+          let tooLarge = false
+          req.on('data', (chunk: Buffer) => {
+            size += chunk.length
+            if (size > MAX_APPENDIX_BODY) { tooLarge = true; chunks.length = 0; return }
+            chunks.push(chunk)
+          })
+          req.on('end', () => {
+            if (tooLarge) return send(413, { error: 'payload too large (max 2MB)' })
+            try {
+              const body = JSON.parse(Buffer.concat(chunks).toString('utf-8')) as { decisions?: unknown }
+              const decisions = body.decisions && typeof body.decisions === 'object' ? body.decisions : {}
+              fs.mkdirSync(path.dirname(file), { recursive: true })
+              fs.writeFileSync(file, JSON.stringify(decisions, null, 2) + '\n', 'utf-8')
+              send(200, { ok: true, count: Object.keys(decisions).length })
+            } catch (e: any) {
+              send(400, { error: e.message })
+            }
+          })
+        })
+      },
+    },
+    {
+      // 反馈审核工作台：一键把「已采纳」写进 appendix 副表（DEV 工具，配合 /feedback-review）。
+      // 刻意**不在 Node 里重写一遍落盘规则** —— 直接调用 scripts/apply_feedback.py，
+      // 与 CLI / 未来 workflow 共用同一实现（去重、F34 URL 归一、id 孤儿门、.bak 备份、报告都在那里）。
+      // 工作台把「它刚审的那批行」原样送来（离线也能用，不必让脚本再拉一次 Supabase）：
+      // 落成 data/feedback/rows-<时间戳>.csv 后当作 --csv 输入；data/ 不入库。
+      // body: { rows: [...], write?: boolean } —— write 缺省 = dry-run（只回报不落盘）。
+      name: 'feedback-apply',
+      configureServer(server) {
+        const root = path.resolve(__dirname, '..')
+        // 是否配置了 service key（决定能否自动回填 Supabase 状态；key 只在 Node 侧读，绝不进浏览器包）
+        const hasServiceKey = () => {
+          if (process.env.SUPABASE_SERVICE_ROLE_KEY) return true
+          try {
+            const env = fs.readFileSync(path.resolve(__dirname, '.env'), 'utf-8')
+            return /^\s*SUPABASE_SERVICE_ROLE_KEY\s*=\s*\S/m.test(env)
+          } catch {
+            return false
+          }
+        }
+        const cell = (v: unknown) => {
+          const s = v == null ? '' : (typeof v === 'string' ? v : JSON.stringify(v))
+          return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s
+        }
+        server.middlewares.use('/__feedback-apply', (req, res) => {
+          // GET = 就绪探测：工作台用它判断中间件是否已加载（vite.config.ts 改动后若重启竞态读到旧内容，
+          // 请求会落到 Vite 的 base 中间件返回 404 提示 —— 有这条就能在页面上说清楚「重启 dev server」），
+          // 同时回报能否自动回填 Supabase（是否有 service key）。
+          if (req.method === 'GET') {
+            res.statusCode = 200
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify({
+              ready: true,
+              canBackfill: hasServiceKey(),
+              hint: 'POST { rows, write } 落盘；write=false 为预演',
+            }))
+            return
+          }
+          if (req.method !== 'POST') { res.statusCode = 405; res.end(); return }
+          const chunks: Buffer[] = []
+          let size = 0
+          req.on('data', (chunk: Buffer) => {
+            size += chunk.length
+            if (size <= MAX_APPENDIX_BODY) chunks.push(chunk)
+          })
+          req.on('end', () => {
+            const send = (code: number, body: unknown) => {
+              res.statusCode = code
+              res.setHeader('Content-Type', 'application/json')
+              res.end(JSON.stringify(body))
+            }
+            if (size > MAX_APPENDIX_BODY) return send(413, { error: 'payload too large (max 2MB)' })
+            try {
+              const body = JSON.parse(Buffer.concat(chunks).toString('utf-8') || '{}') as {
+                rows?: Array<Record<string, unknown>>
+                write?: boolean
+              }
+              const rows = Array.isArray(body.rows) ? body.rows : []
+              if (!rows.length) return send(400, { error: '没有可落盘的行（rows 为空）' })
+              const write = body.write === true
+
+              const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)
+              const fbDir = path.join(root, 'data', 'feedback')
+              const outDir = path.join(root, 'outputs')
+              fs.mkdirSync(fbDir, { recursive: true })
+              fs.mkdirSync(outDir, { recursive: true })
+
+              const cols = ['id', 'item_id', 'changes', 'note', 'user_id', 'status', 'applied', 'created_at']
+              const csv = [cols.join(',')]
+                .concat(rows.map((r) => cols.map((c) => cell(r[c])).join(',')))
+                .join('\n') + '\n'
+              const rowsPath = path.join(fbDir, `rows-${stamp}.csv`)
+              fs.writeFileSync(rowsPath, csv, 'utf-8')
+
+              const args = [
+                path.join(root, 'scripts', 'apply_feedback.py'),
+                '--csv', rowsPath,
+                '--decisions', path.join(fbDir, 'decisions.json'),
+                '--review-md', path.join(outDir, `feedback-apply-${stamp}.md`),
+                '--emit-sql', path.join(outDir, `feedback-backfill-${stamp}.sql`),
+              ]
+              if (write) args.push('--write', '--mark-applied', '--mark-rejected')
+
+              // PYTHONIOENCODING/PYTHONUTF8：Windows 下 Python 写管道默认用 cp936，
+              // 不强制 UTF-8 的话 Node 按 UTF-8 解码就把中文报告变成一堆 `����`
+              const r = spawnSync('python', args, {
+                cwd: root,
+                encoding: 'utf-8',
+                timeout: 180000,
+                env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' },
+              })
+              send(200, {
+                ok: r.status === 0,
+                code: r.status,
+                write,
+                canBackfill: hasServiceKey(),
+                rowsPath,
+                reviewMd: path.join(outDir, `feedback-apply-${stamp}.md`),
+                backfillSql: write ? path.join(outDir, `feedback-backfill-${stamp}.sql`) : '',
+                stdout: (r.stdout || '').slice(-8000),
+                stderr: (r.stderr || '').slice(-4000) || (r.error ? String(r.error) : ''),
+              })
+            } catch (e: any) {
+              send(500, { error: e.message })
+            }
+          })
+        })
       },
     },
     {

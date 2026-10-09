@@ -1,11 +1,13 @@
-// 悬浮提示自适应归位（V2 徽章 tip）：hover/聚焦时量取 tip 与滚动容器
+// 悬浮提示自适应归位（V2 徽章 tip / 标记图标 tip）：hover/聚焦时量取 tip 与滚动容器
 // （.modal-body / .sheet-body）的矩形，左右超界则平移收回容器内（留 8px 边距）。
 // opacity:0 的元素仍参与布局，可直接测量，无需先显示。
+//
+// selector 可换：徽章用 `.meta-tip`，标记图标行用 `.mark-tip`（同一套归位逻辑，不重复实现）。
 const PAD = 8
 
-export function fitTipIntoView(link: HTMLElement | null): void {
+export function fitTipIntoView(link: HTMLElement | null, selector = '.meta-tip'): void {
   if (!link) return
-  const tip = link.querySelector<HTMLElement>('.meta-tip')
+  const tip = link.querySelector<HTMLElement>(selector)
   if (!tip) return
   tip.style.removeProperty('margin-left')
   const host = link.closest('.modal-body, .sheet-body')
@@ -18,6 +20,6 @@ export function fitTipIntoView(link: HTMLElement | null): void {
   if (dx) tip.style.marginLeft = `${Math.round(dx)}px`
 }
 
-export function clearTipFit(link: HTMLElement | null): void {
-  link?.querySelector<HTMLElement>('.meta-tip')?.style.removeProperty('margin-left')
+export function clearTipFit(link: HTMLElement | null, selector = '.meta-tip'): void {
+  link?.querySelector<HTMLElement>(selector)?.style.removeProperty('margin-left')
 }

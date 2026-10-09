@@ -6,7 +6,7 @@ import { Eye } from '@lucide/vue'
 import type { IcebergMeta } from '../lib/data'
 import { formatUnixDate } from '../lib/data'
 import { activeCategories, activeTags, searchQuery } from '../lib/filterStore'
-import { HANDBOOK_TABS, parseSections } from '../lib/handbook'
+import { HANDBOOK_TABS, parseSections, segmentDesc } from '../lib/handbook'
 // 术语表只用到分类色 / 标签表 / 生成时间 / 词条总数 —— 走轻量 meta.json（~3.5KB），
 // 不导入 iceberg.json（否则会拉下 ~800KB 的词条数据 chunk，而这些内容本页面一条都不显示）
 import meta from '../data/meta.json'
@@ -30,49 +30,8 @@ const TABS: TabDef[] = HANDBOOK_TABS.map((t) =>
   t.key === 'criteria' ? { ...t, source: 'criteria' as const } : { ...t },
 )
 
-// 描述里用 ==...== 标记强调：双等号包裹的内容会被高亮，标记本身不显示（可嵌套）。
-// 另外「」『』“”‘’《》引号包裹的内容也会自动微微高亮，作为便捷写法。
-const QUOTE_OPEN: Record<string, string> = {
-  '「': '」', '『': '』', '“': '”', '‘': '’', '《': '》',
-}
-const QUOTE_CLOSE = new Set(Object.values(QUOTE_OPEN))
-
-interface DescSeg { text: string; em: boolean }
-
-function segmentDesc(text: string): DescSeg[] {
-  const segs: DescSeg[] = []
-  const stack: string[] = [] // 当前生效的强调定界符（'==' 或引号闭字符）
-  let buf = ''
-  let em = false
-  const flush = () => {
-    if (buf) { segs.push({ text: buf, em }); buf = '' }
-  }
-  let i = 0
-  while (i < text.length) {
-    const two = text.slice(i, i + 2)
-    // ==...== 显式强调：标记不进入输出，仅切换高亮状态
-    if (two === '==') {
-      flush()
-      if (stack[stack.length - 1] === '==') stack.pop()
-      else stack.push('==')
-      em = stack.length > 0
-      i += 2
-      continue
-    }
-    const ch = text[i]
-    if (QUOTE_OPEN[ch]) {
-      flush(); stack.push(QUOTE_OPEN[ch]); em = true; buf += ch; i++
-    } else if (QUOTE_CLOSE.has(ch)) {
-      buf += ch; flush()
-      if (stack[stack.length - 1] === ch) stack.pop()
-      em = stack.length > 0; i++
-    } else {
-      buf += ch; i++
-    }
-  }
-  flush()
-  return segs
-}
+// 描述里的强调解析在 lib/handbook.ts（`segmentDesc`）：只认显式 `==...==`，
+// 引号/书名号不再自动高亮（2026-10-09 用户要求，见该函数注释）。
 
 const sections = parseSections(rawMd)
 
@@ -319,7 +278,7 @@ function viewInIceberg(e: GlossaryEntry) {
   color: var(--white-35); opacity: 0.45; transition: opacity 0.15s, color 0.15s;
 }
 .hb-viewin:hover { opacity: 1; color: var(--white-85); }
-/* 词条描述：保留 md 里的换行（pre-line 折叠多余空格但保留 \n）；==...== 或引号包裹的内容微微高亮 */
+/* 词条描述：保留 md 里的换行（pre-line 折叠多余空格但保留 \n）；只有 ==...== 包裹的内容微微高亮 */
 .hb-desc {
   white-space: pre-line;
 }

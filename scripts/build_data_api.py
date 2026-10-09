@@ -351,6 +351,19 @@ def build_from_api(data: dict, history: dict, old_ids_by_title: dict) -> dict:
 MIN_ITEMS = 500  # 数量下限（当前 1440；低于此值视为上游异常）
 COUNT_DROP_RATIO = 0.5  # 相对上一版数量突降阈值
 
+# 一表一域契约：这些字段名由专职副表拥有，overrides.csv（标量字段订正表）不得承载。
+# category → categories.csv（role=main）、link → references.csv、related → related.csv。
+RESERVED_FIELDS = {
+    'category': 'categories.csv（role=main）',
+    'link': 'references.csv（role=main）',
+    'related': 'related.csv',
+}
+
+# 标记副表（extra.csv）的 flag **允许集合**：只在这里维护一份 —— 将来加标记（前端 appendix.ts
+# 的 EXTRA_FLAGS 同步加一项）改这里即可，校验按集合判定，不在下面再硬编码一个字面量。
+# 大小写不敏感（与前端 appendix.ts 同口径：写入前 lowercase 再比对）。
+EXTRA_FLAGS = ('warn', 'need')
+
 
 def validate_data(data: dict) -> list:
     """字段完整性 / ID 格式与唯一性 / URL 协议 / 层级名称，违规即返回错误列表"""
@@ -400,9 +413,22 @@ def check_count_drop(old_data: dict | None, new_count: int) -> str | None:
     return None
 
 
-def check_orphan_relations(new_ids: set, known_categories: set | None = None) -> list:
-    """副表孤儿关系：related.csv / references.csv 的 source_id / target_id 必须存在于新数据；
-    categories.csv 的 item_id 必须存在、category 必须落在 categoryColors 内"""
+def check_orphan_relations(new_ids: set, known_categories: set | None = None,
+                           main_by_id: dict | None = None) -> list:
+    """副表孤儿关系与字段归属：related.csv / references.csv 的 source_id / target_id 必须存在于新数据；
+    categories.csv 的 item_id 必须存在、category 必须落在 categoryColors 内，且 role 合法
+    （main / extra，空 = extra）、一个 item 最多一行 main、extra 不得与主分类重合；
+    overrides.csv 不得承载保留字段（category / link / related —— 它们由专职副表拥有）；
+    contributors.csv（署名副表）的 item_id 必须存在、by 非空、同一 (item_id, by) 不得重复、
+    at 为空或 YYYY-MM-DD；
+    extra.csv（标记副表）的 item_id 必须存在、flag ∈ EXTRA_FLAGS（大小写不敏感、空即违规）、
+    同一 (item_id, flag) 不得重复（note 是 hover 提示，可空）。
+
+    main_by_id：item_id → 新数据里的主分类（来自 tiers），用于判断 extra 是否与主分类重复；
+    不传时退化为「只看 categories.csv 自己的 main 行」。
+
+    所有副表一律 utf-8-sig 读（BOM 会让首列名变成 '\\ufeffsource_id'，检查静默空转）。
+    """
     problems = []
     for rel_file in ('related.csv', 'references.csv'):
         path = os.path.join(OUTPUT_DIR, 'appendix', rel_file)
@@ -410,7 +436,9 @@ def check_orphan_relations(new_ids: set, known_categories: set | None = None) ->
             continue
         try:
             import csv as _csv
-            with open(path, encoding='utf-8') as f:
+            # utf-8-sig：related.csv 带 UTF-8 BOM，按 utf-8 读首列名会变成 '\ufeffsource_id'，
+            # 于是 source_id 永远取不到、孤儿检查静默失效（BOM 只在第一个单元格上）
+            with open(path, encoding='utf-8-sig') as f:
                 for row in _csv.DictReader(f):
                     src = (row.get('source_id') or '').strip()
                     tgt = (row.get('target_id') or '').strip()
@@ -420,21 +448,124 @@ def check_orphan_relations(new_ids: set, known_categories: set | None = None) ->
                         problems.append(f'{rel_file} 孤儿 target_id: {tgt}')
         except (OSError, ValueError) as e:
             problems.append(f'{rel_file} 读取失败: {e}')
-    # 多分类副表（叠加 OR）：孤儿 item_id 与未知分类均阻断覆盖
+    # overrides.csv 只承载标量字段订正（title/desc/tags）：保留字段由专职副表拥有，出现即阻断覆盖
+    try:
+        import csv as _csv
+        ov_path = os.path.join(OUTPUT_DIR, 'appendix', 'overrides.csv')
+        if os.path.exists(ov_path):
+            with open(ov_path, encoding='utf-8-sig') as f:
+                for row in _csv.DictReader(f):
+                    field = (row.get('field') or '').strip()
+                    if field in RESERVED_FIELDS:
+                        iid = (row.get('item_id') or '').strip()
+                        problems.append(
+                            f'overrides.csv 保留字段 {field}（应由 {RESERVED_FIELDS[field]} 承载）'
+                            f': item_id={iid or "?"} value={(row.get("value") or "")[:40]!r}')
+    except (OSError, ValueError) as e:
+        problems.append(f'overrides.csv 读取失败: {e}')
+    # 分类副表（role=main 覆盖主分类 / extra 叠加 OR）：孤儿 item_id、未知分类、非法 role、
+    # 重复 main 行、extra 与主分类重合 —— 任一违规都阻断覆盖
     try:
         import csv as _csv
         cat_path = os.path.join(OUTPUT_DIR, 'appendix', 'categories.csv')
         if os.path.exists(cat_path):
             with open(cat_path, encoding='utf-8-sig') as f:
-                for row in _csv.DictReader(f):
-                    iid = (row.get('item_id') or '').strip()
-                    cat = (row.get('category') or '').strip()
-                    if iid and iid not in new_ids:
-                        problems.append(f'categories.csv 孤儿 item_id: {iid}')
-                    if cat and known_categories is not None and cat not in known_categories:
-                        problems.append(f'categories.csv 未知分类: {cat}')
+                # 按列名读：契约只认 item_id/category/role 三列，多出来的列自动忽略
+                cat_rows = list(_csv.DictReader(f))
+            main_rows, extra_rows = {}, []
+            for row in cat_rows:
+                iid = (row.get('item_id') or '').strip()
+                cat = (row.get('category') or '').strip()
+                if not iid and not cat:
+                    continue
+                # role 空 = extra（契约默认值），大小写不敏感
+                role = (row.get('role') or '').strip().lower() or 'extra'
+                if iid and iid not in new_ids:
+                    problems.append(f'categories.csv 孤儿 item_id: {iid}')
+                if cat and known_categories is not None and cat not in known_categories:
+                    problems.append(f'categories.csv 未知分类: {cat}')
+                if role not in ('main', 'extra'):
+                    problems.append(f'categories.csv 未知 role: {role!r}'
+                                    f'（item_id={iid or "?"}，只允许 main / extra，空 = extra）')
+                    continue
+                if role == 'main':
+                    if iid in main_rows:
+                        problems.append(f'categories.csv 一个 item 只能有一行 role=main（重复）: {iid}')
+                    else:
+                        main_rows[iid] = cat
+                else:
+                    extra_rows.append((iid, cat))
+            for iid, cat in extra_rows:
+                # 主分类 = categories.csv 的 main 行；没有 main 行就用新数据里该词条自带的分类
+                main_cat = main_rows.get(iid) or (main_by_id or {}).get(iid, '')
+                if cat and main_cat and cat == main_cat:
+                    problems.append(f'categories.csv extra 与主分类重复（extra 必须与主分类不同）: {iid} {cat}')
     except (OSError, ValueError) as e:
         problems.append(f'categories.csv 读取失败: {e}')
+    # 署名副表（contributors.csv）：署名是独立数据域，条目详情页脚「由 X 提供」的数据源。
+    # 孤儿 item_id / 空 by / 同 (item_id, by) 重复 / 非法 at 任一违规都阻断覆盖 ——
+    # 脏署名会直接显示在页脚（空 by 前端会静默忽略该行，等于白写，所以在这里就拦下）。
+    try:
+        import csv as _csv
+        con_path = os.path.join(OUTPUT_DIR, 'appendix', 'contributors.csv')
+        if os.path.exists(con_path):
+            with open(con_path, encoding='utf-8-sig') as f:
+                con_keys = set()
+                for row in _csv.DictReader(f):
+                    iid = (row.get('item_id') or '').strip()
+                    by = (row.get('by') or '').strip()
+                    at = (row.get('at') or '').strip()
+                    if not iid and not by and not at:
+                        continue  # 整行空（编辑器/手工留下的空行）不算违规
+                    if iid and iid not in new_ids:
+                        problems.append(f'contributors.csv 孤儿 item_id: {iid}')
+                    if not by:
+                        problems.append(f'contributors.csv 空 by（署名行必须写清是谁）: item_id={iid or "?"}')
+                    elif iid:
+                        if (iid, by) in con_keys:
+                            problems.append(f'contributors.csv 重复署名 (item_id, by): {iid} {by}')
+                        con_keys.add((iid, by))
+                    # at 只看格式：空 = 未记日期（契约允许），否则必须 YYYY-MM-DD
+                    if at and not re.fullmatch(r'\d{4}-\d{2}-\d{2}', at):
+                        problems.append(f'contributors.csv 非法 at（需 YYYY-MM-DD 或留空）: '
+                                        f'{iid or "?"} {by or "?"} {at!r}')
+    except (OSError, ValueError) as e:
+        problems.append(f'contributors.csv 读取失败: {e}')
+    # 标记副表（extra.csv）：**行的存在即该标记为真**（删行 = 取消标记），前端只读不写 ——
+    # 全由副表编辑器手填，所以脏行会一路渲染到词条卡片的小图标上：孤儿 item_id 挂不上词条、
+    # 未知/空 flag 前端直接忽略（等于白写）、同 (item_id, flag) 两行是同一标记记了两次。
+    # note 只是图标 hover 提示，空是契约允许的（有图标没说明），不检查内容。
+    try:
+        import csv as _csv
+        ex_path = os.path.join(OUTPUT_DIR, 'appendix', 'extra.csv')
+        if os.path.exists(ex_path):
+            with open(ex_path, encoding='utf-8-sig') as f:
+                ex_keys = set()
+                for row in _csv.DictReader(f):
+                    iid = (row.get('item_id') or '').strip()
+                    raw_flag = (row.get('flag') or '').strip()
+                    # flag 大小写不敏感：前端 appendix.ts 也是 lowercase 后再比对
+                    flag = raw_flag.lower()
+                    if not iid and not raw_flag:
+                        continue  # 整行空（编辑器/手工留下的空行）不算违规
+                    if not iid:
+                        problems.append(f'extra.csv 缺 item_id（标记行必须挂在词条上）: '
+                                        f'flag={raw_flag or "?"}')
+                    elif iid not in new_ids:
+                        problems.append(f'extra.csv 孤儿 item_id: {iid}')
+                    if not flag:
+                        problems.append(f'extra.csv 空 flag（标记行必须写标记名）: item_id={iid or "?"}')
+                        continue
+                    if flag not in EXTRA_FLAGS:
+                        problems.append(f'extra.csv 未知 flag: {raw_flag!r}'
+                                        f'（item_id={iid or "?"}，只允许 {" / ".join(EXTRA_FLAGS)}）')
+                        continue
+                    if iid:
+                        if (iid, flag) in ex_keys:
+                            problems.append(f'extra.csv 重复标记 (item_id, flag): {iid} {flag}')
+                        ex_keys.add((iid, flag))
+    except (OSError, ValueError) as e:
+        problems.append(f'extra.csv 读取失败: {e}')
     return problems
 
 
@@ -542,6 +673,8 @@ def build():
     errors += check_orphan_relations(
         {it['id'] for its in data['tiers'].values() for it in its},
         set(data.get('categoryColors', {}).keys()),
+        # 新数据里每个词条的主分类：用于校验 categories.csv 的 extra 行不与主分类重合
+        {it['id']: (it.get('category') or '') for its in data['tiers'].values() for it in its},
     )
     if errors:
         print('ERROR: 数据校验未通过，拒绝覆盖（旧数据保留在 iceberg.json）:')

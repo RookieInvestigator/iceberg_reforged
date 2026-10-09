@@ -5,7 +5,8 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/',             component: () => import('../views/v2/IndexNextView.vue') },
-    { path: '/legacy',       component: () => import('../views/IndexView.vue') },
+    // v1 已归档（data/archive/legacy-v1-2026-10/）：/legacy 保留为重定向，老书签不 404
+    { path: '/legacy',       redirect: '/' },
     { path: '/home',         component: () => import('../views/HomeView.vue') },
     { path: '/handbook',     component: () => import('../views/HandbookView.vue') },
     { path: '/features',     component: () => import('../views/FeaturesView.vue') },
@@ -22,6 +23,9 @@ const router = createRouter({
 // 开发专用路由：构建时 tree-shake 掉
 if (import.meta.env.DEV) {
   router.addRoute({ path: '/appendix-edit', component: () => import('../views/AppendixEditView.vue') })
+  // 反馈审核工作台：读 entry_feedback（Supabase 或 CSV），决定落 data/feedback/decisions.json，
+  // 再由 scripts/apply_feedback.py 写副表。生产构建不产出该路由与 chunk。
+  router.addRoute({ path: '/feedback-review', component: () => import('../views/FeedbackReviewView.vue') })
   // 深潜巡游（/dive）：实验性 WebGL 页面，仅限本地开发访问，生产构建不产出路由与 chunk
   router.addRoute({ path: '/dive', component: () => import('../views/SubmarineDiveView.vue') })
 }

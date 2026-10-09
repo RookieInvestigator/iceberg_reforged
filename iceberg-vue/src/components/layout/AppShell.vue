@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref } from 'vue'
 import router from '../../router'
 import BulletinBanner from './BulletinBanner.vue'
 import BulletinModal from '../modals/BulletinModal.vue'
@@ -34,10 +34,23 @@ const bulletinState = readBulletinState()
 const bannerBulletin = ref(shouldShowBanner(bulletins, bulletinState) ? bulletins[0] : null)
 const showBulletin = ref(false)
 
+// 条幅高度 → CSS 变量 --bulletin-offset（供 bg.css 的静态背景层向上顶出，消除顶端硬边）。
+// 不写死 58px：移动端断点、env(safe-area-inset-top) 都会改变高度，实测最稳。
+const bannerEl = ref<HTMLElement | null>(null)
+let bannerRo: ResizeObserver | null = null
+
+function syncBulletinOffset() {
+  const root = document.documentElement
+  const h = bannerEl.value?.offsetHeight || 0
+  if (h > 0) root.style.setProperty('--bulletin-offset', `${h}px`)
+  else root.style.removeProperty('--bulletin-offset')
+}
+
 function onBulletinDismiss() {
   const id = bannerBulletin.value?.id
   if (id) dismissBulletinBanner(id)
   bannerBulletin.value = null
+  void nextTick(syncBulletinOffset)
 }
 
 // 自动弹窗时机：等首帧加载页真正让位之后再弹 —— 遮罩 z-index 高于弹窗，提前弹会被盖住，
@@ -114,6 +127,12 @@ onMounted(() => {
   document.addEventListener('vue-ready', onVueReady)
   document.addEventListener('route-ready', onRouteReady)
   window.addEventListener('pageshow', onPageshow)
+
+  syncBulletinOffset()
+  if (typeof ResizeObserver !== 'undefined') {
+    bannerRo = new ResizeObserver(syncBulletinOffset)
+    if (bannerEl.value) bannerRo.observe(bannerEl.value)
+  }
 })
 
 onUnmounted(() => {
@@ -122,17 +141,22 @@ onUnmounted(() => {
   window.removeEventListener('pageshow', onPageshow)
   window.clearTimeout(shieldTimer)
   window.clearTimeout(bulletinTimer)
+  bannerRo?.disconnect()
+  bannerRo = null
+  document.documentElement.style.removeProperty('--bulletin-offset')
 })
 </script>
 
 <template>
-  <!-- 顶部公告条：全站可见（含所有路由），关闭状态按公告 id 记忆 -->
-  <BulletinBanner
-    v-if="bannerBulletin"
-    :bulletin="bannerBulletin"
-    @open="showBulletin = true"
-    @dismiss="onBulletinDismiss"
-  />
+  <!-- 顶部公告条：全站可见（含所有路由），关闭状态按公告 id 记忆。
+       外层 div 只为量高度（--bulletin-offset），组件根元素不接受模板 ref -->
+  <div v-if="bannerBulletin" ref="bannerEl" class="bulletin-slot">
+    <BulletinBanner
+      :bulletin="bannerBulletin"
+      @open="showBulletin = true"
+      @dismiss="onBulletinDismiss"
+    />
+  </div>
   <slot />
 
   <!-- 公告板：页脚 / 条幅 / 进站自动弹窗共用同一实例入口 -->

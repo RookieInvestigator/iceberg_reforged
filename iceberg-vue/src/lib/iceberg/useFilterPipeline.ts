@@ -68,7 +68,7 @@ export function useFilterPipeline(allItems: RenderItem[], opts: PipelineOptions)
   }
 
   // Filter（F14：统一快照 + 单一调度器取消旧帧，最后一帧严格对应最新状态）
-  // 仅声明式路径：filterVisible/dimItems 由宿主（IndexView）注入，v-show / :class + v-memo
+  // 仅声明式路径：filterVisible/dimItems 由宿主视图（IndexNextView）注入，v-show / :class + v-memo
   // 批量消费；层空/全空提示同属声明式（宿主模板渲染），此处不再触碰 DOM（双路径已剪除）。
   // 单遍产出：matched + dim 集合 + 层可见数（tierVisibleCounts）一次遍历全量派生。
   let filterRaf = 0;

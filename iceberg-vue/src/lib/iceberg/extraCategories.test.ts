@@ -2,29 +2,20 @@ import { describe, expect, it } from 'vitest'
 import {
   GRADIENT_EDGE_HOLD,
   GRADIENT_STEPS,
-  applyExtraCategories,
+  applyCategories,
   buildCategories,
   extraBadges,
   gradientStops,
   isMultiCategory,
   itemCategories,
-  parseExtraCategories,
 } from './extraCategories'
+import type { CategoryRecord } from './appendix'
 
 const COLORS = { A: '#111111', B: '#222222', C: '#333333' }
 
-describe('parseExtraCategories', () => {
-  it('保序去重，空行丢弃', () => {
-    const m = parseExtraCategories('item_id,category\n1,A\n1,B\n1,A\n2,\n, C\n3,C\n')
-    expect([...m.entries()]).toEqual([
-      ['1', ['A', 'B']],
-      ['3', ['C']],
-    ])
-  })
-
-  it('空表只有头时返回空 Map', () => {
-    expect(parseExtraCategories('item_id,category\n').size).toBe(0)
-  })
+/** 分类记录工厂（role 缺省 extra，与缺省 role 列语义一致） */
+const rec = (category: string, role: 'main' | 'extra' = 'extra'): CategoryRecord => ({
+  category, role,
 })
 
 describe('itemCategories / buildCategories', () => {
@@ -131,9 +122,9 @@ describe('gradientStops', () => {
   })
 })
 
-type GradItem = { id: string; category: string; categories?: string[]; gradStops?: string }
+type GradItem = { id: string; category: string; categoryColor?: string; categories?: string[]; gradStops?: string }
 
-describe('applyExtraCategories', () => {
+describe('applyCategories', () => {
   function mkData(): {
     tiers: Record<string, GradItem[]>
     categoryColors: Record<string, string>
@@ -148,18 +139,49 @@ describe('applyExtraCategories', () => {
 
   it('副分类挂载 + 渐变命中数上报（单分类不挂 gradStops）', () => {
     const data = mkData()
-    const hits = applyExtraCategories(data, new Map([['1', ['B']]]))
-    expect(hits).toBe(1)
+    const stat = applyCategories(data, new Map([['1', [rec('B')]]]))
+    expect(stat).toEqual({ main: 0, extra: 1, gradient: 1 })
     expect(data.tiers.T1[0].categories).toEqual(['A', 'B'])
     expect(data.tiers.T1[0].gradStops).toBeTruthy()
     expect(data.tiers.T1[1].categories).toEqual(['A'])
     expect(data.tiers.T1[1].gradStops).toBeUndefined()
   })
 
-  it('未知分类被过滤：不进入 categories，也不触发渐变', () => {
+  it('未知副分类被过滤：不进入 categories，也不触发渐变', () => {
     const data = mkData()
-    const hits = applyExtraCategories(data, new Map([['1', ['Z']], ['2', ['A']]]))
-    expect(hits).toBe(0)
+    const stat = applyCategories(data, new Map([['1', [rec('Z')]], ['2', [rec('A')]]]))
+    expect(stat.gradient).toBe(0)
+    expect(data.tiers.T1[0].categories).toEqual(['A'])
+  })
+
+  it('role=main 覆盖主分类：category / categoryColor / categories[0] 一起换', () => {
+    const data = mkData()
+    const stat = applyCategories(data, new Map([['1', [rec('B', 'main'), rec('C')]]]))
+    expect(stat.main).toBe(1)
+    expect(data.tiers.T1[0].category).toBe('B')
+    expect(data.tiers.T1[0].categoryColor).toBe('#222222')
+    // 主分类打头 + 副分类追加（不再需要「改主分类时顺手补 categories[0]」的补丁）
+    expect(data.tiers.T1[0].categories).toEqual(['B', 'C'])
+    expect(data.tiers.T1[1].category).toBe('A')
+  })
+
+  it('同一词条多条 main：最后一条生效（与 overrides 的 last-wins 同约定）', () => {
+    const data = mkData()
+    applyCategories(data, new Map([['1', [rec('B', 'main'), rec('C', 'main')]]]))
+    expect(data.tiers.T1[0].category).toBe('C')
+  })
+
+  it('main 指向未知分类：照用（权威指定）但颜色回退 defaultColor', () => {
+    const data = mkData()
+    applyCategories(data, new Map([['1', [rec('Z', 'main')]]]))
+    expect(data.tiers.T1[0].category).toBe('Z')
+    expect(data.tiers.T1[0].categoryColor).toBe('#fff')
+  })
+
+  it('空副表：全部词条仍挂上 [主分类]（模板依赖 categories 存在）', () => {
+    const data = mkData()
+    const stat = applyCategories(data, new Map())
+    expect(stat).toEqual({ main: 0, extra: 0, gradient: 0 })
     expect(data.tiers.T1[0].categories).toEqual(['A'])
   })
 })

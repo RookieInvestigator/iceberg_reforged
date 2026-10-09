@@ -62,6 +62,14 @@
 .surface-light {
   --color-modal-bg: #fff;
   --color-text-primary: #0a0c10;
+  /* 气泡 tooltip 在浅底上翻成深泡：白底白泡等于隐形（见 .tip-bubble） */
+  --tip-bg: #17191e;
+  --tip-fg: rgba(255, 255, 255, 0.92);
+  --tip-border: rgba(255, 255, 255, 0.16);
+  --tip-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  /* 浅色阅读表面内的原生控件（下拉弹层/滚动条）也要跟着翻亮，
+     否则全局 color-scheme: dark 会让这里的选择器弹层变黑，与纸面白底割裂 */
+  color-scheme: light;
   --white-02: rgba(10, 12, 16, 0.02);
   --white-03: rgba(10, 12, 16, 0.03);
   --white-04: rgba(10, 12, 16, 0.04);
@@ -125,6 +133,41 @@
   color: color-mix(in srgb, var(--cat) 40%, black);
   border-color: color-mix(in srgb, var(--cat) 40%, black);
   filter: none;
+}
+
+/* ── 气泡 tooltip：**唯一实现**（组件 components/ui/TipBubble.vue 只用这里的外观）──
+   徽章释义（层级/分类/标签）与标记备注（警示/需补充/社区贡献）共用同一套：
+   同样的底/字/圆角/内距/阴影/字号/行高/6 行截断/过渡时长/z-index，且都在下方展开。
+   与所处表面反相：深底浅泡（--tip-* 默认），浅底深泡（.surface-light 翻面）。 */
+.tip-anchor { position: relative; display: inline-flex; align-items: center; }
+.tip-bubble {
+  position: absolute; top: calc(100% + 6px); left: 50%; z-index: 60;
+  transform: translateX(-50%) translateY(-2px);
+  display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical;
+  overflow: hidden;
+  width: max-content;
+  max-width: min(260px, calc(100vw - 48px));
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--tip-bg);
+  color: var(--tip-fg);
+  border: 1px solid var(--tip-border);
+  box-shadow: var(--tip-shadow);
+  font-size: var(--font-xs);
+  font-weight: 400;
+  line-height: 1.6;
+  text-align: left;
+  white-space: normal;
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0s 0.15s;
+}
+/* 展开态由 .tip-anchor 统一驱动：hover / 键盘聚焦 / 触屏点击（.open）三条路径同款动效 */
+.tip-anchor:hover .tip-bubble,
+.tip-anchor:focus-within .tip-bubble,
+.tip-anchor.open .tip-bubble {
+  opacity: 1; visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0s 0s;
 }
 
 /* S1：tooltip 形状语言（白底保留，阅读层与操控层分工）。

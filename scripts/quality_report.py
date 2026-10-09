@@ -90,6 +90,22 @@ MARKETING_DOMAINS = [
 ]
 
 APPENDIX_DIR = ROOT / 'iceberg-vue' / 'src' / 'data' / 'appendix'
+# 副表一表一域契约：这些字段名由专职副表拥有，overrides.csv（标量字段订正）不得承载
+RESERVED_FIELDS = {
+    'category': 'categories.csv（role=main）',
+    'link': 'references.csv（role=main）',
+    'related': 'related.csv',
+}
+# 各副表的合法 role 与空值默认（契约：categories 空 = extra，references 空 = ref）
+APPENDIX_ROLES = {
+    'categories.csv': ({'main', 'extra'}, 'extra'),
+    'references.csv': ({'main', 'ref'}, 'ref'),
+}
+# 标记副表（extra.csv）的 flag 允许集合：与构建门 build_data_api.py 的 EXTRA_FLAGS、前端
+# appendix.ts 的 EXTRA_FLAGS 同口径。将来加标记只在这里加一项（**允许集合**，不是两处硬编码）。
+EXTRA_FLAGS = ('warn', 'need')
+# 署名副表（contributors.csv）的日期列 at：空 = 未记日期，否则 YYYY-MM-DD（与构建门同口径）
+AT_RE = re.compile(r'\d{4}-\d{2}-\d{2}')
 
 
 def _is_marketing_url(url):
@@ -219,7 +235,10 @@ def check_marketing_sources(data):
     ref_csv = APPENDIX_DIR / 'references.csv'
     if ref_csv.exists():
         try:
-            with open(ref_csv, encoding='utf-8') as f:
+            # utf-8-sig：副表可能带 BOM（Excel 手工维护过，或编辑器保存时保留），
+            # 按 utf-8 读会把首列名变成 '\ufeffsource_id' —— source_id 永远取不到，
+            # 检查静默空转（related.csv 的孤儿检查就栽在这上面，2026-10-09 修）。
+            with open(ref_csv, encoding='utf-8-sig') as f:
                 for row in csv.DictReader(f):
                     url = (row.get('url') or '').strip()
                     if url and _is_marketing_url(url):
@@ -233,7 +252,14 @@ def check_marketing_sources(data):
 
 
 def check_appendix_categories(data):
-    """多分类副表（categories.csv）：孤儿 item_id / 未知分类 / 与主分类重复的行"""
+    """分类副表（categories.csv）：孤儿 item_id / 未知分类 / 重复 main 行 / extra 与主分类重复。
+
+    role=main 覆盖词条主分类（只要分类已知即可），role=extra 是 OR 叠加（**必须与主分类不同**）；
+    空 role 按契约等于 extra。主分类取该词条的 main 行，没有 main 行则取词条自身的分类。
+
+    表结构是 item_id,category,role 三列（by/at 已于 2026-10 迁到 contributors.csv），
+    因此下面**一律按列名取值** —— 列的顺序/有无 by/at 都不影响这里。
+    """
     problems = []
     ids = {it['id'] for its in data.get('tiers', {}).values() for it in its}
     known = set(data.get('categoryColors', {}).keys())
@@ -243,19 +269,193 @@ def check_appendix_categories(data):
         return problems
     try:
         with open(cat_csv, encoding='utf-8-sig') as f:
-            for row in csv.DictReader(f):
-                iid = (row.get('item_id') or '').strip()
-                cat = (row.get('category') or '').strip()
-                if not iid or not cat:
-                    continue
-                if iid not in ids:
-                    problems.append((iid, '', '', f'多分类副表孤儿 item_id: {iid}'))
-                elif cat not in known:
-                    problems.append((iid, '', '', f'多分类副表未知分类: {cat}'))
-                elif cat == by_id.get(iid):
-                    problems.append((iid, '', '', f'多分类副表与主分类重复: {cat}'))
+            # 按列名读：契约只认 item_id/category/role 三列，多出来的列自动忽略
+            rows = list(csv.DictReader(f))
+        main_cat, extras = {}, []
+        for row in rows:
+            iid = (row.get('item_id') or '').strip()
+            cat = (row.get('category') or '').strip()
+            role = (row.get('role') or '').strip().lower() or 'extra'   # 空 = extra（契约默认）
+            if not iid or not cat:
+                continue
+            if iid not in ids:
+                problems.append((iid, '', '', f'多分类副表孤儿 item_id: {iid}'))
+                continue
+            if cat not in known:
+                problems.append((iid, '', '', f'多分类副表未知分类: {cat}'))
+                continue
+            if role not in ('main', 'extra'):
+                problems.append((iid, '', '', f'多分类副表未知 role: {role!r}（只允许 main/extra，空 = extra）'))
+                continue
+            if role == 'main':
+                if iid in main_cat:
+                    problems.append((iid, '', '', f'多分类副表重复 main 行（一个词条只允许一行）: {cat}'))
+                else:
+                    main_cat[iid] = cat
+            else:
+                extras.append((iid, cat))
+        for iid, cat in extras:
+            # extra 是 OR 叠加：与主分类相同就是空操作（也是 role 写错的信号）
+            if cat == (main_cat.get(iid) or by_id.get(iid, '')):
+                problems.append((iid, '', '', f'多分类副表 extra 与主分类重复: {cat}'))
     except (OSError, ValueError) as e:
         problems.append(('', '', '', f'多分类副表读取失败: {e}'))
+    return problems
+
+
+def check_appendix_overrides(data):
+    """字段订正副表（overrides.csv）：只允许 title/desc/tags，保留字段必须迁到专职副表。
+
+    表结构是 item_id,field,value 三列（by/at 已于 2026-10 迁到 contributors.csv）——
+    这里按列名取 field，列的变化（增删/换序）都不影响判读。
+    """
+    problems = []
+    ov_csv = APPENDIX_DIR / 'overrides.csv'
+    if not ov_csv.exists():
+        return problems
+    try:
+        with open(ov_csv, encoding='utf-8-sig') as f:
+            for row in csv.DictReader(f):
+                field = (row.get('field') or '').strip()
+                if field in RESERVED_FIELDS:
+                    iid = (row.get('item_id') or '').strip()
+                    problems.append((iid, '', '', f'字段订正副表含保留字段 {field}'
+                                                  f'（应由 {RESERVED_FIELDS[field]} 承载）'))
+    except (OSError, ValueError) as e:
+        problems.append(('', '', '', f'字段订正副表读取失败: {e}'))
+    return problems
+
+
+def check_appendix_roles(data):
+    """副表 role 合法性：categories.csv ∈ {main, extra}；references.csv ∈ {main, ref}（空 = 该表默认值）"""
+    problems = []
+    for fname, (allowed, default) in APPENDIX_ROLES.items():
+        path = APPENDIX_DIR / fname
+        if not path.exists():
+            continue
+        try:
+            with open(path, encoding='utf-8-sig') as f:
+                for row in csv.DictReader(f):
+                    # 空 role 是契约允许的默认值（categories 空 = extra，references 空 = ref）；
+                    # 老副表没有 role 列时 DictReader 给 None，同样算空 —— 都不算违规
+                    raw = (row.get('role') or '').strip().lower()
+                    if raw and raw not in allowed:
+                        key = (row.get('item_id') or row.get('source_id') or '').strip()
+                        problems.append((key, '', '', f'{fname} 未知 role: {raw}'
+                                                        f'（只允许 {"、".join(sorted(allowed))}，空 = {default}）'))
+        except (OSError, ValueError) as e:
+            problems.append(('', '', '', f'{fname} 读取失败: {e}'))
+    return problems
+
+
+def check_appendix_contributors(data):
+    """署名副表（contributors.csv）：孤儿 item_id / 空 by / 重复 (item_id, by) / 非法 at。
+
+    署名是独立数据域（词条详情页脚「由 X 提供」的数据源），键是 (item_id, by)：
+    空 by 的行前端 appendix.ts 直接忽略（等于白写），同 key 两行则是同一人被记了两次
+    （契约：同 by 取较晚的 at，不该出现两行）。at 空 = 未记日期，否则必须 YYYY-MM-DD。
+    """
+    problems = []
+    ids = {it['id'] for its in data.get('tiers', {}).values() for it in its}
+    con_csv = APPENDIX_DIR / 'contributors.csv'
+    if not con_csv.exists():
+        return problems
+    try:
+        with open(con_csv, encoding='utf-8-sig') as f:
+            rows = list(csv.DictReader(f))
+        seen = set()
+        for row in rows:
+            iid = (row.get('item_id') or '').strip()
+            by = (row.get('by') or '').strip()
+            at = (row.get('at') or '').strip()
+            if not iid and not by and not at:
+                continue  # 整行空（编辑器留下的空行）
+            if not iid:
+                problems.append(('', '', '', '署名副表缺 item_id（署名行必须挂在词条上）'))
+                continue
+            if iid not in ids:
+                problems.append((iid, '', '', f'署名副表孤儿 item_id: {iid}'))
+            if not by:
+                problems.append((iid, '', '', '署名副表 by 为空（页脚会忽略该行，等于白写）'))
+            else:
+                if (iid, by) in seen:
+                    problems.append((iid, '', '', f'署名副表重复署名 (item_id, by): {iid} {by}'))
+                seen.add((iid, by))
+            if at and not AT_RE.fullmatch(at):
+                problems.append((iid, '', '', f'署名副表非法 at: {at!r}（需 YYYY-MM-DD 或留空）'))
+    except (OSError, ValueError) as e:
+        problems.append(('', '', '', f'署名副表读取失败: {e}'))
+    return problems
+
+
+def check_appendix_extra(data):
+    """标记副表（extra.csv）：孤儿 item_id / 未知 flag / 重复 (item_id, flag)。
+
+    表结构是 item_id,flag,note 三列，键 = (item_id, flag)：**行的存在即该标记为真**
+    （删行 = 取消标记），note 是那个小圆图标的 hover 提示。前端只读不写 —— 表由副表编辑器
+    手填，所以这里盯的是「填了但不生效」的几类：孤儿 item_id 挂不上词条、未知 flag 前端
+    直接丢弃（只认 EXTRA_FLAGS，大小写不敏感，空 flag 同样算丢弃）、同键两行是同一标记记了两次。
+    空 note 是契约允许的（有标记没说明），不报。
+    """
+    problems = []
+    ids = {it['id'] for its in data.get('tiers', {}).values() for it in its}
+    ex_csv = APPENDIX_DIR / 'extra.csv'
+    if not ex_csv.exists():
+        return problems
+    try:
+        # utf-8-sig：副表可能带 BOM（Excel 手工维护过），按 utf-8 读会把首列名变成
+        # '\ufeffitem_id' —— item_id 永远取不到，整项检查静默空转（related.csv 栽过这个坑）。
+        with open(ex_csv, encoding='utf-8-sig') as f:
+            rows = list(csv.DictReader(f))
+        seen = set()
+        for row in rows:
+            iid = (row.get('item_id') or '').strip()
+            raw = (row.get('flag') or '').strip()
+            flag = raw.lower()   # 大小写不敏感（与前端 appendix.ts 同口径）
+            if not iid and not raw:
+                continue  # 整行空（编辑器留下的空行）
+            if not iid:
+                problems.append(('', '', '', f'标记副表缺 item_id（标记行必须挂在词条上）: flag={raw or "?"}'))
+                continue
+            if iid not in ids:
+                problems.append((iid, '', '', f'标记副表孤儿 item_id: {iid}'))
+            if not flag:
+                problems.append((iid, '', '', '标记副表 flag 为空（前端会忽略该行，等于白写）'))
+                continue
+            if flag not in EXTRA_FLAGS:
+                problems.append((iid, '', '', f'标记副表未知 flag: {flag!r}'
+                                              f'（只允许 {"、".join(EXTRA_FLAGS)}，大小写不敏感）'))
+                continue
+            if (iid, flag) in seen:
+                problems.append((iid, '', '', f'标记副表重复标记 (item_id, flag): {iid} {flag}'))
+            seen.add((iid, flag))
+    except (OSError, ValueError) as e:
+        problems.append(('', '', '', f'标记副表读取失败: {e}'))
+    return problems
+
+
+def check_appendix_headers():
+    """副表列名契约：overrides.csv = item_id,field,value；categories.csv = item_id,category,role。
+
+    2026-10 署名副表上线时 by/at 从这两张表删列（署名归 contributors.csv）——
+    任何工具（编辑器 / 旧脚本 / 手工粘贴）再把它们写回去都是 schema 违规，这里点名报出来。
+    只盯 by/at 这两列，其余多余列不判违规（避免误伤未来的合法扩列）。
+    """
+    problems = []
+    for fname in ('overrides.csv', 'categories.csv'):
+        path = APPENDIX_DIR / fname
+        if not path.exists():
+            continue
+        try:
+            # utf-8-sig：BOM 会粘在第一个列名上，按列名比对必须先剥掉
+            with open(path, encoding='utf-8-sig', newline='') as f:
+                header = next(csv.reader(f), [])
+            extra = [h for h in ((c or '').strip().lower() for c in header) if h in ('by', 'at')]
+            if extra:
+                problems.append(('', '', '', f'{fname} 不该有列 {"、".join(sorted(set(extra)))}'
+                                                '（署名归 contributors.csv）'))
+        except (OSError, ValueError) as e:
+            problems.append(('', '', '', f'{fname} 读表头失败: {e}'))
     return problems
 
 
@@ -297,6 +497,11 @@ def run_static_checks(data, old_data):
         ('链接质量', check_link_quality(data)),
         ('营销号来源', check_marketing_sources(data)),
         ('多分类副表', check_appendix_categories(data)),
+        ('副表字段归属', check_appendix_overrides(data)),
+        ('副表角色', check_appendix_roles(data)),
+        ('署名副表', check_appendix_contributors(data)),
+        ('标记副表', check_appendix_extra(data)),
+        ('副表列名', check_appendix_headers()),
         ('回归对比', check_regression(old_data, data)),
     ]
     return [(check, *row) for check, rows in checks for row in rows]

@@ -1,23 +1,21 @@
 import { provide, shallowRef } from 'vue'
 import raw from '../../data/iceberg.json'
-import relatedRaw from '../../data/appendix/related.csv?raw'
-import referencesRaw from '../../data/appendix/references.csv?raw'
-import overridesRaw from '../../data/appendix/overrides.csv?raw'
-import categoriesRaw from '../../data/appendix/categories.csv?raw'
-import { isSafeHttpUrl, normalizeData } from '../data'
-import { parseCSV } from '../csv'
-import { applyExtraCategories, parseExtraCategories } from './extraCategories'
+import { normalizeData } from '../data'
+import { loadAppendix } from './appendix'
+import { applyCategories } from './extraCategories'
+import { applyOverrides } from './overrides'
 import {
   CATEGORY_COLORS_KEY,
+  CATEGORIES_MAP_KEY,
+  CONTRIBUTORS_MAP_KEY,
   DEFAULT_COLOR_KEY,
   DESC_MAP_KEY,
-  EXTRA_CATEGORIES_KEY,
+  EXTRA_MAP_KEY,
   FILTER_VISIBLE_KEY,
   DIM_ITEMS_KEY,
   HERO_TITLES_KEY,
   RELATED_MAP_KEY,
   REFERENCES_MAP_KEY,
-  OVERRIDES_MAP_KEY,
   RENDER_ITEMS_KEY,
   TAG_MAP_KEY,
   TIER_ORDER_KEY,
@@ -25,17 +23,37 @@ import {
 
 /**
  * 冰山图数据源（审计 A6.2：IndexNextView 数据段上提）。
- * normalizeData + 关联/参考副表 CSV 解析 + 全套 provide，一处持有。
- * v1 IndexView 暂不消费（v1 冻结，转正时再合流），当前仅 v2 用。
+ * normalizeData + 六张副表的解析/装配 + 全套 provide，一处持有。
+ * 主图（IndexNextView）唯一数据入口 —— v1 于 2026-10-09 归档后不再有第二个消费方。
+ *
+ * 副表解析（列名/键/越界判定）统一走 lib/iceberg/appendix.ts，装配按区域分派：
+ *   标量字段 → overrides.applyOverrides；分类 → extraCategories.applyCategories；
+ *   链接/关联只提供 Map。**顺序有讲究**：订正（title/desc/tags）必须在
+ *   allItemsRaw / descMap 生成之前就地把值写回词条对象，之后所有消费方
+ *   （词条墙、详情、hero 标题、descMap）自动拿到订正后的值；分类装配随后一次算清
+ *   主分类覆盖 + 副分类 + 墙渐变色标。
  */
 export function useIcebergDataSource() {
   const data = normalizeData(raw)
-  // 多分类副表：item_id → 副分类[]（未知分类渲染时过滤，构建门才是真校验）。
-  // 装配（副分类列表 + 墙 OKLCH 渐变色标）统一走 applyExtraCategories，v1 同源；
-  // 直接挂到 data.tiers 条目上（normalize 产物）：allItemsRaw / V2Wall.tierItems /
-  // ScatterField 全经展开透传，新增墙消费方无需再单独接线。
-  const extraCategoriesMap = parseExtraCategories(categoriesRaw)
-  applyExtraCategories(data, extraCategoriesMap)
+  const appendix = loadAppendix()
+  if (appendix.violations.length) {
+    // 越界写法（保留字段写进通用表）不生效，必须外显（见 lib/iceberg/appendix.ts）
+    console.warn('[appendix] 副表越界：', appendix.violations.join('；'))
+  }
+
+  // 派生字段重算所需的映射（tags → emojis，见 lib/iceberg/overrides.ts）
+  const nameToEmoji: Record<string, string> = {}
+  for (const [emoji, name] of Object.entries(data.tagMap || {})) nameToEmoji[name] = emoji
+  const overrideStat = applyOverrides(Object.values(data.tiers).flat(), appendix.overrides, { nameToEmoji })
+  if (overrideStat.violations.length) console.warn('[overrides] 越界字段（未生效）：', overrideStat.violations.join('；'))
+  if (overrideStat.skipped.length) {
+    // 不静默：这些字段的反馈被写进了 CSV 却没有渲染层语义（见 lib/iceberg/overrides.ts）
+    console.warn('[overrides] 暂不支持叠加的字段（已忽略）：', overrideStat.skipped.join('、'))
+  }
+
+  // 分类区域：主分类覆盖 + 副分类追加 + 墙 OKLCH 渐变色标（唯一入口）
+  applyCategories(data, appendix.categories)
+
   const allItemsRaw = Object.entries(data.tiers).flatMap(([tierName, items]) =>
     items.map((item) => ({ ...item, tier: tierName })),
   )
@@ -45,45 +63,6 @@ export function useIcebergDataSource() {
   const renderItemsRef = shallowRef(allItemsRaw)
   const descMap = new Map(allItemsRaw.map((i) => [i.id, (i as { desc?: string }).desc || '']))
 
-  // 副表加载：关联词条 (source_id → target_id[], 含反向索引)
-  const relatedMap = new Map<string, string[]>()
-  for (const row of parseCSV(relatedRaw)) {
-    const src = (row.source_id || '').trim()
-    const tgt = (row.target_id || '').trim()
-    if (!src || !tgt) continue
-    if (!relatedMap.has(src)) relatedMap.set(src, [])
-    relatedMap.get(src)!.push(tgt)
-    // 反向：target 也获得 source
-    if (!relatedMap.has(tgt)) relatedMap.set(tgt, [])
-    relatedMap.get(tgt)!.push(src)
-  }
-
-  // 副表加载：参考链接 (source_id → [{label, url}])
-  const referencesMap = new Map<string, { label: string; url: string }[]>()
-  for (const row of parseCSV(referencesRaw)) {
-    const src = (row.source_id || '').trim()
-    const label = (row.label || '').trim()
-    const url = (row.url || '').trim()
-    if (!src || !url) continue
-    if (!isSafeHttpUrl(url)) continue // F34：副表 URL 同样过 schema 校验
-    if (!referencesMap.has(src)) referencesMap.set(src, [])
-    referencesMap.get(src)!.push({ label: label || url, url })
-  }
-
-  // 副表加载：社区订正 (item_id → [{field, value, by, at}]，空表即无角标)
-  const overridesMap = new Map<string, { field: string; value: string; by: string; at: string }[]>()
-  for (const row of parseCSV(overridesRaw)) {
-    const id = (row.item_id || '').trim()
-    if (!id) continue
-    if (!overridesMap.has(id)) overridesMap.set(id, [])
-    overridesMap.get(id)!.push({
-      field: (row.field || '').trim(),
-      value: row.value || '',
-      by: (row.by || '').trim(),
-      at: (row.at || '').trim(),
-    })
-  }
-
   // 全局注入：子组件不需要 JSON.parse props
   provide(TIER_ORDER_KEY, data.tierOrder)
   provide(CATEGORY_COLORS_KEY, data.categoryColors)
@@ -92,10 +71,24 @@ export function useIcebergDataSource() {
   provide(RENDER_ITEMS_KEY, renderItemsRef)
   provide(DESC_MAP_KEY, descMap)
   provide(HERO_TITLES_KEY, allItemsRaw.map((i) => i.title))
-  provide(RELATED_MAP_KEY, relatedMap)
-  provide(REFERENCES_MAP_KEY, referencesMap)
-  provide(OVERRIDES_MAP_KEY, overridesMap)
-  provide(EXTRA_CATEGORIES_KEY, extraCategoriesMap)
+  provide(RELATED_MAP_KEY, appendix.related)
+  provide(REFERENCES_MAP_KEY, appendix.references)
+  provide(CONTRIBUTORS_MAP_KEY, appendix.contributors)
+  provide(EXTRA_MAP_KEY, appendix.extra)
+  provide(CATEGORIES_MAP_KEY, appendix.categories)
 
-  return { data, allItems, allItemsRaw, renderItemsRef, descMap, relatedMap, referencesMap, overridesMap, extraCategoriesMap }
+  return {
+    data,
+    allItems,
+    allItemsRaw,
+    renderItemsRef,
+    descMap,
+    relatedMap: appendix.related,
+    referencesMap: appendix.references,
+    overridesMap: appendix.overrides,
+    categoriesMap: appendix.categories,
+    contributorsMap: appendix.contributors,
+    extraMap: appendix.extra,
+    appendix,
+  }
 }

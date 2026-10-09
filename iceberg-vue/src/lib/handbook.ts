@@ -64,6 +64,41 @@ let shortCache: Record<string, string> | null = null
 export function stripMdEm(text: string): string {
   return text.replace(/==/g, '')
 }
+
+export interface DescSeg { text: string; em: boolean }
+
+/**
+ * 术语表描述的分段（`==...==` 显式强调，可嵌套）。
+ *
+ * ⚠️ **引号/书名号不再自动高亮**（2026-10-09 用户要求）：此前「」『』“”‘’《》也被当作
+ * 强调定界符，正文里这类符号太常见 —— 结果是整段被染花，「哪些是真正被强调的」反而没有信号。
+ * 现在强调**只认显式的 `==...==`**，引号原样输出（`stripMdEm` 与徽章预览的口径也一致）。
+ *
+ * 放在 lib 而不是视图里：这段解析有明确行为约定（标记不出现在输出里、嵌套可开可关、
+ * 未闭合的 `==` 只是普通文字），值得单测锁住，而视图层在本仓库没有测试。
+ */
+export function segmentDesc(text: string): DescSeg[] {
+  const segs: DescSeg[] = []
+  let em = false
+  let buf = ''
+  const flush = () => {
+    if (buf) { segs.push({ text: buf, em }); buf = '' }
+  }
+  let i = 0
+  while (i < text.length) {
+    // ==...== 显式强调：标记不进入输出，仅切换高亮状态（可嵌套，未闭合则一路高亮到末尾）
+    if (text.slice(i, i + 2) === '==') {
+      flush()
+      em = !em
+      i += 2
+      continue
+    }
+    buf += text[i]
+    i++
+  }
+  flush()
+  return segs
+}
 /**
  * 全节的名 → 短版表（释义首行 `> ` 开头即短版；徽章 hover 优先显示，无则回退全文）。
  * 与 parseSections 同源解析，两表互补（短版行已从 desc 剥离，不会重复出现）。

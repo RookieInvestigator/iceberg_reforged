@@ -2,7 +2,11 @@
    原云层漂移/水面波动/光晕呼吸等 CSS 动画与关键帧已全量移除：
    动画此前已被 .bg-root.static 暂停（视觉定格），此番删除死代码，
    云层（暂停态下几乎不可见）整层移除，其余层按定格值固定。 */
-.bg-root{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;background:#000}
+/* top 覆盖 inset 的 0：顶部公告条在文档流里位于页面内容之前，而本层是画在视图根节点
+   （#capture-area，position: relative）里的绝对层 —— 视图从条幅下方开始，不向上顶出就会在
+   条幅处露出 body 底色（#0a0e14 的硬边，液态背景是 fixed 铺满视口所以没这问题）。
+   --bulletin-offset 由 AppShell 按条幅实测高度写入，无条幅时不存在（回退 0px）。 */
+.bg-root{position:absolute;inset:0;top:calc(-1 * var(--bulletin-offset, 0px));z-index:0;pointer-events:none;overflow:hidden;background:#000}
 .bg-wrap{position:absolute;inset:-5%;z-index:0;pointer-events:none;transform:scale(1.02)}
 
 .bg-sky{position:absolute;inset:0;

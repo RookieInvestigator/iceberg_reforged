@@ -83,6 +83,13 @@ def collect_corpus() -> str:
         if d.is_dir():
             for p in sorted(d.glob("*.md")):
                 parts.append(p.read_text(encoding="utf-8"))
+    # 副表（appendix/*.csv）：overrides.csv 里的社区订正描述会被渲染层叠加进词条正文
+    # （lib/iceberg/overrides.ts），与 iceberg.json 同待遇 —— 不进语料的话，采纳的描述里
+    # 出现的新字只能回退系统字体。references.csv 的显示名同理（短，代价可忽略）。
+    appendix = SRC_DIR / "data" / "appendix"
+    if appendix.is_dir():
+        for p in sorted(appendix.glob("*.csv")):
+            parts.append(p.read_text(encoding="utf-8"))
     for p in sorted((SRC_DIR / "lib" / "i18n").glob("*.ts")):
         parts.append(p.read_text(encoding="utf-8"))
     # 模板与样式中的硬编码文案（含 Tailwind 类名中的 ASCII，不影响子集）

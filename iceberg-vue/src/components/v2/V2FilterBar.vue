@@ -121,11 +121,13 @@ const catPillCls = (cat: string) =>
   pillCls(hiddenCats.value.includes(cat), activeCats.value.length === 0 || activeCats.value.includes(cat))
 const tagPillCls = (emoji: string) =>
   pillCls(hiddenT.value.includes(emoji), activeT.value.length === 0 || activeT.value.includes(emoji))
-const specialPills: Array<[filter: string, labelKey: string]> = [
-  ['hasLink', 'hasLink'],
-  ['hasDesc', 'hasDesc'],
-  ['isNew', 'isNew'],
-  ['noLinkNoDesc', 'needComplete'],
+// 用对象而不是元组：`labelKey: '…'` 是 i18n 死 key 守卫认得的引用形式（元组写法它看不见，
+// v1 归档后这四个 key 就曾被误判成死 key）
+const specialPills: Array<{ filter: string; labelKey: string }> = [
+  { filter: 'hasLink', labelKey: 'hasLink' },
+  { filter: 'hasDesc', labelKey: 'hasDesc' },
+  { filter: 'isNew', labelKey: 'isNew' },
+  { filter: 'noLinkNoDesc', labelKey: 'needComplete' },
 ]
 function toggleSpecial(key: string) {
   specialFilter.set(splFilter.value === key ? 'all' : key)
@@ -210,7 +212,7 @@ function toggleSpecial(key: string) {
       <section class="v2bar-group">
         <h3 class="v2bar-h">{{ t('special') }}</h3>
         <div class="v2bar-grid">
-          <button v-for="[key, labelKey] in specialPills" :key="key" class="v2bar-pill" :class="{ on: splFilter === key }" @click="toggleSpecial(key)">{{ t(labelKey) }}</button>
+          <button v-for="p in specialPills" :key="p.filter" class="v2bar-pill" :class="{ on: splFilter === p.filter }" @click="toggleSpecial(p.filter)">{{ t(p.labelKey) }}</button>
           <button class="v2bar-pill" :class="{ on: favF }" @click="favFilter.set(!favF)">{{ favF ? '★ ' + t('unfavorite') : '☆ ' + t('favorite') }}</button>
         </div>
       </section>

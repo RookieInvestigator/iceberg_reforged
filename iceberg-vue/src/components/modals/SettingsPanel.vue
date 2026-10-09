@@ -9,7 +9,7 @@ import { useI18n } from '../../lib/useI18n';
 
 defineEmits(['close']);
 const { t } = useI18n();
-// v2 实验开关只在主站（/，即 v2 视图）显示，/legacy（v1）下隐藏（v1 行为零影响）
+// v2 实验开关只在主站（/，主冰山图）显示：这些开关只作用于词条墙/详情表面，其他页面显示没有意义
 const route = useRoute();
 const isV2 = computed(() => route.path === '/');
 

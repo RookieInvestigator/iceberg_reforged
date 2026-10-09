@@ -13,10 +13,12 @@ import { useI18n } from '../../lib/useI18n';
 import { normalizeTags } from '../../lib/tags';
 import type { EntryView } from '../../lib/iceberg/entryView';
 import CommentPanel from '../items/CommentPanel.vue';
-import CorrectedMark from '../items/CorrectedMark.vue';
+import EntryMarks from '../items/EntryMarks.vue';
 import EntryMetaBadges from './V2EntryMetaBadges.vue';
 import EntryRelatedLinks from './V2RelatedLinks.vue';
 import { REFERENCES_MAP_KEY, type ReferenceLink } from '../../lib/injectionKeys';
+import { linkDisplay } from '../../lib/sourceLabel';
+import { pickLinks } from '../../lib/iceberg/entryLinks';
 import { CATEGORY_COLORS_KEY, DEFAULT_COLOR_KEY } from '../../lib/injectionKeys';
 import { extraBadges } from '../../lib/iceberg/extraCategories';
 import { TRAIL_KEY, ENTRY_IA_KEY } from '../../lib/iceberg/v2/keys';
@@ -61,6 +63,14 @@ const referencesMap = inject(REFERENCES_MAP_KEY, new Map<string, ReferenceLink[]
 // 空结果复用同一常量，避免每次 computed 造新数组触发下游无谓更新
 const NO_REFS: ReferenceLink[] = []
 const refLinks = computed(() => referencesMap.get(props.item?.id || '') ?? NO_REFS)
+
+// 链接副表：role=main 可覆盖主链接（改 URL / 只改显示名），其余为附加参考链接
+const picked = computed(() => pickLinks(props.item?.link, refLinks.value))
+const mainLink = computed(() => {
+  const m = picked.value.main
+  return m ? { url: m.url, ...linkDisplay(m.label, m.url) } : null
+})
+const refItems = computed(() => picked.value.refs.map((r) => ({ url: r.url, d: linkDisplay(r.label, r.url) })))
 const hasRelated = computed(
   () => (props.item?.related?.length ?? 0) + (props.item?.recommended?.length ?? 0) > 0,
 )
@@ -101,7 +111,7 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
       </template>
     </nav>
 
-    <!-- 元信息徽章行（层级 / 分类 / 标签，术语表深链） -->
+    <!-- 元信息徽章行（层级 / 分类 / 标签，术语表深链）；行尾挂标记图标（警示 / 需补充 / 社区贡献） -->
     <EntryMetaBadges
       class="v2entry-badges"
       :tier="item.tier"
@@ -109,29 +119,38 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
       :categoryColor="item.categoryColor"
       :tags="tagList"
       :extra="extraCats"
-    />
-    <CorrectedMark :itemId="item.id" />
+    >
+      <EntryMarks :itemId="item.id" />
+    </EntryMetaBadges>
 
     <!-- 描述：核心阅读区（15px / 1.8 与 v1 对齐，属展示级例外，不收编进 5 阶梯） -->
     <p class="v2entry-desc" :class="[item.desc ? '' : 'v2entry-desc--empty', descSpacing]">
       {{ item.desc || t('noDescShort') }}
     </p>
 
-    <!-- 链接：词条内容的延伸，与描述同区（弱化、无线分隔） -->
-    <div v-if="item.link || refLinks.length" class="v2entry-links">
-      <a v-if="item.link" :href="item.link" target="_blank" rel="noopener" class="v2entry-link">
-        <ExternalLink :size="11" :stroke-width="2" />
-        {{ t('openLink') }}
-      </a>
+    <!-- 链接区：一个连续的列表 —— 主链接在前、参考链接紧随，**没有任何分组字样**把两者分开；
+         仅用 sr-only 标题给读屏用户交代后半段语义（也让 i18n 的 referenceLinks 不成为死词） -->
+    <div v-if="mainLink || refItems.length" class="v2entry-links">
+      <ul v-if="mainLink" class="v2entry-linklist">
+        <li>
+          <a :href="mainLink.url" target="_blank" rel="noopener" class="v2entry-link" :aria-label="t('openLink')">
+            <span class="v2entry-link__name">{{ mainLink.name }}</span>
+            <span v-if="mainLink.showHost" class="v2entry-link__host">{{ mainLink.host }}</span>
+            <ExternalLink :size="11" :stroke-width="2" class="v2entry-link__icon" />
+          </a>
+        </li>
+      </ul>
 
-      <div v-if="refLinks.length" class="v2entry-refs">
-        <span class="v2entry-refs__label">{{ t('referenceLinks') }}</span>
-        <ul class="v2entry-refs__list">
-          <li v-for="(r, i) in refLinks" :key="i">
-            <a :href="r.url" target="_blank" rel="noopener" class="v2entry-link">{{ r.label }}</a>
-          </li>
-        </ul>
-      </div>
+      <h4 v-if="refItems.length" class="sr-only">{{ t('referenceLinks') }}</h4>
+      <ul v-if="refItems.length" class="v2entry-linklist">
+        <li v-for="(r, i) in refItems" :key="i">
+          <a :href="r.url" target="_blank" rel="noopener" class="v2entry-link">
+            <span class="v2entry-link__name">{{ r.d.name }}</span>
+            <span v-if="r.d.showHost" class="v2entry-link__host">{{ r.d.host }}</span>
+            <ExternalLink :size="11" :stroke-width="2" class="v2entry-link__icon" />
+          </a>
+        </li>
+      </ul>
     </div>
 
     <!-- 拓展信息区：关联词条（跳板，沉底弱化） -->
@@ -182,36 +201,26 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
 }
 .v2entry-link {
   display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  align-items: baseline;
+  gap: 6px;
   font-size: var(--font-xs);
   color: var(--white-60);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.v2entry-link:hover { color: var(--white-90); }
+/* 下划线只画在站点名上：域名与图标保持弱化，两者混排时不会连成一条长下划线 */
+.v2entry-link__name {
   text-decoration: underline;
   text-underline-offset: 4px;
   text-decoration-color: var(--white-20);
-  transition: color 0.15s, text-decoration-color 0.15s;
+  transition: text-decoration-color 0.15s;
 }
-.v2entry-link:hover { color: var(--white-90); text-decoration-color: var(--white-50); }
-.v2entry-refs__label {
-  display: block;
-  margin-bottom: 4px;
-  font-size: var(--font-micro);
-  font-weight: 700;
-  text-transform: uppercase;
-  /* 中文标签不需要 0.15em 那么松（那是为拉丁字母设计的），收到 0.08em */
-  letter-spacing: 0.08em;
-  color: var(--white-50);
-}
-.v2entry-refs__list {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;   /* 10px label 与 12px 链接混排时基线对齐 */
-  column-gap: 16px;
-  row-gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
+.v2entry-link:hover .v2entry-link__name { text-decoration-color: var(--white-50); }
+.v2entry-link__host { font-size: var(--font-micro); color: var(--white-30); }
+.v2entry-link__icon { flex: none; align-self: center; opacity: 0.5; transition: opacity 0.15s; }
+.v2entry-link:hover .v2entry-link__icon { opacity: 0.9; }
+.v2entry-linklist { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
 
 /* 分区（关联 / 评论）：原为两套（12/4 与 10/8），统一到 12/6 —— 各自仅差 2px，
    视觉几乎无感，但两区节奏一致 */

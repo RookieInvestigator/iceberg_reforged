@@ -6,8 +6,8 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from '../../lib/useI18n'
 import { getCriteriaDescMap, getShortMap, handbookLink, stripMdEm } from '../../lib/handbook'
-import { clearTipFit, fitTipIntoView } from '../../lib/fitTip'
 import { normalizeTags } from '../../lib/tags'
+import TipBubble from '../ui/TipBubble.vue'
 import rawMd from '../../data/handbook.md?raw'
 
 const props = defineProps<{
@@ -32,19 +32,8 @@ interface Badge {
 const route = useRoute()
 const { t } = useI18n()
 
-function tipLinkOf(e: Event): HTMLElement | null {
-  const el = e.target as HTMLElement | null
-  return el?.closest?.('a.meta-chip') as HTMLElement | null
-}
-// tip 宽度自适应：hover/聚焦时量好再摆，超界平移收回弹窗内
-function onTipHover(e: Event) {
-  fitTipIntoView(tipLinkOf(e))
-}
-function onTipOut(e: Event) {
-  const link = tipLinkOf(e)
-  const to = (e as MouseEvent).relatedTarget as HTMLElement | null
-  if (link && link !== to?.closest?.('a.meta-chip')) clearTipFit(link)
-}
+// 气泡（含 hover/聚焦/点击三条展开路径 + 超界归位）统一交给 TipBubble：
+// 徽章释义与标记备注不再各写一套定位与显隐逻辑。
 const badges = computed<Badge[]>(() => {
   const from = route.path
   const descMap = getCriteriaDescMap(rawMd)
@@ -82,19 +71,24 @@ const badges = computed<Badge[]>(() => {
 </script>
 
 <template>
-  <ul class="meta-row" @mouseover="onTipHover" @mouseout="onTipOut" @focusin="onTipHover" @focusout="onTipOut">
+  <ul class="meta-row">
     <li v-for="b in badges" :key="b.key" class="meta-item">
-      <component
-        :is="b.to ? 'router-link' : 'span'"
-        :to="b.to"
-        class="meta-chip"
-        :class="`meta-chip--${b.kind}`"
-        :style="b.color ? { '--cat': b.color } : undefined"
-      >
-        <span v-if="b.kind === 'tag'" aria-hidden="true">#</span>{{ b.label }}
-        <span v-if="b.to" class="meta-tip" aria-hidden="true">{{ b.desc }}</span>
-      </component>
+      <!-- 气泡统一走 TipBubble：与标记图标那三个小圆点用的是同一个组件、同一套样式 -->
+      <TipBubble :text="b.desc">
+        <component
+          :is="b.to ? 'router-link' : 'span'"
+          :to="b.to"
+          class="meta-chip"
+          :class="`meta-chip--${b.kind}`"
+          :style="b.color ? { '--cat': b.color } : undefined"
+        >
+          <span v-if="b.kind === 'tag'" aria-hidden="true">#</span>{{ b.label }}
+        </component>
+      </TipBubble>
     </li>
+    <!-- 徽章行尾：标记图标（警示 / 需补充 / 社区贡献）由调用方塞进来。
+         用 li 包一层：本组件根是 ul，div 直接做子元素是非法 HTML -->
+    <li v-if="$slots.default" class="meta-item"><slot /></li>
   </ul>
 </template>
 
@@ -122,26 +116,6 @@ const badges = computed<Badge[]>(() => {
 .meta-chip--category { color: var(--cat); border-color: var(--cat); background: rgba(255, 255, 255, 0.03); }
 .meta-chip--tag { color: var(--white-55); }
 a.meta-chip:hover { filter: brightness(1.35); }
-/* hover 类 tooltip：徽章释义预览，纯 CSS，键盘聚焦同显。
- * 相对徽章居中、出在徽章下方（吸顶头会盖住上方）。
- * 行首行尾徽章的 tip 可能轻微超出弹窗边界，属已知可接受范围（hover 瞬态提示）。 */
-.meta-chip { position: relative; }
-.meta-tip {
-  position: absolute; top: calc(100% + 6px); left: 50%;
-  transform: translateX(-50%) translateY(-2px);
-  display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical;
-  overflow: hidden;
-  width: max-content; max-width: min(260px, calc(100vw - 48px));
-  padding: 6px 10px; border-radius: 8px; text-align: left;
-  background: var(--color-tooltip-bg); color: var(--color-tooltip-text);
-  border: 1px solid rgba(10, 12, 16, 0.12);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  font-size: var(--font-xs); font-weight: 400; line-height: 1.6;
-  opacity: 0; pointer-events: none; z-index: 5;
-  transition: opacity 0.15s, transform 0.15s;
-}
-.meta-item:hover .meta-tip,
-.meta-item:focus-within .meta-tip {
-  opacity: 1; transform: translateX(-50%) translateY(0);
-}
+/* 气泡（徽章释义）已抽到 components/ui/TipBubble.vue + styles/v2.css 的
+   .tip-anchor / .tip-bubble —— 与标记图标 tooltip 共用同一实现，这里不再留样式。 */
 </style>
