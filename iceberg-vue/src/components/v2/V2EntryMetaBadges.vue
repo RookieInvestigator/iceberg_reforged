@@ -1,7 +1,6 @@
 <script setup lang="ts">
-// V2EntryMetaBadges（/v2 专用）：v1 EntryMetaBadges 原件冻结，新建 V2 版（审计 A7）。
-// 差异：徽章是术语表深链（L1）+ 反向回路（L2 经 HandbookView）+ 同构数据收敛 + 语义化 ul/li。
-// props 与 v1 签名兼容（tags 收紧为 string[]，归一化上移到 lib/tags.ts）。
+// V2EntryMetaBadges：徽章行 —— 术语表深链（L1）+ 反向回路（L2 经 HandbookView）+ 语义化 ul/li。
+// tags 收为 string[]，归一化在 lib/tags.ts。
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from '../../lib/useI18n'
@@ -32,8 +31,7 @@ interface Badge {
 const route = useRoute()
 const { t } = useI18n()
 
-// 气泡（含 hover/聚焦/点击三条展开路径 + 超界归位）统一交给 TipBubble：
-// 徽章释义与标记备注不再各写一套定位与显隐逻辑。
+// 气泡（含 hover/聚焦/点击三条展开路径 + 超界归位）统一交给 TipBubble。
 const badges = computed<Badge[]>(() => {
   const from = route.path
   const descMap = getCriteriaDescMap(rawMd)
@@ -93,7 +91,7 @@ const badges = computed<Badge[]>(() => {
 </template>
 
 <style scoped>
-/* 与 v1 同视觉（tier 弱框 / 分类色描边 / 标签裸字），只收结构：ul/li + 圆角进 v2 三档 */
+/* 视觉：tier 弱框 / 分类色描边 / 标签裸字；结构 ul/li，圆角走 v2 三档 */
 .meta-row {
   display: flex; flex-wrap: wrap; align-items: center;
   column-gap: 0.75rem; row-gap: 0.375rem;
@@ -116,6 +114,5 @@ const badges = computed<Badge[]>(() => {
 .meta-chip--category { color: var(--cat); border-color: var(--cat); background: rgba(255, 255, 255, 0.03); }
 .meta-chip--tag { color: var(--white-55); }
 a.meta-chip:hover { filter: brightness(1.35); }
-/* 气泡（徽章释义）已抽到 components/ui/TipBubble.vue + styles/v2.css 的
-   .tip-anchor / .tip-bubble —— 与标记图标 tooltip 共用同一实现，这里不再留样式。 */
+/* 气泡样式在 components/ui/TipBubble.vue + styles/v2.css 的 .tip-anchor / .tip-bubble */
 </style>

@@ -1,16 +1,13 @@
 /**
- * 链接副表（appendix/references.csv）的语义层（2026-10-09 升级）。
+ * 链接副表（appendix/references.csv）的语义层。
  *
- * 升级前：references.csv 只是「附加参考链接」——一个词条的主链接只能来自主数据 item.link，
- * 显示名也只能靠自动识别。
- * 升级后：它是**链接副表**，一张表同时表达三件事：
- *   · `role=ref`（缺省）—— 附加参考链接（旧行为不变）
+ * 一张表同时表达三件事：
+ *   · `role=ref`（缺省）—— 附加参考链接
  *   · `role=main`      —— **覆盖词条主链接**（改 URL）
  *   · `label` 非空     —— **覆盖显示名**（主链接与参考链接都适用；留空则按域名自动判，见 lib/sourceLabel.ts）
- * 于是「主链接换了地址」「来源站名写错了要改」「补一条更权威的参考」都能只靠副表完成，
- * 不必动主数据（主数据来自上游 API，本地改不了 —— 这也是当初做副表的原因）。
+ * 主数据来自上游 API、本地改不了 —— 换地址 / 改站名 / 补参考都只靠副表完成。
  *
- * 列：`source_id,label,url[,role]`。role 列缺省为 ref，旧文件（无该列）行为完全不变。
+ * 列：`source_id,label,url[,role]`。role 缺省为 ref（无该列时行为不变）。
  */
 import type { ReferenceLink } from '../injectionKeys'
 

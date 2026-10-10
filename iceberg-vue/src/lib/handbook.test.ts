@@ -73,11 +73,11 @@ describe('segmentDesc（术语表描述强调解析）', () => {
     expect(plain('前==后')).toBe('前后')
   })
 
-  it('🔒 引号 / 书名号**不再**自动高亮（用户反馈：正文引号太常见，自动强调把整段染花）', () => {
+  it('🔒 引号 / 书名号不作强调定界符，原样输出', () => {
     const s = '俗称「鬼打墙」，见《山海经》与“民间传说”，另有『异闻』与‘讹传’'
     expect(segmentDesc(s)).toEqual([{ text: s, em: false }])
     expect(emText(s)).toBe('')
-    // 引号必须原样保留（不是定界符，也不该被吞掉）
+    // 引号原样保留，不被吞掉
     expect(plain(s)).toBe(s)
   })
 

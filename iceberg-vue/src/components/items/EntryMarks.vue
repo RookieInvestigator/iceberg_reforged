@@ -4,8 +4,7 @@
 // 数据源都是副表：警示与需补充来自 `extra.csv`（行的存在即该标记为真，`note` 是 hover 提示），
 // 社区贡献来自 `contributors.csv`（只给名字，**不带日期**）。没有标记就整行不渲染。
 //
-// 气泡一律用 components/ui/TipBubble.vue（与徽章释义同一个组件、同一套样式与展开路径），
-// 本组件不再自带任何 tooltip 样式。
+// 气泡一律用 components/ui/TipBubble.vue（与徽章释义同一个组件、同一套样式与展开路径）。
 import { computed, inject } from 'vue'
 import { CircleDashed, PenLine, TriangleAlert } from '@lucide/vue'
 import { useI18n } from '../../lib/useI18n'

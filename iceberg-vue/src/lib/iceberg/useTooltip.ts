@@ -8,13 +8,13 @@ interface TooltipOptions {
 }
 
 /**
- * 词条 Tooltip 控制器（codeq 拆分：原 ItemInteractivity 的悬浮提示职责）。
+ * 词条 Tooltip 控制器。
  * 200ms 悬停延迟、滚动/缩放阻止误触发、位置自适应（上/下 + 左/中/右 + 视口钳制）。
  *
- * 定位架构（2026-08-21 重做）：**body 级浮动层** —— ItemTooltip 以 floating 模式
- * Teleport 到 <body>，useTooltip 用视口坐标 + position:fixed + 8px 硬钳制定位。
- * tooltip 不再属于任何可裁剪祖先盒（tier 合成层 / content-visibility / capture-area
- * overflow / body clip）的后代，结构上不存在被截断的路径。
+ * 定位架构：**body 级浮动层** —— ItemTooltip 以 floating 模式 Teleport 到 <body>，
+ * useTooltip 用视口坐标 + position:fixed + 8px 硬钳制定位。因而不属于任何可裁剪
+ * 祖先盒（tier 合成层 / content-visibility / capture-area overflow / body clip），
+ * 结构上不存在被截断的路径。
  */
 export function useTooltip(opts: TooltipOptions) {
   const { t, dm, findItem } = opts

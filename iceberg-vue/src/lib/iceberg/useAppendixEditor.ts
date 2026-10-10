@@ -1,14 +1,14 @@
 /**
- * 副表编辑器的**编辑模型**（2026-10-09 从 AppendixEditView.vue 抽出来）。
+ * 副表编辑器的**编辑模型**。
  *
  * 视图只负责画，这里负责「数据长什么样、改一下落到哪张表」：
- *   · 载入五张副表（列名/键/越界判定都来自 lib/iceberg/appendix.ts，一处定义）；
+ *   · 载入六张副表（列名/键/越界判定都来自 lib/iceberg/appendix.ts，一处定义）；
  *   · 行级读写（增删改）与 dirty / 保存 / 越界上报；
  *   · 按区域分派的「所见即所得」写入口：标量字段 → overrides，分类 → categories，
  *     链接 → references，关联 → related，署名 → contributors。
  *
- * 之所以抽成 composable 而不是塞在组件里：这份状态要被「所见即所得」「原始行」「左栏列表」
- * 三块 UI 共用，塞在视图里就只能靠 props/emit 层层透传，正是上一版越写越乱的原因。
+ * 抽成 composable 是因为这份状态要被「所见即所得」「原始行」「左栏列表」三块 UI 共用，
+ * 塞在视图里只能靠 props/emit 层层透传。
  */
 import { computed, ref, type ComputedRef, type Ref } from 'vue'
 import raw from '../../data/iceberg.json'
@@ -156,11 +156,10 @@ export function useAppendixEditor(): AppendixEditor {
   const tables = APPENDIX_TABLES
   const defOf = (key: AppendixKey): AppendixTableDef => tables.find(t => t.key === key)!
 
-  // ── 载入五张副表（各文件原有的 BOM / 行尾在保存时沿用） ──
-  // 读文件走 lib/iceberg/appendix.ts 的 readAppendixRaw —— 它就在同一个目录，
-  // glob 路径已经是对的。**不要在这里再写一份 import.meta.glob**：相对路径是相对
-  // 「本文件」解析的，从 views/ 搬过来时路径没跟着改，glob 匹配到 0 个文件，
-  // 编辑器就显示成「所有副表都是空的」（更危险的是此时保存会把副表清空）。
+  // ── 载入六张副表（各文件原有的 BOM / 行尾在保存时沿用） ──
+  // 读文件走 lib/iceberg/appendix.ts 的 readAppendixRaw（其中 glob 路径相对该文件解析）。
+  // **不要在这里再写一份 import.meta.glob**：路径写错会匹配到 0 个文件，编辑器显示成
+  // 「所有副表都是空的」，更危险的是此时保存会把副表清空。
   const rawTables = readAppendixRaw()
   const stores = new Map<string, Store>()
   const fileBom = new Map<string, boolean>()
@@ -186,8 +185,7 @@ export function useAppendixEditor(): AppendixEditor {
   const saveError = ref('')
   /**
    * 本次会话里「点了＋添加」新建的行。保存时只丢这些且仍空白的行；
-   * 历史副表里的空值行（如 related.csv 里 source_id 有、target_id 空的 4 行）必须原样保留 ——
-   * 按「空不空」判会误删真实数据（2026-10-09 踩过）。
+   * 历史副表里的空值行（如 related.csv 里 source_id 有、target_id 空的 4 行）必须原样保留。
    */
   const freshRows = new WeakSet<Row>()
 

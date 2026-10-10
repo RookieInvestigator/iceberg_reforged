@@ -68,8 +68,8 @@ export function useFilterPipeline(allItems: RenderItem[], opts: PipelineOptions)
   }
 
   // Filter（F14：统一快照 + 单一调度器取消旧帧，最后一帧严格对应最新状态）
-  // 仅声明式路径：filterVisible/dimItems 由宿主视图（IndexNextView）注入，v-show / :class + v-memo
-  // 批量消费；层空/全空提示同属声明式（宿主模板渲染），此处不再触碰 DOM（双路径已剪除）。
+  // 声明式路径：filterVisible/dimItems 由宿主视图（IndexNextView）注入，v-show / :class + v-memo
+  // 批量消费；层空/全空提示也由宿主模板渲染，此处不触碰 DOM。
   // 单遍产出：matched + dim 集合 + 层可见数（tierVisibleCounts）一次遍历全量派生。
   let filterRaf = 0;
   watchEffect(() => {
@@ -116,8 +116,8 @@ export function useFilterPipeline(allItems: RenderItem[], opts: PipelineOptions)
     navIndex.value = buildNavIndex(docOrder.value, vis)
   })
 
-  // 已读/NEW 标记：**只对开关变化全量扫描**；单条已读由 ItemInteractivity.markRead 定向
-  // 翻转（O(1)），管线不再监听 readItems —— 每次开弹窗不再触发 1432 节点全量重扫。
+  // 已读/NEW 标记：**只对开关变化全量扫描**；单条已读由 V2Interactivity.markRead 定向翻转
+  // （O(1)），此处不监听 readItems（否则每次开弹窗都会触发全量重扫）。
   // 关闭开关时清理一次残留标记类，之后保持零扫描。
   let marksApplied = false
   function applyItemMarks() {

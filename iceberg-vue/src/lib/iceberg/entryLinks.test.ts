@@ -4,7 +4,7 @@ import { pickLinks, roleOf, type LinkRow } from './entryLinks'
 const row = (url: string, label = '', role?: 'main' | 'ref'): LinkRow => ({ url, label, role })
 
 describe('roleOf', () => {
-  it('缺省与未知值都视作 ref（旧文件无 role 列 → 行为不变）', () => {
+  it('缺省与未知值都视作 ref（无 role 列时行为不变）', () => {
     expect(roleOf(row('https://a'))).toBe('ref')
     expect(roleOf(row('https://a', '', undefined))).toBe('ref')
     expect(roleOf({ url: 'https://a', label: '', role: 'main' })).toBe('main')
@@ -19,7 +19,7 @@ describe('pickLinks', () => {
     expect(r.refs.map((x) => x.url)).toEqual(['https://ref1.example', 'https://ref2.example'])
   })
 
-  it('role=main 覆盖主链接 URL，且不再出现在参考链接里', () => {
+  it('role=main 覆盖主链接 URL，且不进参考链接', () => {
     const r = pickLinks('https://old.example', [row('https://new.example', '', 'main'), row('https://ref.example')])
     expect(r.main?.url).toBe('https://new.example')
     expect(r.refs.map((x) => x.url)).toEqual(['https://ref.example'])

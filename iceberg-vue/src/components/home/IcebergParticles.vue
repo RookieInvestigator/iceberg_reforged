@@ -97,7 +97,7 @@ function sampleGrid(img: HTMLImageElement): { x: number; y: number }[] {
   const out: { x: number; y: number }[] = []
   for (let by = 0; by < oh; by += block) {
     for (let bx = 0; bx < ow; bx += block) {
-      // 性能：直接读块中心单像素 alpha（省 4× 读操作，轮换时不再卡顿）
+      // 性能：直接读块中心单像素 alpha，省 4× 读操作
       if (d[(by * ow + bx) * 4 + 3] < 40) continue
       if (Math.random() < 0.24) continue // 稀释 24%
       out.push({

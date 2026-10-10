@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// V2EntryBody（/v2 专用）：桌面卡与移动抽屉的共用内容区（审计 A1）。
+// V2EntryBody：桌面卡与移动抽屉的共用内容区。
 // 标题 chrome 留在各自外壳（卡走 BaseModal 头、抽屉走标题按钮），此处从徽章行开始：
 // 徽章 → 描述 → 外链/参考 → 关联 → 评论 → sticky 常驻动作条。
 //
@@ -84,7 +84,7 @@ const extraCats = computed(() => extraBadges(props.item, categoryColors, default
 const tagList = computed(() => normalizeTags(props.item.tags))
 
 // 描述留白自适应：短描述（<=100 字，约 1-3 行）上下保底 32px 呼吸空间；
-// 长描述内容本身占空间，回归紧凑 16px。沿用 v1 原值，不改视觉。
+// 长描述内容本身占空间，收为紧凑 16px。
 const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2entry-desc--tight' : ''))
 </script>
 
@@ -168,9 +168,7 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
 
 <style scoped>
 /* ── 间距节奏 ──
- * 全部沿用 v1 原值，不在本次改动视觉：
  * 描述上下 32（长描述收为 16）；分区之间 12 / 6；动作条上 10；关联区落底 14（用 padding）。
- * 动作条恒为末块，统一吃掉原本散落在三个分区上的 -mb-4。
  * 注意：本容器是普通 block 流，相邻兄弟 margin 会折叠 —— 任何「加大间距」的改动
  * 若写在 margin-bottom 上都可能被折叠吃掉，需实测实得值。 */
 /* card：modal-body 顶 24 + header 底 16 = 40 偏松，首个块回抽贴回标题。
@@ -182,7 +180,7 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
 
 .v2entry-desc {
   margin: 32px 0;
-  /* 15px / 1.8 与 v1 一致：收进 5 阶梯会跳到 14 或 16，视觉变化过大，保留原值 */
+  /* 15px / 1.8 刻意不走 5 阶梯（收进去会跳到 14 或 16，视觉变化过大） */
   font-size: 15px;
   line-height: 1.8;
   white-space: pre-wrap;
@@ -193,7 +191,7 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
 .v2entry-desc--tight { margin: 16px 0; }
 .v2entry-desc--empty { color: var(--white-55); font-style: italic; }
 
-/* 链接区：外链与参考组竖向堆叠，间距由 gap 统一，不再散落 mt-* */
+/* 链接区：外链与参考组竖向堆叠，间距统一由 gap 给 */
 .v2entry-links {
   display: flex;
   flex-direction: column;
@@ -231,19 +229,16 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
 }
 /* 关联区落底留白：推荐词条紧贴动作条顶边显得拥挤。
    用 padding-bottom 而非 margin-bottom —— margin 会与 .v2entry-actions 的
-   margin-top:10px 折叠成 max()，加多少都吃掉大半（这是先前改到 12px 仍嫌紧的原因）。
+   margin-top:10px 折叠成 max()，加多少都吃掉大半。
    padding 不参与折叠，实得 = 14 + 10 = 24，比内部分隔线的 18（12 上边距 + 6 内边距）
    再拉开一档：动作条是常驻 chrome，与正文的分离应强于正文内部的分隔。 */
 .v2entry-sec--related { padding-bottom: 6px; }
 /* 相邻两分区（关联 → 评论）：评论展开时两区之间的留白由
    关联区落底 padding（6） + 上一区 margin-top 折叠（=0）= 6 决定，
-   与原 .mt-3 的余量相近，不另设重叠抑制 —— 评论本身就是大块视觉。 */
-/* 相邻两分区（关联 → 评论）：评论展开时两区之间的留白由
-   关联区落底 padding（6） + 上一区 margin-top 折叠（=0）= 6 决定，
-   与原 .mt-3 的余量相近，不另设重叠抑制 —— 评论本身就是大块视觉。 */
+   不另设重叠抑制 —— 评论本身就是大块视觉。 */
 
 /* A3：探索轨迹面包屑 —— 刻意做弱：细字重（300）、低透明度、不抢正文。
-   层次只靠透明度区分，不靠字重（原 700 过重）；不再显示「已下潜 N 跳」文字标签。
+   层次只靠透明度区分，不靠字重（700 过重）。
    分隔符与省略号是纯装饰，压到 --white-15/20；历史项 --white-30 为可点最低可辨档；
    当前项 --white-55 只比历史亮一档，hover 才升到 --white-70。 */
 .trail {
@@ -271,9 +266,7 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-/* ── 末块回收：动作条已外迁到滚动区外的底栏，原「-mb-4 压缩末尾留白」的职责
- * 现在转给这里的「末尾块回收」：把 .modal-body 的 32px 底内边距减到 16px，
- * 与 v1 原版对齐（v1 在末尾分区上写 -mb-4）。
+/* ── 末块回收：动作条在滚动区外的底栏，末块把 .modal-body 的 32px 底内边距减到 16px。
  * 用 .v2entry-links / .v2entry-sec 显式列出而不写 :last-child —— 描述本身
  * 的 32px 上下呼吸应当保留，不参与回收。 */
 .v2entry-body--card > .v2entry-links:last-child,

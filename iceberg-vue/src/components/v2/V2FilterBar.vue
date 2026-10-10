@@ -1,9 +1,9 @@
 <script setup lang="ts">
-// V2FilterBar（/v2 专用）：搜索 + 筛选 + 层级指示三合一 morphing 导航。
+// V2FilterBar：搜索 + 筛选 + 层级指示三合一 morphing 导航。
 // 顶部全宽透明大条（h-16），滚过 160px 收成
 // 居中浮动小丸（毛玻璃 + ring + 阴影），过渡统一 var(--ease-emphatic) 700ms。
-// 层级指示器（TierNav 逻辑内迁：scroll-spy 当前层 + 下拉跳转）并入右侧，
-// v2 不再挂载 TierNav。功能与 v1 侧边栏 1:1（防抖/右键隐藏/AND-OR/特殊/收藏/恢复/摘要/清除）。
+// 层级指示器（scroll-spy 当前层 + 下拉跳转）并入右侧。
+// 筛选能力：防抖 / 右键隐藏 / AND-OR / 特殊 / 收藏 / 恢复 / 摘要 / 清除。
 import { computed, inject, onMounted, onUnmounted } from 'vue'
 import { useStore } from '@nanostores/vue'
 import {
@@ -52,7 +52,7 @@ const visibleText = computed(() => {
   return `${hit} / ${total.value}`
 })
 
-// C3：滚动帧/显隐/面板开关/层级跳转见 useV2NavVisibility，搜索速查见 useV2SearchSuggest。
+// 滚动帧/显隐/面板开关/层级跳转见 useV2NavVisibility，搜索速查见 useV2SearchSuggest。
 // 本组件只保留筛选域（分类/标签/特殊/收藏）+ 召唤入口 + 模板。
 const {
   suggestOpen, suggestIdx, suggestRows, searchInputRef,
@@ -69,9 +69,7 @@ const curTierText = computed(() => {
 })
 const tierItemText = (name: string) => tierDisplayName(name)
 defineExpose({ togglePanel })
-// （滚动帧状态机已迁入 useV2NavVisibility，本组件只消费其返回的状态与函数）
 
-// （搜索输入/速查下拉已迁入 useV2SearchSuggest）
 // 召唤语义：展开面板 + 立刻解除 auto-hide + 聚焦。
 // barVisible 只在滚动/鼠标帧里重算，程序化 focus() 不会触发重算，
 // 必须这里直接置 true，否则焦点落在透明顶栏里（"按了没反应"）。
@@ -96,10 +94,6 @@ function onGlobalKey(e: KeyboardEvent) {
   }
 }
 
-// （Fuse 速查索引/下拉导航已迁入 useV2SearchSuggest）
-
-// （吸顶/层级指示/跳转已迁入 useV2NavVisibility）
-// （外部点击关闭已迁入 useV2NavVisibility）
 onMounted(() => {
   document.addEventListener('keydown', onGlobalKey)
 })
@@ -111,7 +105,7 @@ function clearAll() {
   searchQuery.set(''); activeCategories.set([]); activeTags.set([])
   hiddenCategories.set([]); hiddenTags.set([]); specialFilter.set('all'); favFilter.set(false)
 }
-// 特殊筛选四项：值与 i18n key 配对，模板 v-for 渲染（原四组手写按钮）
+// 特殊筛选四项：值与 i18n key 配对，模板 v-for 渲染
 // 右键隐藏直接显示在原位（删除线 + 变暗，点即恢复），无需翻找恢复区
 function pillCls(hidden: boolean, active: boolean): string {
   if (hidden) return 'off'
@@ -121,8 +115,7 @@ const catPillCls = (cat: string) =>
   pillCls(hiddenCats.value.includes(cat), activeCats.value.length === 0 || activeCats.value.includes(cat))
 const tagPillCls = (emoji: string) =>
   pillCls(hiddenT.value.includes(emoji), activeT.value.length === 0 || activeT.value.includes(emoji))
-// 用对象而不是元组：`labelKey: '…'` 是 i18n 死 key 守卫认得的引用形式（元组写法它看不见，
-// v1 归档后这四个 key 就曾被误判成死 key）
+// 用对象而不是元组：`labelKey: '…'` 是 i18n 死 key 守卫认得的引用形式（元组写法它看不见）
 const specialPills: Array<{ filter: string; labelKey: string }> = [
   { filter: 'hasLink', labelKey: 'hasLink' },
   { filter: 'hasDesc', labelKey: 'hasDesc' },
@@ -414,7 +407,7 @@ function toggleSpecial(key: string) {
 @media (max-width: 640px) {
   .v2bar-group-sm { display: block; }
 }
-/* F10 平板：吸顶小丸不再定宽 52rem（768px 下几乎满宽），改流式边距 */
+/* F10 平板：吸顶小丸改流式边距（定宽 52rem 在 768px 下几乎满宽） */
 @media (max-width: 820px) {
   .stuck .v2nav { max-width: calc(100vw - 24px); }
 }

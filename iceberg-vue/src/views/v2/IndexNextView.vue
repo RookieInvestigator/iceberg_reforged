@@ -2,9 +2,7 @@
 // IndexNext（`/`）：主冰山图 —— v2 全套专用组件
 // （V2Header / V2FilterBar / V2Wall / V2TierChapter / V2Interactivity /
 // V2EntryCard / V2Sheet / V2Tooltip）。
-// 数据 provide / 深链 / 入场 / 背景沿用原 v1 模式；过滤管线与搜索 Worker 复用 lib 层。
-// v1（IndexView 及其 IcebergApp / ItemInteractivity / EntryDetailCardNext / MobileSheet 等）
-// 已于 2026-10-09 归档（data/archive/legacy-v1-2026-10/），本文件是唯一主图实现。
+// 数据 provide / 深链 / 入场 / 背景在本视图；过滤管线与搜索 Worker 复用 lib 层。
 import { shallowRef, ref, computed, onMounted, provide, watch, watchEffect, onUnmounted } from 'vue'
 import OnThisDayModal from '../../components/calendar/OnThisDayModal.vue'
 import { useRoute } from 'vue-router'
@@ -46,8 +44,8 @@ const facetCounts: FacetCounts = (() => {
 })()
 provide(FACET_COUNTS_KEY, facetCounts)
 
-// ═══ v2 安全网：任何用户交互 / 筛选 / 深链 / 弹窗 → V2Wall 全量挂载 ═══
-// （observer 常驻方案已因滚动不连贯回退；现用 wallMount 渐进挂载，见 V2Wall）
+// ═══ 安全网：任何用户交互 / 筛选 / 深链 / 弹窗 → V2Wall 全量挂载 ═══
+// （渐进挂载见 V2Wall 的 wallMount；此处只负责触发 flush）
 const wallRef = ref<{ flushWall: () => void } | null>(null)
 let entranceDoneTimer = 0
 function flushWall() { wallRef.value?.flushWall() }
@@ -68,7 +66,7 @@ function unbindWallListeners() {
   document.removeEventListener('open-item-modal', onWallFlushSignal)
 }
 
-// 字号设置 → 词条字号 CSS 变量（v1 由 IcebergApp 承担，v2 无侧边栏，收归本视图）
+// 字号设置 → 词条字号 CSS 变量（v2 无侧边栏，收归本视图）
 const FONT_SCALE: Record<string, string> = { xs: '0.75rem', sm: '0.875rem', md: '1rem', lg: '1.125rem', xl: '1.25rem' }
 const fsVal = useStore(fontSize)
 watchEffect(() => {
@@ -76,7 +74,7 @@ watchEffect(() => {
   document.documentElement.style.setProperty('--item-font-size', FONT_SCALE[fsVal.value] || '1rem')
 })
 
-// 顶栏 + 随机入口接线（v1 由 IcebergApp 承担）
+// 顶栏 + 随机入口接线
 const filterBarRef = ref<{ togglePanel: (source?: 'fab' | 'bar') => void } | null>(null)
 const interactivityRef = ref<{ showRandom: () => void } | null>(null)
 function onRandom() { interactivityRef.value?.showRandom() }
@@ -84,7 +82,7 @@ function onToggleFilter() { filterBarRef.value?.togglePanel('fab') }
 
 const buildDate = formatUnixDate(data.generatedAt)
 
-// 公告：解析 / schema 校验 / 排序 / 已读判定统一收敛在 lib/bulletins（v1 同源），
+// 公告：解析 / schema 校验 / 排序 / 已读判定统一收敛在 lib/bulletins，
 // 顶部公告条（AppShell）与公告板弹窗共用同一份数据，本视图只负责透传给跋。
 const bulletins = loadBulletins()
 
@@ -97,16 +95,15 @@ const scatter = useStore(scatterMode)
 const showOnThisDay = ref(false)
 provide(OPEN_ON_THIS_DAY_KEY, () => { showOnThisDay.value = true })
 
-// 声明式过滤：null=全部显示，Set<string>=仅这些ID可见（替代命令式DOM操作）
+// 声明式过滤：null=全部显示，Set<string>=仅这些 ID 可见
 const filterVisible = shallowRef(null as Set<string> | null)
 provide(FILTER_VISIBLE_KEY, filterVisible)
 // perf：dim 模式变暗集合（null=无变暗），模板 :class + v-memo 响应式消费
 const dimItems = shallowRef(null as Set<string> | null)
 provide(DIM_ITEMS_KEY, dimItems)
 
-// 层空/全空提示（声明式，替代原 useFilterPipeline 命令式 createElement 路径；
-//   仅 hide 模式可见——dim 模式全部词条仍在 DOM，提示会造成误读）
-// 层可见数由过滤管线单遍产出（wallCounts——不再单独扫 1432 词条）
+// 层空/全空提示（声明式；仅 hide 模式可见——dim 模式全部词条仍在 DOM，提示会造成误读）。
+// 层可见数由过滤管线单遍产出（wallCounts）
 const { t } = useI18n()
 
 // F30：旧 ID → 新 ID 重定向表（分享 hash / 深链 / 收藏旧 id 解析用）
@@ -144,7 +141,7 @@ onMounted(() => {
 
   // 入场动画全部结束（最晚 ~0.3 + 7×0.08 + 0.5 ≈ 1.36s）后移除 content-enter：
   // 释放 fill-mode:both 动画对 .iceberg-tier 的变换层持有（合成层+估算盒会裁剪 tooltip，
-  // 详见 index.css content-enter 注释；曾用 will-change 提升合成层 → 引入裁剪回归）
+  // 详见 index.css content-enter 注释）；不要改用 will-change 提升合成层，会引入裁剪回归
   entranceDoneTimer = window.setTimeout(() => content.classList.remove('content-enter'), 1500)
 
   // 视口窗口挂载：IO 接管前首屏 2 层已就绪（useTierWindow 初始值）；深链/弹窗定向需要完整墙 → 直接全量
@@ -169,7 +166,7 @@ onUnmounted(() => {
       <V2Header :buildDate="buildDate" :entryCount="allItems.length" :introText="data.introText" />
       <V2FilterBar ref="filterBarRef" />
 
-      <!-- F5：跳过词条墙（键盘用户免 1400+ 次 Tab；v1 同状，已记为已知限制） -->
+      <!-- F5：跳过词条墙（键盘用户免 1400+ 次 Tab） -->
       <a href="#v2-colophon" class="v2-skip">{{ t('skipWall') }}</a>
       <V2Wall v-if="!scatter" :data="data" ref="wallRef" />
       <ScatterField v-else :items="allItemsRaw" />

@@ -1,12 +1,11 @@
 /**
  * 反馈审核工作台纯逻辑（DEV 工具，不进生产包）。
  *
- * 背景：`entry_feedback` 的审阅原本只写在 docs/FEEDBACK_WORKFLOW.md 里（在 Supabase 后台逐条改
- * status），量一上来就不可行。工作台把「看 diff → 决定采纳/驳回 → 导出决定」搬进本地页面，
- * 决定落 `data/feedback/decisions.json`（data/ 不入库），再由 scripts/apply_feedback.py
- * 按决定写入 appendix 两个副表。
+ * 工作台把「看 diff → 决定采纳/驳回 → 导出决定」搬进本地页面，决定落
+ * `data/feedback/decisions.json`（data/ 不入库），再由 scripts/apply_feedback.py
+ * 按决定写入 appendix 副表。
  *
- * 分工刻意保持：**页面只记录人的判断，不写副表**；写盘由脚本做（可 dry-run、可审计、可回滚）。
+ * 分工：**页面只记录人的判断，不写副表**；写盘由脚本做（可 dry-run、可审计、可回滚）。
  */
 
 import { normalizeTags } from './tags'
@@ -63,7 +62,7 @@ export type RowKind = 'link' | 'desc' | 'title' | 'meta' | 'mixed'
 
 const DECISIONS_KEY = 'iceberg-feedback-review-decisions'
 
-// 来源站点识别统一在 lib/sourceLabel.ts（词条链接与参考链接共用同一套），此处不再重复维护域名表
+// 来源站点识别统一在 lib/sourceLabel.ts（词条链接与参考链接共用同一套），此处不重复维护域名表
 
 /** changes 可能是对象（REST）或 JSON 字符串（CSV 导出），其它一律视为空 */
 function parseChanges(v: unknown): Record<string, string> {
@@ -162,14 +161,12 @@ export interface ReviewFilter {
 }
 
 /**
- * 工作台列表筛选（纯函数，2026-10-09 从视图里提出来）。
+ * 工作台列表筛选（纯函数）。顺序固定：**库状态 → 类型 → 未决 → 关键词**，四步互不干扰。
  *
- * 顺序固定：**库状态 → 类型 → 未决 → 关键词**，四步互不干扰。
- * 「已审」有两个口径，故意分成两个开关而不是合成一个：
- *   · `scope` 走库里的 `status`（open / accepted / rejected）——回填之后 open 里查不到，
- *     想看已审就得切 scope；Supabase 模式下它同时是查询过滤，CSV 离线模式下就靠这里兜；
- *   · `undecidedOnly` 走本地 `decisions.json` ——「我在这台机器上决定过没有」。
- * 两者会不一致（比如线上已 accepted，本地 decisions 没有），合成一个必然有一边说不清。
+ * 「已审」有两个口径，故意分成两个开关：`scope` 走库里的 `status`（open / accepted /
+ * rejected，Supabase 模式下同时是查询过滤，CSV 离线模式就靠这里兜）；`undecidedOnly`
+ * 走本地 `decisions.json`（「我在这台机器上决定过没有」）。两者会不一致（线上已
+ * accepted、本地没决定过），合成一个必然有一边说不清。
  */
 export function filterReviewRows(
   rows: FeedbackRow[],
@@ -280,7 +277,7 @@ export async function saveDecisionsToDisk(m: DecisionMap): Promise<boolean> {
   }
 }
 
-/** 落盘命令（CLI 等价路径，文档/脚本用；工作台里已改为一键调用 dev 中间件） */
+/** 落盘命令（CLI 等价路径，文档/脚本用；工作台走 dev 中间件） */
 export const APPLY_COMMAND =
   'python scripts/apply_feedback.py --from-api --decisions data/feedback/decisions.json --write'
 

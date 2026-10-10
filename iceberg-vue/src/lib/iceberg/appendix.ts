@@ -1,34 +1,24 @@
 /**
- * 副表（`src/data/appendix/*.csv`）的**关系定义与唯一解析入口**（2026-10-09 重组）。
+ * 副表（`src/data/appendix/*.csv`）的**关系定义与唯一解析入口**。
  *
  * ## 一张表管一个区域，同一区域不允许两张表都能写
  *
  * | 区域       | 表               | 列                              | 键                     | 语义 |
  * | ---------- | ---------------- | ------------------------------- | ---------------------- | ---- |
- * | 标量字段   | `overrides.csv`  | `item_id,field,value,by,at`     | (item_id,field)        | `field ∈ {title,desc,tags}`，新值覆盖旧值 |
- * | 分类       | `categories.csv` | `item_id,category,role,by,at`   | (item_id,category)     | `role=main` 覆盖主分类（每词条至多一条）；`role=extra`（缺省）追加副分类（OR 叠加） |
+ * | 标量字段   | `overrides.csv`  | `item_id,field,value`           | (item_id,field)        | `field ∈ {title,desc,tags}`，新值覆盖旧值 |
+ * | 分类       | `categories.csv` | `item_id,category,role`         | (item_id,category)     | `role=main` 覆盖主分类（每词条至多一条）；`role=extra`（缺省）追加副分类（OR 叠加） |
  * | 链接       | `references.csv` | `source_id,label,url,role`      | (source_id,url,role)   | `role=main` 覆盖主链接；`role=ref`（缺省）附加参考链接，见 entryLinks.ts |
  * | 关联词条   | `related.csv`    | `source_id,target_id`           | (source_id,target_id)  | 双向索引，见下方 parse |
+ * | 署名       | `contributors.csv` | `item_id,by,at`               | (item_id,by)           | 谁贡献过这个词条；`at` 只存档不展示 |
+ * | 标记       | `extra.csv`      | `item_id,flag,note`             | (item_id,flag)         | 行的存在即标记为真；`flag ∈ {warn,need}`，`note` 是 tooltip 文案 |
  *
- * ### 为什么定这条规矩
- *
- * 重组前「分类」这块有两个入口：`overrides.csv` 的 `field=category` 改主分类，`categories.csv`
- * 加副分类。两张表都能写同一块数据，于是渲染层不得不再打一个补丁（改主分类时手动把
- * `categories[0]` 一起换掉，避免主/副分类打架）—— 那是**症状**，病根是归属没定。
- * 现在：分类只归 `categories.csv`（主/副由 `role` 表达），链接只归 `references.csv`，
- * 关联只归 `related.csv`，通用表只收「没有专表」的标量字段。
- *
- * ### 越界不静默
+ * ## 越界不静默
  *
  * `category` / `link` / `related` 是**保留字段**：写进 `overrides.csv` 不会生效（渲染层没有
- * 对应语义）。以前这种行只会静默躺着（页面不变、也没人提示），现在 parse 阶段就记进
- * `violations`，由调用方 `console.warn`、由构建门断言为空、由副表编辑器拒绝保存。
+ * 对应语义），parse 阶段记进 `violations`，由调用方 `console.warn`、由构建门断言为空、
+ * 由副表编辑器拒绝保存。
  *
- * ## 为什么解析集中在这里
- *
- * 同一份解析逻辑曾在 v1（IndexView）、v2（useIcebergDataSource）、副表编辑器里各写一遍 ——
- * 于是「链接 role」只在 v2 生效过、「分类 role」只在一处生效过。现在三处共用本模块：
- * 表格定义（列名/键/区域）也在这里，编辑器直接拿它建表单，加列不会再漏改一处。
+ * 解析与表格定义（列名/键/区域）都集中在本模块：编辑器直接拿它建表单，加列不会漏改一处。
  */
 import { isSafeHttpUrl } from '../data'
 import { parseCSV } from '../csv'
@@ -115,7 +105,7 @@ export const APPENDIX_TABLES: readonly AppendixTableDef[] = [
 
 /**
  * `extra.csv` 的 flag 取值（**行的存在即该标记为真**，删行即取消）。
- * 「目前可以新增警示和需补充两个布尔」——以后加标记只在这里加一项 + 补三语文案。
+ * 以后加标记只在这里加一项 + 补三语文案。
  */
 export const EXTRA_FLAGS = ['warn', 'need'] as const
 export type ExtraFlag = (typeof EXTRA_FLAGS)[number]
@@ -185,7 +175,7 @@ export interface AppendixData {
   categories: Map<string, CategoryRecord[]>
   /** source_id → 链接记录（role=main / ref） */
   references: Map<string, ReferenceRecord[]>
-  /** 双向关联：source → target 与 target → source 都存在（与原实现一致） */
+  /** 双向关联：source → target 与 target → source 都存在 */
   related: Map<string, string[]>
   /** item_id → 署名记录（保序去重 (item_id,by)，同 by 取较晚的 at） */
   contributors: Map<string, ContributorRecord[]>
@@ -252,7 +242,7 @@ export function parseAppendix(raw: AppendixRaw): AppendixData {
     const category = (row.category || '').trim()
     if (!id || !category) continue
     const rawRole = (row.role || '').trim().toLowerCase()
-    // 缺省 = extra：旧文件（无 role 列）语义不变，全是「追加副分类」
+    // 缺省 = extra（无 role 列时一律按「追加副分类」）
     const role: CategoryRole = rawRole === 'main' ? 'main' : 'extra'
     if (rawRole && rawRole !== 'main' && rawRole !== 'extra') {
       violations.add(`categories.csv:无法识别的 role「${rawRole}」（只认 main / extra）`)
@@ -358,9 +348,8 @@ export function isEmptyAppendixRow(def: AppendixTableDef, row: Record<string, st
 /**
  * 保存时该不该丢这一行：**只有「本次新建、且仍然空白」的行才丢**。
  *
- * ⚠️ 绝不能只看「空不空」：历史副表里真的有「source_id 有、target_id 空」的行
- * （related.csv 里就有 4 条），按空值判会把它们当垃圾行删掉 —— 2026-10-09 踩过，
- * 用户一次保存就少了 4 行（从 git 恢复）。所以「新建」这件事必须由调用方显式告知。
+ * ⚠️ 绝不能只看「空不空」：历史副表里确实存在「source_id 有、target_id 空」的行
+ * （related.csv 里有 4 条），按空值判会把它们当垃圾行删掉。所以「新建」必须由调用方显式告知。
  */
 export function shouldDropOnSave(
   def: AppendixTableDef,
@@ -409,8 +398,7 @@ export function hasBom(raw: string): boolean {
 }
 
 /**
- * 署名文案（图标 tooltip）：**只给名字，不带日期**（2026-10-09 用户要求 —— 日期是存档信息，
- * 读者不需要）。多人时取前两位 + 「等 N 人」。
+ * 署名文案（图标 tooltip）：**只给名字，不带日期**（`at` 仅存档）。多人时取前两位 + 「等 N 人」。
  */
 export function contributorLabel(rows: ContributorRecord[] | undefined): string {
   if (!rows?.length) return ''

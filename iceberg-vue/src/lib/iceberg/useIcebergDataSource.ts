@@ -22,9 +22,8 @@ import {
 } from '../injectionKeys'
 
 /**
- * 冰山图数据源（审计 A6.2：IndexNextView 数据段上提）。
- * normalizeData + 六张副表的解析/装配 + 全套 provide，一处持有。
- * 主图（IndexNextView）唯一数据入口 —— v1 于 2026-10-09 归档后不再有第二个消费方。
+ * 冰山图数据源：normalizeData + 六张副表的解析/装配 + 全套 provide，一处持有。
+ * 主图（IndexNextView）唯一数据入口。
  *
  * 副表解析（列名/键/越界判定）统一走 lib/iceberg/appendix.ts，装配按区域分派：
  *   标量字段 → overrides.applyOverrides；分类 → extraCategories.applyCategories；

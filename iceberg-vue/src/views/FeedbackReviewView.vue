@@ -1,9 +1,7 @@
 <script setup lang="ts">
 // FeedbackReviewView：反馈审核工作台（DEV 专用，路由只在 import.meta.env.DEV 注册）。
 //
-// 为什么有它：entry_feedback 的审阅原本写在 docs/FEEDBACK_WORKFLOW.md 里 —— 在 Supabase 后台
-// 逐条改 status。反馈量一上来就不可行（当前积压 189 条）。工作台把「看当前值 vs 建议值 →
-// 决定采纳/驳回/待定」搬进本地页面：
+// 把「看当前值 vs 建议值 → 决定采纳/驳回/待定」搬进本地页面：
 //   · 数据源：Supabase REST（anon 只读，RLS 允许 SELECT）或离线导入 Supabase 导出的 CSV
 //   · 决定：localStorage + data/feedback/decisions.json（dev 中间件，data/ 不入库）
 //   · 落盘：**页面不写副表**，只导出决定 + 给出 CLI 命令，写副表由 apply_feedback.py 做（可 dry-run）
@@ -21,7 +19,7 @@ import {
   type ReviewKind, type ReviewScope,
 } from '../lib/feedbackReview'
 
-// 当前词条数据（与 AppendixEditView 同法：DEV 视图可吃完整主数据）
+// 当前词条数据（DEV 视图可直接吃完整主数据）
 type ReviewItem = IcebergItem & { tier: string }
 const data = normalizeData(raw)
 const items: ReviewItem[] = Object.entries(data.tiers).flatMap(([tier, list]) =>
@@ -53,7 +51,7 @@ const activeIndex = ref(0)
 /** 拉取范围：直接作为 Supabase 查询的 status 过滤（回填之后 open 里就查不到已审条目了，需要能切过去回看） */
 const fetchScope = ref<ReviewScope>('open')
 const kindFilter = ref<ReviewKind>('all')
-// 默认只看未决：已决定的（含待定）不再混在列表里 —— 否则「审过的还在」会让人以为决定没保存。
+// 默认只看未决：已决定的（含待定）不混在列表里 —— 否则「审过的还在」会让人以为决定没保存。
 // 真正的持久化在 localStorage + data/feedback/decisions.json（刷新即恢复），这里只是显示口径。
 const undecidedOnly = ref(true)
 const query = ref('')

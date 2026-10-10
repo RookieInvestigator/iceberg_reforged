@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// V2RelatedLinks（/v2 专用）：v1 EntryRelatedLinks 原件冻结，新建 V2 版（审计 A9）。
-// 差异：删 variant 双分支（形态交给容器 CSS，见下方 .v2rel--card / .v2rel--sheet）；
+// V2RelatedLinks：关联词条区。形态交给容器 CSS（见下方 .v2rel--card / .v2rel--sheet）；
 // navigate 携带 from（来源词条 id），供 A3 探索轨迹记录「从哪跳来」。
 import { computed } from 'vue'
 import { useI18n } from '../../lib/useI18n'

@@ -206,8 +206,7 @@ describe('loadBulletins（站内真实公告）', () => {
     expect([...dates].sort((a, b) => b.localeCompare(a))).toEqual(dates)
   })
 
-  // 2026-10-08：001–006（开发进度/已知问题/移动端 WIP/古籍尝鲜/浏览器建议/CF 部署）全部标
-  // `hidden: true` 下线，站内只留在架的欢迎公告。此断言同时是 hidden 机制的实地守卫 ——
+  // 站内只留在架的欢迎公告；此断言也是 hidden 机制的实地守卫 ——
   // 任何一条旧公告因 frontmatter 拼写（如 `Hidden:`）而漏出，这里立刻失败。
   it('旧公告已全部隐藏，在架只剩欢迎公告', () => {
     expect(loadBulletins().map((b) => b.id)).toEqual(['007-welcome'])

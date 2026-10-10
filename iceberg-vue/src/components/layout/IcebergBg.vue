@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
  * IcebergBg —— 冰山图页面背景（bgMode 分发）。
- * 'static'（冰山）/'black'：纯静态 SVG 场景（2026-08-19 取消全部动态，
- * 云层/波动/光晕动画已移除；black 模式由宿主视图（IndexNextView）的 v-if 整体卸载）；
+ * 'static'（冰山）/'black'：纯静态 SVG 场景（页面无动画；
+ * black 模式由宿主视图（IndexNextView）的 v-if 整体卸载）；
  * 'liquid'：挂 LiquidBg（WebGL 液态渐变 + 滚动沉海）。
  * bgMode 来自 settingsStore 的 storedAtom（legacy 'dynamic' 由设置面板归一为 static）。
  */
@@ -67,7 +67,7 @@ const mode = useStore(bgMode)
           <!-- 连续底形消除多边形接缝；水面固定在 y=30，与既有波浪层精确衔接。 -->
           <path d="M8 30 15 26 22 23 29 16 35 18 43 10 49 7 56 13 62 11 69 19 77 21 84 27 92 30 95 44 91 59 83 72 73 82 61 91 50 96 37 89 25 80 15 68 8 51Z" fill="url(#iceberg-underwater)" style="--fc:#3e96c2"/>
 
-          <!-- 水上：非对称双峰与错落山脊，避免旧版规则三角形观感。
+          <!-- 水上：非对称双峰与错落山脊，避免规则的三角形观感。
                水面线（y≈30）为微弱倾斜折线（±0.2 打破平齐、几乎水平）：
                8,30 16,29.8 24,30.2 31,30 36,30.2 41,30 46,29.8 51,30 54,30.2 58,30
                62,29.8 67,30 67.5,30.2 68,30 76,29.8 84,30.2 92,30 ——
@@ -122,7 +122,7 @@ const mode = useStore(bgMode)
 
 <style scoped>
 /* 填充面同色描边：覆盖半透明填充在共享边上的抗锯齿混合线（"缝隙"观感）。
-   冰山 svg 的直接子 path 均为填充面（defs 不匹配；冰裂脊线已删除）。 */
+   冰山 svg 的直接子 path 均为填充面（defs 不匹配，选择器不会误伤）。 */
 .bg-iceberg svg > path {
   stroke: var(--fc, currentColor);
   stroke-opacity: 1;

@@ -114,7 +114,7 @@ vi.mock('./supabase', () => ({
   supabase: {
     auth: { getUser: () => Promise.resolve({ data: { user: { id: 'u1' } } }) },
     from: (table: string) => (table === 'comments' ? builder(commentsResult) : interactionsFake()),
-    // P0-审计：interaction_counts RPC —— 从 iRows 分组聚合计数（匿名路径）
+    // interaction_counts RPC —— 从 iRows 分组聚合计数（匿名路径）
     rpc: (fn: string, args?: Record<string, unknown>) => {
       calls.push(['rpc', fn, JSON.stringify(args || {})])
       if (fn === 'interaction_counts') {
@@ -149,12 +149,12 @@ describe('fetchComments 点赞聚合（400 回归）', () => {
     expect(rows[0].like_count).toBe(2)
   })
 
-  it('点赞聚合走 interaction_counts RPC（P0-审计：interactions_select 已收紧）', async () => {
+  it('点赞聚合走 interaction_counts RPC（interactions_select 只允许读本人行）', async () => {
     await fetchComments('item-x', undefined, { offset: 0, limit: 50 })
     expect(calls.some(c => c[0] === 'rpc' && c[1] === 'interaction_counts')).toBe(true)
   })
 
-  it('不再使用不带引号的 in 方式（in.(5) 是 400 根因）', async () => {
+  it('不带引号的 in 方式会 400（in.(5) 是根因）', async () => {
     await fetchComments('item-x', undefined, { offset: 0, limit: 50 })
     expect(calls).not.toContainEqual(['in', 'target_id', '5'])
   })

@@ -1,8 +1,7 @@
 <script setup>
-// V2Tooltip（/v2 专用）：ItemTooltip 的逻辑逐行复刻（teleport 时序、fade 门控），
-// 只换呈现：分类眉题 + 描述 + 发丝线元信息，与 v2 排印语言对齐。
+// V2Tooltip：词条悬停卡片 —— 分类眉题 + 描述 + 发丝线元信息。
 // 定位/尺寸由 useTooltip 内联写入，样式只管字与间距；.tooltip-box 的定位与
-// 显示状态机（.show / .floating）沿用 index.css 全局规则。
+// 显示状态机（.show / .floating）走 index.css 全局规则。
 import { computed, ref } from 'vue';
 import { useI18n } from '../../lib/useI18n';
 import { useFadeInOnShow } from '../../lib/iceberg/useFadeInOnShow';
@@ -13,7 +12,7 @@ const emit = defineEmits(['enter', 'leave']);
 const { t } = useI18n();
 
 // 仅纯白（都市传说・超自然事件・超常经历 #FFFFFF）色点加黑边，其余纯色圆不动。
-// 该特判依赖浅色表面（白底）：若 tooltip 表面改深色需反转（见审计 S1）。
+// 该特判依赖浅色表面（白底）：若 tooltip 表面改深色需反转。
 const dotStyle = computed(() => {
   const c = props.color || '#fff';
   return c.toLowerCase() === '#ffffff'

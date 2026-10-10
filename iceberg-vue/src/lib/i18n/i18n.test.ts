@@ -9,8 +9,7 @@ import ja from './ja'
 /**
  * i18n 三语对齐 + 死 key 守卫。
  *
- * 背景：2026-08-30 清过 66 条死词条，2026-09-06 又发现 `loading` / `noLink`
- * 在零引用的情况下存活——人工清理不可持续，改由测试锁住：
+ * 死 key 与三语缺漏靠测试锁住（人工清理不可持续）：
  * 1. en/ja 的 key 集合必须与 zh 完全一致（无缺失、无多余）；
  * 2. 每个 key 都必须被源码引用：t('key') 字面量、`labelKey` / `descKey`
  *    间接引用，或 `font*` / `sort*` 动态拼接前缀（SettingsPanel 的 t('font'+…)）。

@@ -22,14 +22,13 @@
   --color-surface-border: #333333;
   --color-text-primary: #ffffff;
   /* 阅读表面（reading surface）令牌：tooltip 白底黑字 21:1，专供久读载体；
-   * 与操控层毛玻璃（--v2-surface）分工，勿当成「不一致」误改（见审计 S1） */
+   * 与操控层毛玻璃（--v2-surface）分工，勿当成「不一致」误改 */
   --color-tooltip-bg: #ffffff;
   --color-tooltip-text: #000000;
   --color-tooltip-meta: #888888;
   --color-tooltip-border: #eeeeee;
-  /* 气泡 tooltip（徽章释义 / 标记备注共用一套，2026-10-09）：**与所处表面反相** ——
-   * 深底用浅气泡、浅底用深气泡（.surface-light 里翻面）。
-   * 原来各写各的：徽章 tip 写死白底，标记 tip 写死深底；浅色阅读表面上白泡=隐形。 */
+  /* 气泡 tooltip（徽章释义 / 标记备注共用一套）：**与所处表面反相** ——
+   * 深底用浅气泡、浅底用深气泡（.surface-light 里翻面）。 */
   --tip-bg: #f5f6f8;
   --tip-fg: #14161a;
   --tip-border: rgba(10, 12, 16, 0.16);

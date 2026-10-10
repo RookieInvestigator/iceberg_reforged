@@ -84,8 +84,8 @@ describe('ScatterField（无层级模式）', () => {
   })
 })
 
-// 多分类渐变（2026-09-20 起为 background-clip:text + --grad-stops，
-// 不再是逐字纯色 span：逐字方案在短标题上退化成跳变，且打断 kerning）
+// 多分类渐变：background-clip:text + --grad-stops
+// （逐字纯色 span 会在短标题上退化成跳变，且打断 kerning）
 describe('多分类渐变', () => {
   const multi = [
     { ...items[0], id: 'm1', title: '黑弥撒', gradStops: '#FF3333, #CB8BFB, #85D6FF' },

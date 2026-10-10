@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// EntrySearchButton：词条弹窗标题右侧的外搜按钮（四处复用：
-// v2 桌面卡 header-actions、v2 抽屉标题行、v1 桌面弹窗 header-actions、v1 移动抽屉标题行）。
+// EntrySearchButton：词条弹窗标题右侧的外搜按钮（桌面卡 / 抽屉标题行共用）。
 // 引擎走 settingsStore.searchEngine，URL 拼装收敛在 lib/searchEngine。
 import { computed } from 'vue';
 import { useStore } from '@nanostores/vue';

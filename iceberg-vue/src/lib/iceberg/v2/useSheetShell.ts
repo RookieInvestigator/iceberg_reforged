@@ -1,9 +1,7 @@
-// V2 抽屉外壳行为（/v2 专用）：Esc 关闭 + Tab 焦点循环 + 背景滚动锁 + 焦点移入/还原。
+// 抽屉外壳行为：Esc 关闭 + Tab 焦点循环 + 背景滚动锁 + 焦点移入/还原。
 //
-// 与 BaseModal（components/modals/BaseModal.vue:22-80）逻辑同构，但 BaseModal 是全站
-// 共用件、按分叉纪律保持冻结，故此处只服务 V2Sheet，**不反向修改 BaseModal**。
-// 焦点陷阱这类「所有浮层必须行为一致」的东西本不该有两份实现；等 V2 转正、
-// v1 抽屉退役后，这里就是唯一的抽屉外壳实现。
+// 与 BaseModal（components/modals/BaseModal.vue:22-80）逻辑同构，故**不要反向修改 BaseModal**；
+// 本文件只服务 V2Sheet。
 import { nextTick, onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
 import { lockOverlay } from '../../overlayLock'
 

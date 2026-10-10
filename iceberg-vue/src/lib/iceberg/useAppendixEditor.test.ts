@@ -3,15 +3,10 @@ import { useAppendixEditor } from './useAppendixEditor'
 import { APPENDIX_TABLES } from './appendix'
 
 /**
- * 编辑器**保存载荷**的集成测试（2026-10-09）。
+ * 编辑器**保存载荷**的集成测试。
  *
- * 为什么值得单独测：这里出过两次真事故 ——
- *   1. 载入副表的 glob 路径写错（从 views/ 搬到 lib/ 没改相对路径）→ 五张表全空，
- *      此时点保存等于把副表清空；
- *   2. 保存时按「行是否为空」丢行 → 把 related.csv 里「source_id 有、target_id 空」
- *      的 4 条历史行当垃圾删了。
- * 两次都能被下面这些断言拦下：载荷必须带上真实数据、且**不按空值删历史行**。
- *
+ * 断言要拦的两类事故：副表没被载入（载荷为空 = 保存等于清空副表），
+ * 以及按「行是否为空」丢行（related.csv 里「source_id 有、target_id 空」的历史行会被误删）。
  * 全程用 stub 的 fetch 捕获请求体，不碰磁盘。
  */
 function stubSave() {

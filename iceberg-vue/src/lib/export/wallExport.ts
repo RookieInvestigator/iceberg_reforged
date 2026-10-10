@@ -1,6 +1,5 @@
 /**
- * wallExport —— 2D 词条墙导出 PNG（独立实现，仅借归档 canvas 实验的设计思路，
- * 归档代码原地不动：data/archive/tools-2026-08/canvas-experiment/）。
+ * wallExport —— 2D 词条墙导出 PNG（独立实现，不复用 canvas 实验代码）。
  *
  * 量纲以主界面 v2 为基准（V2TierChapter.vue / index.css），导出按海报观感整体放大一档：
  * - 题头海报级：眉题 13 / 标题 54 / meta 13 / intro 15；
@@ -660,7 +659,7 @@ export interface ExportPngOptions {
   slice?: PngSliceMode
   /** 均匀切图张数（slice=even 时有效，默认 3，钳制 [2, 32]） */
   sliceCount?: number
-  /** 位图内存预算 MB（默认 150；dpr² 是主乘数，见归档 capDpr 同款逻辑） */
+  /** 位图内存预算 MB（默认 150；dpr² 是主乘数） */
   budgetMB?: number
   filename?: string
   onProgress?: (done: number, total: number) => void

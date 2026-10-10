@@ -111,8 +111,8 @@ export function isSafeHttpUrl(url: string): boolean {
 /**
  * 秒级 Unix 时间戳 → 本地日期字符串。
  *
- * 管线输出的 `generatedAt` / `createdAt` / `modifiedAt` 均为秒（见 build_data_api.py），
- * 此前各视图手写 `new Date(x * 1000)`，毫秒/秒极易混淆，收敛为唯一入口。
+ * 管线输出的 `generatedAt` / `createdAt` / `modifiedAt` 均为秒（见 build_data_api.py）：
+ * 这是唯一入口，各视图不要手写 `new Date(x * 1000)`（毫秒/秒极易混淆）。
  * 语言默认跟随页面 `lang`（i18n 切换时同步写入），保证构建日期与界面语言一致。
  */
 export function formatUnixDate(sec: number | undefined | null, locale?: string): string {

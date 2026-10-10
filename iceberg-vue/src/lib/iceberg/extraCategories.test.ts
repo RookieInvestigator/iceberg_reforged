@@ -79,7 +79,7 @@ describe('gradientStops', () => {
     for (let i = 2; i < s.length; i++) expect(s[i].pos - s[i - 1].pos).toBeCloseTo(gap, 6)
   })
 
-  it('edgeHold = 0 退化为 0%–100% 满幅（旧行为可复现）', () => {
+  it('edgeHold = 0 退化为 0%–100% 满幅', () => {
     const s = parseStops(gradientStops(['A', 'B'], COLORS, '#fff', 5, 0))
     expect(s[0].pos).toBe(0)
     expect(s[4].pos).toBe(100)
@@ -91,7 +91,7 @@ describe('gradientStops', () => {
     expect(s[s.length - 1].pos).toBeGreaterThan(50)
   })
 
-  it('短标题不再逐字跳变：5 步色标互不相同（连续渐变的前提）', () => {
+  it('5 步色标互不相同（连续渐变的前提）', () => {
     const s = parseStops(gradientStops(['R', 'B'], { R: '#FF3333', B: '#85D6FF' }, '#fff', 5))
     expect(new Set(s.map((x) => x.color)).size).toBe(5)
     expect(s[2].color).not.toBe(s[0].color)
@@ -160,7 +160,7 @@ describe('applyCategories', () => {
     expect(stat.main).toBe(1)
     expect(data.tiers.T1[0].category).toBe('B')
     expect(data.tiers.T1[0].categoryColor).toBe('#222222')
-    // 主分类打头 + 副分类追加（不再需要「改主分类时顺手补 categories[0]」的补丁）
+    // 主分类打头 + 副分类追加
     expect(data.tiers.T1[0].categories).toEqual(['B', 'C'])
     expect(data.tiers.T1[1].category).toBe('A')
   })

@@ -104,13 +104,13 @@
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 
-/* ═══════════ 響應式斷點（修復雙重 Padding） ═══════════ */
+/* ═══════════ 響應式斷點 ═══════════ */
 /* 断点与 Tailwind sm(640px) 对齐 */
 @media (max-width: 640px) {
   .modal-panel { 
     max-width: 92vw !important; 
     max-height: 85vh; 
-    /* 移除此處原本的 padding: 24px 20px; 避免與內部疊加 */
+    /* 不設 padding：內距由內部各層提供，避免疊加 */
   }
   /* 統一等比例縮小內部間距 */
   .modal-header { padding: 20px 20px 12px; }

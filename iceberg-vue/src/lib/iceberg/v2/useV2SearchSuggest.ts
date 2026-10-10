@@ -4,9 +4,9 @@ import Fuse from 'fuse.js'
 import { searchQuery } from '../../filterStore'
 import { RENDER_ITEMS_KEY, type RenderItem } from '../../injectionKeys'
 
-// V2 搜索速查下拉（审计 C3：V2FilterBar 拆分其二）。
-// 输入框 Fuse 标题速查（与 Worker 全文搜索互补）：防抖写 store + 下拉开合/键盘导航。
-// query 读全局 searchQuery（150ms 防抖后才更新，速查天然滞后一拍——原语义保留）。
+// 搜索速查下拉：输入框 Fuse 标题速查（与 Worker 全文搜索互补）——
+// 防抖写 store + 下拉开合 / 键盘导航。
+// query 读全局 searchQuery（150ms 防抖后才更新，速查天然滞后一拍）。
 export interface SuggestRow {
   id: string
   title: string
@@ -19,7 +19,7 @@ export function useV2SearchSuggest() {
   const suggestIdx = ref(0)
   const searchInputRef = ref<HTMLInputElement | null>(null)
 
-  // 搜索 150ms 防抖（与 v1 同参数，语义一致）
+  // 搜索 150ms 防抖
   let debounce = 0
   function onSearchInputEvent(e: Event) {
     const v = (e.target as HTMLInputElement).value

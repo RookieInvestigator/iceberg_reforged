@@ -1,8 +1,7 @@
 import { onMounted, onUnmounted, ref, type Ref } from 'vue'
 
-// V2 导航显隐 + 滚动帧状态机（审计 C3：V2FilterBar 拆分其一）。
-// 滚动方向感知 / 顶部热区 / 变形吸顶 / 面板开关 / 层级 scroll-spy / 进度直写，
-// 共用同一 rAF 循环（与 P1/P2 同因，禁止再拆第二条循环）。
+// 导航显隐 + 滚动帧状态机：滚动方向感知 / 顶部热区 / 变形吸顶 / 面板开关 /
+// 层级 scroll-spy / 进度直写，**共用同一 rAF 循环**（不要再拆第二条循环）。
 // suggest 下拉的开关由搜索域持有，经参数传入（外部点击关闭时联动）。
 export function useV2NavVisibility(opts: { tierOrder: string[]; suggestOpen: Ref<boolean> }) {
   const { tierOrder, suggestOpen } = opts

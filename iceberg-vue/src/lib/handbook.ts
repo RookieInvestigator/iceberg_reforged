@@ -1,5 +1,4 @@
-// 术语表单一事实源（HandbookView 与 V2 徽章共用）：tab 定义 + 深链构造。
-// parseSections 从 HandbookView 上移至此（L3）：徽章 hover 预览释义共用同一解析。
+// 术语表单一事实源（HandbookView 与 V2 徽章共用）：tab 定义、深链构造、md 解析。
 export const HANDBOOK_TABS = [
   { key: 'criteria', heading: '划定标准', labelKey: 'handbookTabCriteria' },
   { key: 'concepts', heading: '各类概念', labelKey: 'handbookTabConcepts' },
@@ -14,9 +13,8 @@ export const handbookLink = (tab: HandbookTab, term: string, from?: string) => (
   query: { tab, term, ...(from ? { from } : {}) },
 })
 
-/** 解析 handbook.md：二级标题 →（三级标题 → 描述）。与原 HandbookView 实现一致，
- * 另加一条：释义首行若为 `> ` 开头，视为短版摘要行——从 desc 剥离（术语表不显示），
- * 由 getShortMap 另行提取（徽章 hover 优先显示短版）。 */
+/** 解析 handbook.md：二级标题 →（三级标题 → 描述）。释义首行若为 `> ` 开头，视为短版摘要行：
+ * 从 desc 剥离（术语表不显示），由 getShortMap 另行提取（徽章 hover 优先显示短版）。 */
 export function parseSections(md: string): Map<string, Record<string, string>> {
   const sections = new Map<string, Record<string, string>>()
   const parts = md.split(/\r?\n## /)
@@ -60,7 +58,7 @@ export function getCriteriaDescMap(rawMd: string): Record<string, string> {
 
 let shortCache: Record<string, string> | null = null
 
-/** 预览用纯文本：去掉 md 强调标记（`==...==` 只留文字；引号是正常字符，保留）。 */
+/** 预览用纯文本：去掉 md 强调标记（`==...==` 只留文字）。 */
 export function stripMdEm(text: string): string {
   return text.replace(/==/g, '')
 }
@@ -68,14 +66,8 @@ export function stripMdEm(text: string): string {
 export interface DescSeg { text: string; em: boolean }
 
 /**
- * 术语表描述的分段（`==...==` 显式强调，可嵌套）。
- *
- * ⚠️ **引号/书名号不再自动高亮**（2026-10-09 用户要求）：此前「」『』“”‘’《》也被当作
- * 强调定界符，正文里这类符号太常见 —— 结果是整段被染花，「哪些是真正被强调的」反而没有信号。
- * 现在强调**只认显式的 `==...==`**，引号原样输出（`stripMdEm` 与徽章预览的口径也一致）。
- *
- * 放在 lib 而不是视图里：这段解析有明确行为约定（标记不出现在输出里、嵌套可开可关、
- * 未闭合的 `==` 只是普通文字），值得单测锁住，而视图层在本仓库没有测试。
+ * 术语表描述的分段：**只认显式的 `==...==`**（可嵌套），其余字符原样输出。
+ * 行为约定（由单测锁定）：标记不出现在输出里、嵌套可开可关、未闭合的 `==` 只是普通文字。
  */
 export function segmentDesc(text: string): DescSeg[] {
   const segs: DescSeg[] = []

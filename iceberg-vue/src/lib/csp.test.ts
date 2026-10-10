@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
  * —— 其余指令若只改一处，线上实际生效的策略（浏览器取交集）会与源码里那份悄悄分叉，
  * 症状是某条白名单莫名失效（例：加了 script-src 却没同步 connect-src，上报被拦但页面不报错）。
  *
- * 2026-09-24 起 CSP 还承载 Cloudflare Web Analytics 手工片段的白名单：
+ * CSP 还承载 Cloudflare Web Analytics 手工片段的白名单：
  * script-src 放行静态 beacon、connect-src 放行 cloudflareinsights.com 上报端点
  * （片段由 vite.config.ts 的 cf-web-analytics 插件在构建期注入，见第二个用例）。
  *

@@ -55,7 +55,7 @@ export async function fetchComments(itemId: string, userId?: string, opts?: { of
     }
   } catch (e) { reportError('supabase', e, { op: 'batch_user_display' }) }
 
-  // 批量取点赞数（P0-审计 2026-08-16）：interactions_select 已收紧为仅本人，
+  // 批量取点赞数：interactions_select 只允许读本人行，
   // 匿名计数改走 SECURITY DEFINER RPC interaction_counts（分组聚合，不暴露 user_id 明细）。
   let likeCounts: { id: number; count: number }[] = []
   if (ids.length) {
@@ -148,12 +148,12 @@ function throwIfError<T extends { error: unknown }>(res: T): T {
   return res
 }
 
-/** 获取某目标的互动计数（P0-审计：改走 interaction_counts RPC，只读降级：失败返回 0 并上报） */
+/** 获取某目标的互动计数（走 interaction_counts RPC；只读降级：失败返回 0 并上报） */
 export async function fetchInteractionCount(targetType: 'item' | 'comment', targetId: string, type: InteractionType) {
   try {
     const { data, error } = await supabase
       .rpc('interaction_counts', { p_type: type, p_ids: [String(targetId)] })
-    // P0-审计：migration.sql 尚未在线上执行时 RPC 404 —— 静默降级为 0，不上报刷红
+    // migration.sql 尚未在线上执行时 RPC 404 —— 静默降级为 0，不上报刷红
     if (error) {
       const notFound = typeof error === 'object' && error !== null &&
         /404|not found|does not exist/i.test(JSON.stringify((error as { message?: string; details?: string }).message || (error as { details?: string }).details || ''))

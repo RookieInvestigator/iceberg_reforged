@@ -1,17 +1,11 @@
 /**
- * 社区订正（overrides.csv）的**渲染层叠加**（落地顺序第 4 条，2026-10-09）。
- *
- * 背景：overrides.csv 此前只被 CorrectedMark 消费 —— 也就是只有「订正」铅笔角标，
- * 没有任何地方把 value 真正叠加到词条上。结果：反馈里的描述被采纳、写进了 CSV，
- * 页面上却看不到新描述，只有一个角标宣称「这里被订正过」。本模块补上叠加这一步。
+ * 社区订正（overrides.csv）的**渲染层叠加**。
  *
  * 支持字段（与 scripts/apply_feedback.py 的 SUPPORTED、lib/iceberg/appendix.ts 的
  * OVERRIDE_FIELDS 同口径）：**title / desc / tags**。
  *
- * ⚠️ 分类不在这里（2026-10-09 副表重组）：`category` 已归 categories.csv 一家管，
- * 见 lib/iceberg/extraCategories.ts。两张表都能写分类时，本模块不得不再顺手把
- * `categories[0]` 换掉以防主/副打架 —— 那是补丁不是设计。现在保留字段一律不生效，
- * 由 appendix.ts 记入 violations 并在此上报（不静默）。
+ * ⚠️ 分类不在这里：`category` 归 categories.csv 一家管，见 lib/iceberg/extraCategories.ts。
+ * 保留字段一律不生效，由 appendix.ts 记入 violations 并在此上报（不静默）。
  *
  * ⚠️ tags 必须**连带重算派生字段**，否则会出现「筛选按旧标签、墙显示旧 emoji」这类半生效状态：
  *   tags → emojis = tags.map(nameToEmoji) —— emojis 才是词条墙/ScatterField/导出渲染的字段，

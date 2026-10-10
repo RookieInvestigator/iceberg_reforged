@@ -1,9 +1,7 @@
 <script setup lang="ts">
-// TipBubble：气泡 tooltip 的**唯一实现**（2026-10-09 提取）。
+// TipBubble：气泡 tooltip 的**唯一实现**（徽章释义与标记备注共用）。
 //
-// 之前徽章释义与标记备注各写一套：一个白底黑字居中、一个深底白字左对齐，
-// 截断行数、过渡时长、z-index 也都不一样 —— 于是「两种 tooltip 看着不是一回事」。
-// 现在外观全在 styles/v2.css 的 .tip-anchor / .tip-bubble（一处定义），
+// 外观全在 styles/v2.css 的 .tip-anchor / .tip-bubble（一处定义），
 // 组件只负责结构 + 三条展开路径（hover / 键盘聚焦 / 触屏点击）+ 超界归位。
 //
 // 用法：把触发元素放进默认插槽，组件会包一层 .tip-anchor 作为定位参照与事件宿主。

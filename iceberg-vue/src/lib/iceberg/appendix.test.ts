@@ -19,9 +19,7 @@ import {
 } from './appendix'
 
 /**
- * 副表关系的**结构守卫**（2026-10-09 重组）。
- *
- * 这里锁的是「一张表管一个区域」这条规矩本身，而不是某次的具体数据：
+ * 副表关系的**结构守卫**：锁的是「一张表管一个区域」这条规矩本身，而不是某次的具体数据。
  *   · 表定义自洽（键列都在表头里、key/file 唯一）；
  *   · 保留字段有明确归属，且不在通用表允许的字段里；
  *   · **真实副表零越界**（有人把 category 写进 overrides.csv，CI 立刻红）；
@@ -168,7 +166,7 @@ describe('编辑器用的纯函数（保存/越界/空行）', () => {
     // 新建 + 仍空白 → 丢；历史行即使空白也**绝不能**丢
     expect(shouldDropOnSave(overrides, { item_id: 'a', field: ' ' }, true)).toBe(true)
     expect(shouldDropOnSave(overrides, { item_id: 'a', field: ' ' }, false)).toBe(false)
-    // 真实形态：related.csv 里有 source_id 有、target_id 空的行（4 条）—— 曾被误删过
+    // 真实形态：related.csv 里有 source_id 有、target_id 空的行（4 条），不能当垃圾行丢掉
     const relatedDef = APPENDIX_TABLES.find((t) => t.key === 'related')!
     expect(shouldDropOnSave(relatedDef, { source_id: '5374c017', target_id: '' }, false)).toBe(false)
     expect(isEmptyAppendixRow(relatedDef, { source_id: '5374c017', target_id: '' })).toBe(true)

@@ -1,10 +1,9 @@
 // 汉字 → 拼音首字母（由 pypinyin 生成，覆盖 CJK 基本区 U+4E00–U+9FED）
 //
-// 【存储格式】定长字符串查表，而非对象字面量（由 scripts/compact_pinyin.py 转换）：
+// 【存储格式】定长字符串查表（由 scripts/compact_pinyin.py 转换），**不要改回对象字面量**：
 //   索引 = 码点 - 0x4E00；取值 = A–Z 首字母，'-' 表示该码点无拼音（汉字之间的空位）。
-//   体积：对象字面量 218KB → 定长字符串 20KB，
-//   gzip 后差距更大（重复字母高度可压缩）。HandbookView 用它做术语表 A-Z 分组，
-//   此前是该路由 chunk 体积的主要来源。
+//   定长字符串 20KB，对象字面量 218KB，gzip 后差距更大（重复字母高度可压缩）
+//   —— 后者是 HandbookView chunk 体积的主要来源。
 //
 // 【重新生成】如需从 pypinyin 重新导出：先按对象字面量 { 一: 'Y', ... } 生成，
 //   再执行 `python scripts/compact_pinyin.py --force` 转成定长字符串。

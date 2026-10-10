@@ -30,9 +30,6 @@ const TABS: TabDef[] = HANDBOOK_TABS.map((t) =>
   t.key === 'criteria' ? { ...t, source: 'criteria' as const } : { ...t },
 )
 
-// 描述里的强调解析在 lib/handbook.ts（`segmentDesc`）：只认显式 `==...==`，
-// 引号/书名号不再自动高亮（2026-10-09 用户要求，见该函数注释）。
-
 const sections = parseSections(rawMd)
 
 // 分类 / 标签从当前数据集自动生成，md 描述缺失时回退「待补充」，保证与冰山图实际分类标签一致

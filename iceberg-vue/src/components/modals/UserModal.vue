@@ -109,7 +109,7 @@ const statsError = ref(false)
 const viewedCount = ref(0)
 
 // P1-17: 监听 user atom，登录状态变化（含弹窗内登录）时重新拉取统计
-// P1-18: 拉取失败展示错误提示 + 重试入口，不再静默吞错
+// P1-18: 拉取失败展示错误提示 + 重试入口（不静默吞错）
 async function refreshStats() {
   if (!isSupabaseReady()) return
   statsError.value = false

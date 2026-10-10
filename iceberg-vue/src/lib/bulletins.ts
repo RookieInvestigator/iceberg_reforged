@@ -1,9 +1,8 @@
 /**
  * 公告（src/data/bulletins/*.md）单一入口：frontmatter 解析 + schema 校验 + 排序 + 已读状态。
  *
- * 为什么收敛：v1（IndexView）与 v2（IndexNextView）此前各有一份逐行相同的手写正则解析，
- * 无校验、无单测；公告条（BulletinBanner）接入后会出现第三份。现在解析、排序、排序后的
- * 「最新一条」、以及「是否未读 / 是否已被关闭」全部只此一处，公告板弹窗与公告条共用同一数据源。
+ * 解析、排序、排序后的「最新一条」、以及「是否未读 / 是否已被关闭」全部只此一处，
+ * 公告板弹窗与公告条共用同一数据源。
  *
  * 存储：两个单指针（非 id 集合）——
  *   `iceberg-bulletin-seen`             已读到哪一条（打开公告板即前移）
@@ -170,8 +169,8 @@ export function dismissBulletinBanner(id: string): void {
 }
 
 /**
- * 顶部条幅是否显示：只要最新一条没被手动关闭就显示 —— **不因「已读」而隐藏**，
- * 这是「公告不再隐蔽」的关键：看过也仍然看得见入口，用户主动关掉才让位。
+ * 顶部条幅是否显示：只要最新一条没被手动关闭就显示 —— **不因「已读」而隐藏**
+ * （看过也仍然看得见入口，用户主动关掉才让位）。
  */
 export function shouldShowBanner(list: Bulletin[], state: BulletinState): boolean {
   const latest = list[0]

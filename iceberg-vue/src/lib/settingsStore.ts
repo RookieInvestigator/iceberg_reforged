@@ -1,10 +1,10 @@
 import { atom } from 'nanostores';
 import type { SearchEngine } from './searchEngine';
 
-// ── 持久化写入节流（2026-08-21）──
-// 热路径写入（已读 / 收藏 / 设置切换）合并为防抖写盘（500ms）：每次 markRead / 收藏切换
-// 不再同步 JSON.stringify + 写盘；页面隐藏 / 卸载时统一 flush，丢失上限 = 最后一批
-// （本应用无跨标签同步语义，可接受）。直读 localStorage 的外部方须先 flushPersistedWrites()。
+// ── 持久化写入节流 ──
+// 热路径写入（已读 / 收藏 / 设置切换）合并为防抖写盘（500ms），页面隐藏 / 卸载时统一 flush，
+// 丢失上限 = 最后一批（本应用无跨标签同步语义，可接受）。
+// 直读 localStorage 的外部方须先 flushPersistedWrites()。
 const PERSIST_DEBOUNCE_MS = 500;
 interface PendingWrite { key: string; timer: number; value: unknown }
 const pendingWrites: PendingWrite[] = [];

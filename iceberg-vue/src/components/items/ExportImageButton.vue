@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// ExportImageButton：导出触发器（v1 页脚 / v2 跋共用）。
+// ExportImageButton：导出触发器（版本跋里的文字链入口）。
 // 点开 ExportModal（四格式 + 三档宽度）；重型导出引擎仍在弹窗流程里懒加载，不进首屏包。
 import { ref, useAttrs } from 'vue';
 import { Download } from '@lucide/vue';
@@ -31,7 +31,7 @@ const showExport = ref(false);
 </template>
 
 <style scoped>
-/* 页脚文字链形态：跟随所在页脚的链接样式（v2 跋 / v1 页脚各自覆盖颜色） */
+/* 文字链形态：颜色由所在页脚覆盖 */
 .export-linklike {
   background: none; border: none; cursor: pointer; padding: 0;
   font: inherit; color: inherit; transition: color 0.15s;

@@ -1,8 +1,7 @@
 <script setup lang="ts">
 // V2TierChapter（/v2 专用）：单个层级章节。
-// 词条 DOM 与 v1 逐字一致（.iceberg-item / .item-title[data-text] / .item-tag /
-// data-id / v-show / v-memo / dim），ItemInteractivity 的委托、tooltip 定位、
-// 错落偏移全部零改动；只有章节头与间距是新的。
+// 词条 DOM：.iceberg-item / .item-title[data-text] / .item-tag / data-id / v-show / v-memo / dim；
+// 事件委托、tooltip 定位与错落偏移由共享层承担，本组件只负责章节头与间距。
 import { useI18n } from '../../lib/useI18n';
 import { useStore } from '@nanostores/vue';
 import { floatMode } from '../../lib/settingsStore';
@@ -82,11 +81,11 @@ function itemClass(item: RenderItem, dimmed: boolean): Record<string, boolean> {
   font-size: var(--font-xs); font-weight: 400; letter-spacing: 0.35em; margin-right: -0.35em; color: var(--white-40);
 }
 .tier-next .iceberg-item { border-radius: 999px; padding: 0.3rem 0.8rem; }
-/* P4：字号从 1432 条内联收归规则（与原来内联同优先级行为：max-sm:text-[1.05rem] 本就打不过内联，保持不变） */
+/* P4：词条字号在规则里统一定义（不要再写成逐条内联，内联会压掉断点规则） */
 .tier-next .iceberg-item { font-size: 1.15em; }
 /* 错落偏移渲染层落点（F1：--fx/--fy 由 itemStyle 输出，无变量时回落 0） */
 .tier-next .iceberg-item { transform: translate(var(--fx, 0px), var(--fy, 0px)); }
-/* v2 词条行距略收（全局 1.5 用户指定不动，仅 v2 章节覆盖 1.4） */
+/* v2 词条行距略收（全局 1.5 不动，仅 v2 章节覆盖 1.4） */
 .tier-next .iceberg-item { line-height: 1.4; }
 .tier-next .iceberg-item::before { border-radius: inherit; }
 .tier-next .iceberg-item.recently-updated { border-radius: 999px; }

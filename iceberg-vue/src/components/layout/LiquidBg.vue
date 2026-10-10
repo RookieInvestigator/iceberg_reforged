@@ -65,7 +65,7 @@ function onWallPointer(e: Event) {
     else refreshFps()
   }
 }
-// 线性到 1.0：视觉全黑阈值（此前 1.3/1.8 过早全黑），滚到底时画面全部落入纯黑
+// 线性到 1.0：滚到底时画面全部落入纯黑（系数越大越早全黑）
 const liquidShift = computed(() => scrollDepth.value * 1.0)
 
 // 液态种子：每次进入页面（含 keep-alive 切回）重新随机（0-1000），图案不重复
@@ -94,7 +94,7 @@ onUnmounted(() => {
 
 <template>
   <div class="liquid-bg" aria-hidden="true">
-    <!-- colorA 传纯黑：沉海终点为纯黑（色板最深端由深蓝黑 #001220 改为 #000000）
+    <!-- colorA 传纯黑：沉海终点为纯黑（色板最深端 #000000）
          湍流 7 档保留全部形变；fps 三档交互自适应（滚动 60 / 词条墙 hover 30 / 静止 60） -->
     <LiquidGradient :darkShift="liquidShift" colorA="#000000" :seed="liquidSeed" :turb-iter="7" :fps="liquidFps" />
   </div>

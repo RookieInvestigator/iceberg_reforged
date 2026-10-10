@@ -3,22 +3,17 @@ import type { CategoryRecord } from './appendix'
 /**
  * 分类副表（appendix/categories.csv）的**渲染层装配** —— 分类区域的唯一实现。
  *
- * 语义（2026-10-09 重组后由 `role` 表达，一张表一个区域）：
+ * 语义（由 `role` 表达，一张表一个区域）：
  *   · `role=main`  覆盖主分类（每词条至多一条，多行 last-wins）—— 同时重算 categoryColor；
  *   · `role=extra` 追加副分类：主 `category` 保留，副分类额外命中筛选（叠加 OR）；
- *   · 缺省 role = extra，故**旧文件（无 role 列）行为完全不变**。
- *
- * 重组前「改主分类」写在 overrides.csv 的 `field=category`，「加副分类」写在 categories.csv，
- * 两张表都能动分类，装配层只好在改主分类时顺手把 `categories[0]` 一起换掉（防主/副打架）。
- * 那是补丁：现在主/副同表同列，装配一次算清，不再有第二个入口。
+ *   · 缺省 role = extra（无 role 列时行为不变）。
  *
  * 词的渲染侧（词条墙 `.item-title` 左右渐变、详情区多徽章）不变；3D / 古籍 / 导出 / 预渲染
  * 仍按主分类（零口径扩散）。
  *
- * 渐变实现（2026-09-20 换代）：由「逐字纯色 span」改为「OKLCH 预插色标 +
- * background-clip:text 连续渐变」。逐字纯色在短标题上退化成逐字跳变
- * （3 字 3 色），且 span 边界打断 kerning、与 ::after 描边镜像层字形错位。
- * 透明镂空字盖不住 text-shadow 的问题改由 ::after 镜像层承接，见 styles/index.css。
+ * 渐变：OKLCH 预插色标 + background-clip:text 连续渐变（逐字纯色在短标题上退化成逐字跳变，
+ * 且 span 边界打断 kerning、与 ::after 描边镜像层字形错位）。透明镂空字盖不住 text-shadow
+ * 的问题由 ::after 镜像层承接，见 styles/index.css。
  */
 
 /** item_id → 分类记录（含 main 与 extra），由 lib/iceberg/appendix.ts 解析 */
@@ -54,8 +49,7 @@ export interface CategoryApplyStat {
 
 /**
  * 副表装配唯一入口（分类区域）：把 categories.csv 的主分类覆盖 / 副分类 与墙渐变色标挂到
- * data.tiers 条目上。装配唯一入口：v1（IndexView.vue）与 v2（useIcebergDataSource.ts）**曾**各写一份
- * 逐行相同的装配代码，任何口径调整都要改两遍，是漂移源；v1 归档后只剩 useIcebergDataSource 一个消费方。
+ * data.tiers 条目上（消费方只有 useIcebergDataSource）。
  *
  * 未知分类的处理刻意不对称：
  *   · `role=main` 是**权威指定**，照用（颜色回退 defaultColor，构建门才拦未知分类）；
@@ -145,12 +139,9 @@ export const GRADIENT_EDGE_HOLD = 10
  * CSS 侧 `linear-gradient(90deg, var(--grad-stops, var(--item-color)))`
  * 配 `background-clip: text` 渲染（见 styles/index.css）。
  *
- * 为什么自插色标而不用 `linear-gradient(in oklch, ...)`：色相短弧与无彩端
- * 继承逻辑需要手工控制，且预插值让渲染期零兼容风险、样式表零计算。
- * 插值走 OKLCH（JS 内纯实现，不依赖浏览器）：远色在 sRGB 里 direct lerp
- * 中段必灰（#FF3333→#85D6FF 会经过脏灰紫），OKLCH 下色相走短弧、
- * 白端自动继承对方色相，中段干净。未知分类回退 fallbackColor
- * （构建门才是真校验，此处只防白屏）。
+ * 色标在 JS 里按 OKLCH 预插值（色相走短弧、无彩端继承对方色相）：sRGB 直接 lerp
+ * 中段必灰（#FF3333→#85D6FF 会经过脏灰紫）；也避免依赖 CSS `linear-gradient(in oklch, …)`
+ * 的兼容性与色相短弧控制。未知分类回退 fallbackColor（构建门才是真校验，此处只防白屏）。
  */
 export function gradientStops(
   cats: string[],

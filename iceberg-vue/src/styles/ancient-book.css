@@ -1,7 +1,6 @@
 /* ═══════════ 中文兔子洞冰山圖 · 古籍模式 CSS (終極純淨版) ═══════════ */
-/* 说明：P3-64 已删除下方旧版 .c.hw.hp > span 死代码（font-size 0.65em/font-weight 400），
-   生效规则为文件末尾的「徹底修復」版本（0.95em / 700）。P3-71：.dc/.dl 的 transition:
-   all 已改为具体属性；.nz 的 mix-blend-mode: multiply 为墨水晕染效果，有意保留。 */
+/* 说明：.c.hw.hp > span 的生效规则在文件末尾的「徹底修復」版本（0.95em / 700）；
+   .nz 的 mix-blend-mode: multiply 为墨水晕染效果，有意保留。 */
 
 /* Noto Serif TC 自托管于 public/fonts/（语料子集，脚本 scripts/subset_fonts.py 生成，
    src/styles/fonts.css 经 global.css 首行引入），竖排特性 vrt2/vert 由 pyftsubset 默认保留；
@@ -79,7 +78,7 @@
 
 .bx {
   display: flex; position: relative; z-index: 5;
-  /* 背景透明：书页与页面共享 .wr 的纸纹层（帘纹/晕染/噪声），纸上不再纯色 */
+  /* 背景透明：书页与页面共享 .wr 的纸纹层（帘纹/晕染/噪声） */
   border: 6px solid var(--pc-tx); /* 武邊 (粗外框) */
   padding: 4px;
   border-radius: 1px;

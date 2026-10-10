@@ -1,7 +1,7 @@
 import { computed, shallowRef } from 'vue'
 
-// 探索轨迹 Trail（审计 A3）：记录用户自己走出来的下潜路径（A → 相关 → B → …），
-// 与静态 tier 层级并置。单个 shallowRef，无性能影响。
+// 探索轨迹 Trail：记录用户自己走出来的下潜路径（A → 相关 → B → …），与静态 tier 层级并置。
+// 单个 shallowRef，无性能影响。
 export interface TrailNode {
   id: string
   title: string

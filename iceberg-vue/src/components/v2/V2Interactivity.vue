@@ -1,8 +1,6 @@
 <script setup lang="ts">
-// V2Interactivity（/v2 专用）：ItemInteractivity 的逻辑逐行复刻（搜索 Worker /
-// 相关索引 / 过滤管线 / Tooltip 控制器 / 弹窗前后导航 / 随机 / 已读标记），
-// 仅把三个二级界面的呈现换成 v2 版（V2EntryCard / V2Sheet / V2Tooltip）。
-// 交互语义、性能路径（懒加载、增量重绘）与 v1 完全一致。
+// V2Interactivity：主图交互中枢（搜索 Worker / 相关索引 / 过滤管线 / Tooltip 控制器 /
+// 弹窗前后导航 / 随机 / 已读标记）；三个二级界面为 V2EntryCard / V2Sheet / V2Tooltip。
 import { ref, watchEffect, onMounted, onUnmounted, nextTick, markRaw, inject, provide, defineAsyncComponent } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { searchQuery, searchMode, NEW_MARK_WINDOW_DAYS } from '../../lib/filterStore';
@@ -81,16 +79,16 @@ function markRead(id: string) {
   const cur = readItems.get();
   // perf：上限 2000（约 16KB），超出丢弃最早记录，防 localStorage 无界增长
   if (!cur.includes(id)) readItems.set([...cur, id].slice(-2000));
-  // O(1) 定向标记：管线不再监听 readItems 全量重扫（O(1432) → O(1)），
-  // 与 applyItemMarks 的 read 判定同语义（元素 data-id 即当前 id）
+  // O(1) 定向标记：只改这一个元素，不重跑全量（与 applyItemMarks 的 read 判定同语义，
+  // 元素 data-id 即当前 id）
   if (!showReadMark.get()) return;
   const el = getItemEl(id) ?? document.querySelector<HTMLElement>(`.iceberg-item[data-id="${CSS.escape(id)}"]`);
   if (el) el.classList.add('read');
 }
 
-// P1-5: 可见词条前后导航 id（桌面弹窗用；移动抽屉不再展示左右箭头）
-// 2026-08-21: wallState.navIndex 单遍维护的可见文档序位置索引 → O(1) 查表，
-// 与分片挂载兼容（不依赖 DOM 补齐状态），弹窗打开零过滤零 DOM 查询
+// P1-5: 可见词条前后导航 id（桌面弹窗用；移动抽屉不展示左右箭头）
+// navIndex 由 wallState 单遍维护可见文档序位置 → O(1) 查表，与分片挂载兼容
+// （不依赖 DOM 补齐状态），弹窗打开零过滤零 DOM 查询
 function navIdsFor(raw: RenderItem) {
   const idx = navIdx.value.map.get(raw.id);
   if (idx == null) return { prevId: null, nextId: null };
@@ -139,7 +137,7 @@ function openEntry(raw: RenderItem, fromId?: string | null) {
     markRead(raw.id);
 
     const { explicit, recommended } = pickRelated(raw);
-    // 手机端底部抽屉不再展示左右箭头，无需构建前后导航 id（也省去移动端 1432 节点扫描）
+    // 手机端底部抽屉不展示左右箭头，无需构建前后导航 id（省去移动端全量节点扫描）
     if (window.innerWidth < MOBILE_BP) {
       openSheet(toEntryView(raw, { related: explicit, recommended, depth }));
       return;
@@ -171,9 +169,8 @@ function closeSheet() {
 
 function findItem(el: HTMLElement) { return itemMap.get(el.dataset.id || ''); }
 
-// Random entry（F15：随机池 = 当前筛选下的匹配集合；无命中时不做随机，
-// 避免抽到不符合条件的词条）。2026-08-21: 走 wallState.wallMatched（管线单遍产出，
-// hide/dim 皆有效），替代每次点击的 1432 词条 matchesFilter 全量扫描
+// Random entry（F15：随机池 = 当前筛选下的匹配集合 wallState.wallMatched，
+// 管线单遍产出、hide/dim 皆有效；无命中时不做随机，避免抽到不符合条件的词条）
 let randomTooltipTimer = 0
 function showRandom() {
   const matched = wallMatched.value;
@@ -274,7 +271,7 @@ onMounted(() => {
   if (!restoredIds.length && hash && /^[a-f0-9]{8}$/.test(hash)) {
     hashNavTimer = window.setTimeout(() => {
       const item = itemMap.get(resolveId(hash)); // F30：旧 hash 重定向
-      // F9：非法深链不再静默——洗掉坏 hash，避免刷新反复撞墙
+      // F9：非法深链洗掉坏 hash（否则刷新会反复撞墙）
       if (!item) {
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
         return;

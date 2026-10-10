@@ -3,9 +3,9 @@ import { applyOverrides } from './overrides'
 import type { IcebergItem } from '../data'
 import type { OverrideRecord } from './appendix'
 
-// 2026-10-09 副表重组后，通用表（overrides.csv）只管 title / desc / tags：
-// category 归 categories.csv（见 extraCategories.test.ts），link 归 references.csv，
-// related 归 related.csv。保留字段写进通用表不生效，但必须被报出来（violations）。
+// 通用表（overrides.csv）只管 title / desc / tags：category 归 categories.csv
+// （见 extraCategories.test.ts），link 归 references.csv，related 归 related.csv。
+// 保留字段写进通用表不生效，但必须被报出来（violations）。
 const CTX = {
   nameToEmoji: { 神秘学: '🧿', 风水: '🪦' },
 }

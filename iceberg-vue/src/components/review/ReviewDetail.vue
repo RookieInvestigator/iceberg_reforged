@@ -2,8 +2,8 @@
 // ReviewDetail：工作台右栏 —— 当前值 vs 建议值（五字段均可就地编辑）+ 作者说明 + 三个决定键。
 //
 // 反馈表单允许改五个字段（title/desc/link/category/tags），这里一一对应呈现与编辑。
-// 编辑语义（2026-10-09）：改动只进 decisions.json 的 edits，**不写 Supabase**（RLS 也不允许
-// 改他人行），落盘时由 apply_feedback.py 用编辑后的值；反馈没提到的字段也能补。
+// 编辑语义：改动只进 decisions.json 的 edits，**不写 Supabase**（RLS 也不允许改他人行），
+// 落盘时由 apply_feedback.py 用编辑后的值；反馈没提到的字段也能补。
 // 空编辑 = 撤销该字段的修改（不做删除语义：副表本就是追加/覆盖模型）。
 import { computed, reactive, ref, watch } from 'vue'
 import TagPicker from './TagPicker.vue'

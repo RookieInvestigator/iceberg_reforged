@@ -3,8 +3,7 @@ import type { TrailNode } from '../useTrail'
 import type { EntryIA } from '../../useEntryInteractions'
 
 /**
- * v2 专用注入键（只新增不改旧：FACET_COUNTS_KEY 曾短暂放在 lib/injectionKeys.ts，
- * 为遵守「v2 不修改已有文件」已迁回此处；v1 侧无引用）。
+ * v2 专用注入键（v2 自己的键都放这里，不改动 lib/injectionKeys.ts 的公共键）。
  */
 
 /** v2 筛选面计数：分类名 → 词条数；标签 emoji → 词条数（数据静态、零响应式开销） */
@@ -22,7 +21,6 @@ export const TRAIL_KEY: InjectionKey<TrailState> = Symbol('v2trail')
 
 /**
  * 词条交互单实例：由外壳（V2EntryCard / V2Sheet）创建并 provide，内容区（V2EntryBody）消费。
- * 取代原先「把整个 ia 当 prop 传、再在子组件顶层解构」的写法 —— useEntryInteractions
- * 在 setup 阶段即发网络请求，必须单实例；provide/inject 比 prop 传对象更贴合这层关系。
+ * useEntryInteractions 在 setup 阶段即发网络请求，必须单实例，故用 provide/inject 而非 prop 传。
  */
 export const ENTRY_IA_KEY: InjectionKey<EntryIA> = Symbol('v2EntryIA')

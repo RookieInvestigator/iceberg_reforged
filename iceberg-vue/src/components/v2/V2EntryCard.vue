@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// V2EntryCard（/v2 专用）：桌面详情弹窗外壳。
+// V2EntryCard：桌面详情弹窗外壳。
 // 只负责：BaseModal chrome（标题/关闭/焦点陷阱/滚动锁）+ 交互单实例创建 + ←/→ 切换。
-// 内容区全部在 V2EntryBody；交互实例经 ENTRY_IA_KEY 下发，不再当 prop 传。
+// 内容区全部在 V2EntryBody；交互实例经 ENTRY_IA_KEY provide 下发。
 import BaseModal from '../modals/BaseModal.vue';
 import V2EntryBody from './V2EntryBody.vue';
 import V2EntryActions from './V2EntryActions.vue';

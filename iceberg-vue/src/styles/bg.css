@@ -1,7 +1,4 @@
-/* IcebergBackground — 纯静态背景（2026-08-19 取消全部动态）
-   原云层漂移/水面波动/光晕呼吸等 CSS 动画与关键帧已全量移除：
-   动画此前已被 .bg-root.static 暂停（视觉定格），此番删除死代码，
-   云层（暂停态下几乎不可见）整层移除，其余层按定格值固定。 */
+/* IcebergBackground — 纯静态背景：各层按定格值固定，页面无 CSS 动画。 */
 /* top 覆盖 inset 的 0：顶部公告条在文档流里位于页面内容之前，而本层是画在视图根节点
    （#capture-area，position: relative）里的绝对层 —— 视图从条幅下方开始，不向上顶出就会在
    条幅处露出 body 底色（#0a0e14 的硬边，液态背景是 fixed 铺满视口所以没这问题）。
@@ -11,7 +8,6 @@
 
 .bg-sky{position:absolute;inset:0;
   background:linear-gradient(to bottom,#ff2a00 5%,#ff5900 7%,#e26715 10%,#7aaddd 22%,#4a80c0 27%,#2a5a8a 32%,#0a1a30 40%,#040c18 55%,#000 98%)}
-/* 光晕定格于原动画 t=0 的呼吸值（opacity .5） */
 .bg-glow{position:absolute;inset:0;opacity:.5;
   background:radial-gradient(ellipse at 15% 8%,rgba(255,106,6,.5) 0%,rgba(255,140,50,.3) 30%,transparent 65%),radial-gradient(ellipse at 85% 40%,rgba(100,150,255,.25) 0%,transparent 60%),radial-gradient(circle at 25% 12%,rgba(255,200,150,.1) 0%,transparent 40%)}
 .bg-iceberg{position:absolute;inset:0;display:flex;justify-content:center;color:#8ebcf0;z-index:2;opacity:0.9}

@@ -1,9 +1,6 @@
 /**
- * 外链的来源站点识别（**词条链接与参考链接共用同一套**，2026-10-09）。
- *
- * 背景：词条自带的链接以前渲染成「访问词条链接」四个字（不告诉你去哪），参考链接则直接用
- * references.csv 里的 label —— 同一类东西两种表现，而且参考链接一旦没写 label 就露出裸 URL。
- * 现在两者同构：**站点名 + 域名**，站点名优先取人工写的 label，没写就按域名判。
+ * 外链的来源站点识别（**词条链接与参考链接共用同一套**）：**站点名 + 域名**，
+ * 站点名优先取人工写的 label，没写就按域名判。
  *
  * 识别分三层（覆盖率来自实测：954 条链接 / 219 个宿主，未识别仅剩 2 个）：
  *   1. 精确表 SOURCE_LABELS —— 认识的站点
@@ -229,10 +226,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   'pinimg.com': 'Pinterest',
   'pinterest.com': 'Pinterest',
 
-  // 人工认领（2026-10-09）：这 20 条由 scripts/link_source_report.py 的未识别清单逐个核对
-  // **页面自称名**得来（title / og:site_name / 页脚版权行），不是从域名猜的 —— 4 个直连失败的
-  // （fx361.cc / loveufo.com / tianya.at / pulung.com）取其自身页面的 Wayback 快照。
-  // 仍未认领 2 个：mcvlcssbc.us（域名过期占位页）、missing.shiroki-y.top（页面自称名与词条主题不符，存疑）。
+  // 人工认领：来源是各站**页面自称名**（title / og:site_name / 页脚版权行），不是从域名猜的。
   // 子域站点一律登记**父域**，让父域回退统一兜住（tianya.at 与 tianya.cn 同名不同站，各登记各的）。
   'alcoo.com': 'ALCOO',
   'artda.cn': '艺术档案',

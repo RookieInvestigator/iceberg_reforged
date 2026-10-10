@@ -1,33 +1,30 @@
-/* v2 换代实验共享样式（/v2 专用，不进 v1 回归面）。
- * 第三批 token 收拢的目标文件，先播 S8 与 S13 的种子，后续 S3/S4/S5 逐项迁入。 */
+/* v2 共享样式（/v2 专用）：圆角 / 阴影 / 毛玻璃 / 反白 / 展示级标题等 v2 令牌与公共类。 */
 
-/* ===== 第三批 token（S3/S4/S5/S6）=====
- * S3 圆角三档 + 一档下拉专用：sm 8px（pill/chip/kbd/工具/下拉项）、
- * md 12px（下拉框/tooltip 同档，S1 同档要求优先于 S3 原 16px 方案）、
- * lg 16px（nav/panel/sheet）、full 999px（胶囊）。
- * 注意 .sheet-panel 的 16px 是全局共用（v1），不动，全局替换只动 v2 scoped。 */
+/* ===== v2 令牌 =====
+ * 圆角三档 + 一档下拉专用：sm 8px（pill/chip/kbd/工具/下拉项）、
+ * md 12px（下拉框/tooltip 同档）、lg 16px（nav/panel/sheet）、full 999px（胶囊）。
+ * 注意 .sheet-panel 的 16px 是全局共用，不要并入这组。 */
 :root {
   --v2-r-sm: 8px;
   --v2-r-md: 12px;
   --v2-r-lg: 16px;
   --v2-r-full: 999px;
-  /* S4 阴影两档：sm 吸顶小丸，lg 全部浮层（.6/.5/.6 统一 .55） */
+  /* 阴影两档：sm 吸顶小丸，lg 全部浮层 */
   --v2-shadow-sm: 0 2px 16px -6px rgba(0, 0, 0, 0.4);
   --v2-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.55);
-  /* S5 毛玻璃一档：底色 + 模糊（.96 那档经确认无保留必要，统一 .92/24px） */
+  /* 毛玻璃一档：底色 + 模糊 */
   --v2-surface: rgba(8, 10, 14, 0.92);
   --v2-blur: 24px;
-  /* S6 反白（筛选 pill 选中态；S13 浅色令牌可复用这组做来源） */
+  /* 反白（筛选 pill 选中态） */
   --v2-on-bg: #f2f4f8;
   --v2-on-fg: #0a0c10;
-  /* S7 展示级标题字号（masthead；小字仍走 5 阶梯） */
+  /* 展示级标题字号（masthead；小字仍走 5 阶梯） */
   --v2-title-size: 2.4rem;
   --v2-title-size-sm: 1.7rem;
 }
 
-/* S8：详情标题两端统一 1.25rem / 700 / .01em。
- * .modal-header h2 为 (0,1,1)，双类提权替代原来的 !text- 前缀；
- * 抽屉内无竞争者，同类直接生效。 */
+/* 详情标题两端统一 1.25rem / 700 / .01em。
+ * .modal-header h2 为 (0,1,1)，故用双类提权；抽屉内无竞争者，同类直接生效。 */
 .modal-header .v2-entry-title,
 .v2-entry-title {
   font-size: 1.25rem;
@@ -53,11 +50,11 @@
   top: 12px;
 }
 
-/* S13：阅读浅色表面（实验开关 v2DetailSurface，默认 dark 零回归）。
+/* 阅读浅色表面（开关 v2DetailSurface，默认 dark）。
  * 只在面板作用域内重定义变量，不动 modal.css、不动全局 --color-modal-bg。
- * 白 alpha 工具类（text-white-XX / bg-white-XX 系）本就是 var() 引用，随重映射
- * 自动翻面——因此必须把 base.css 里全部阶梯逐一重映射，漏一个就是白上白隐形。
- * 分类色是裸值（非 ramp），在浅底下另用 brightness 压暗（见下方）。
+ * 白 alpha 工具类（text-white-XX / bg-white-XX 系）是 var() 引用，随重映射自动翻面
+ * ——因此必须把 base.css 里全部阶梯逐一重映射，漏一个就是白上白隐形。
+ * 分类色是裸值（非 ramp），在浅底下另用 color-mix 压暗（见下方）。
  * V2Tooltip 的白点黑边特判在浅底上依然正确，无需反转。 */
 .surface-light {
   --color-modal-bg: #fff;
@@ -136,8 +133,7 @@
 }
 
 /* ── 气泡 tooltip：**唯一实现**（组件 components/ui/TipBubble.vue 只用这里的外观）──
-   徽章释义（层级/分类/标签）与标记备注（警示/需补充/社区贡献）共用同一套：
-   同样的底/字/圆角/内距/阴影/字号/行高/6 行截断/过渡时长/z-index，且都在下方展开。
+   徽章释义（层级/分类/标签）与标记备注（警示/需补充/社区贡献）共用同一套。
    与所处表面反相：深底浅泡（--tip-* 默认），浅底深泡（.surface-light 翻面）。 */
 .tip-anchor { position: relative; display: inline-flex; align-items: center; }
 .tip-bubble {
@@ -170,9 +166,9 @@
   transition: opacity 0.15s ease, transform 0.15s ease, visibility 0s 0s;
 }
 
-/* S1：tooltip 形状语言（白底保留，阅读层与操控层分工）。
- * 覆盖选择器一律 .v2tip.tooltip-box 提权，不碰全局 .tooltip-box（v1 共用）：
- * 边框改深色 alpha（浅底上 white-10 不可见）、阴影归 lg 档（含 below 变体）、
+/* tooltip 形状语言（白底保留，阅读层与操控层分工）。
+ * 覆盖选择器一律 .v2tip.tooltip-box 提权，不碰全局 .tooltip-box：
+ * 边框用深色 alpha（浅底上 white-10 不可见）、阴影归 lg 档（含 below 变体）、
  * 过渡只收时长到 .18s（不加位移，跟随鼠标定位会打架）。 */
 .v2tip.tooltip-box {
   border: 1px solid rgba(10, 12, 16, 0.1);

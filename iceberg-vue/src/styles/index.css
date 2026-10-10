@@ -42,10 +42,10 @@
     position: relative;
     display: inline-flex; align-items: baseline;
     padding: 0.125rem 0.375rem; font-weight: 700;
-    line-height: 1.5; /* 行距 1.5 倍（用户指定） */
+    line-height: 1.5;
     contain: layout style;
-    /* 唯一描边方案（stroke-glow，2026-08-21 拍板）：光晕仅保留大阴影一层
-       （4px 3px 4px）；外描边由 .item-title::after 镜像层承担（见下） */
+    /* 描边方案：光晕只保留大阴影一层（4px 3px 4px），
+       外描边由 .item-title::after 镜像层承担（见下） */
     text-shadow: 4px 3px 4px var(--shadow-color, rgba(0,0,0,.6));
     cursor: pointer;
   }
@@ -63,8 +63,8 @@
     z-index: -1;
     pointer-events: none;
   }
-  /* ===== 多分类渐变字（2026-09-20 换代：逐字纯色 span → background-clip:text）=====
-     逐字纯色在短标题上退化成逐字跳变（3 字 3 色），且 span 边界打断 kerning、
+  /* ===== 多分类渐变字：background-clip:text 连续渐变 =====
+     逐字纯色 span 在短标题上会退化成逐字跳变（3 字 3 色），且 span 边界打断 kerning、
      与 ::after 镜像层字形错位；连续渐变只有 background-clip:text 能给。
      代价是透明镂空字盖不住 text-shadow（同层绘制必洇进字形内部），故光晕从
      .iceberg-item（文字层）下沉到 ::after 镜像层 —— 该层本就是 attr(data-text)
@@ -98,7 +98,7 @@
     transform: scaleX(0); transform-origin: left; z-index: -1;
     transition: transform 0.25s var(--ease-out);
   }
-  /* ===== 桌面端 hover —— 两模式语义分离（2026-08-21 拍板）=====
+  /* ===== 桌面端 hover —— 两模式语义分离 =====
      tooltip 模式：hover 有 marker 背景承担对比度 → 黑字**无需描边/阴影**
      （隐藏镜像描边层 + text-shadow 移除）；tooltip-active 同语义（data-detail 守卫不泄漏）。
      modal 模式：hover 无 marker 背景，仅透明度反馈 → 描边/光晕**保持原样**。 */
@@ -223,8 +223,8 @@
   /* ===== Content enter animations ===== */
   /* 入场动画。NOTICE：不能给 .iceberg-tier 加 will-change/transform 提升合成层——
      content-visibility:auto 的 paint containment + 估算盒会让合成层按边框盒裁剪溢出的
-     tooltip（tooltip 挂在 chip 内、可越过层级边缘，2026-08-21 实测被层级边缘截断）；
-     IndexView 在动画全部结束后移除 content-enter（释放 fill-mode:both 的变换层持有） */
+     tooltip（tooltip 挂在 chip 内、可越过层级边缘，会被层级边缘截断）；
+     主图视图在动画全部结束后移除 content-enter（释放 fill-mode:both 的变换层持有） */
   .content-enter .iceberg-tier { animation: fade-in-up 0.5s var(--ease-out) both; animation-delay: calc(0.3s + var(--tier-stagger, 0s) * 0.08s); }
   /* fill 用 backwards 而非 both：content-enter 挂载后不移除，both 会让 to{opacity:1} 永久生效、
      压掉沉浸模式 FAB 的 .immersive-group .fab-btn { opacity: 0 }（CSS 动画优先于普通声明） */

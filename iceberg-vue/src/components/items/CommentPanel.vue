@@ -18,7 +18,7 @@ const comments = ref<CommentRow[]>([])
 const loading = ref(false)
 const loadingMore = ref(false)
 const hasMore = ref(false)
-// P1-12: 加载失败错误态（首屏加载 / 加载更多各一），失败时展示重试按钮，不再永久卡「加载中…」
+// P1-12: 加载失败错误态（首屏加载 / 加载更多各一），失败时展示重试按钮，不卡在「加载中…」
 const loadError = ref(false)
 const loadMoreError = ref(false)
 const text = ref('')
@@ -103,7 +103,7 @@ async function doDelete(id: number) {
   }
 }
 
-// P1-19: 乐观点赞（先更新 UI）+ 「提交成功后回读修正」+ 防并发双击漂移
+// P1-19: 乐观点赞（先更新 UI），提交成功后回读修正，并发双击靠 pendingLikes 挡住
 const pendingLikes = new Set<number>()
 async function toggleCommentLike(c: CommentRow) {
   if (pendingLikes.has(c.id)) return

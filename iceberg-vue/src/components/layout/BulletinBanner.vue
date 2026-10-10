@@ -1,9 +1,6 @@
 <script setup lang="ts">
-// BulletinBanner：全站顶部的公告条（2026-10）。
-//
-// 为什么加：公告此前只藏在页脚「公告板」按钮后面，用户不主动点就完全不知道有公告 ——
-// 等于没有公告系统。现在最新一条公告在进站时即可见（不因「已读」而隐藏，只有用户
-// 手动关闭才让位，判定见 lib/bulletins.ts 的 shouldShowBanner）。
+// BulletinBanner：全站顶部的公告条 —— 最新一条在进站时即可见（不因「已读」而隐藏，
+// 只有用户手动关闭才让位，判定见 lib/bulletins.ts 的 shouldShowBanner）。
 //
 // 视觉：**逐条照抄 V2FilterBar 的吸顶小丸**，不新造样式 ——
 //   外壳    = `.stuck .v2nav`（--v2-surface / --white-10 边 / --v2-r-lg / --v2-shadow-sm / --v2-blur）

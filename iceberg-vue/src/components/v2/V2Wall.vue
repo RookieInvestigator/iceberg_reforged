@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // V2Wall（/v2 专用）：词条墙容器 —— 声明式排序 + 文档序 + 渐进挂载 + 空态。
-// 挂载策略沿用 wallMount（首屏 2 层 + 逐帧补齐；content-visibility 跳绘制）：
-// v2 曾实验 IO 真卸载远端层，但滚动不连贯（销毁重建抖动），已回退。
+// 挂载策略走 wallMount（首屏 2 层 + 逐帧补齐；content-visibility 跳绘制）。
+// 不要改成 IO 真卸载远端层：销毁重建会造成滚动不连贯。
 import { shallowRef, ref, computed, onMounted, onUnmounted, watch, inject } from 'vue'
 import { useStore } from '@nanostores/vue'
 import { sortMode } from '../../lib/settingsStore'
