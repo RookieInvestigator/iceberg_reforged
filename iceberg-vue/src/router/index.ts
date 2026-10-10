@@ -1,11 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { redirectGuard } from '../lib/redirectGuard'
+import { canonicalUrl } from '../lib/site'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     { path: '/',             component: () => import('../views/v2/IndexNextView.vue') },
-    // v1 已归档（data/archive/legacy-v1-2026-10/）：/legacy 保留为重定向，老书签不 404
+    // 第一代主图入口保留为重定向，老书签不 404（归档见 data/archive/legacy-v1-2026-10/）
     { path: '/legacy',       redirect: '/' },
     { path: '/home',         component: () => import('../views/HomeView.vue') },
     { path: '/handbook',     component: () => import('../views/HandbookView.vue') },
@@ -35,15 +36,12 @@ if (import.meta.env.DEV) {
 // 非法/空 r 仅清理参数、停留在当前路径，不产生跳转循环。
 router.beforeEach(redirectGuard)
 
-// P1-2：canonical / og:url 跟随当前路由，但 origin 强制指向主站（主从镜像策略）。
-// 无论用户访问 pages.dev 默认域名还是 GitHub Pages（镜像），canonical 都指向主站
-// iceberg.hezihezi.com，让搜索引擎把权重归并到主站。镜像通过构建期 noindex meta 做双保险。
+// canonical / og:url 跟随路由，origin 取 lib/site.ts（唯一来源 site.config.json）。
 // 模板不写死这两个标签：构建期预渲染按路由注入，浏览器端不存在时由这里创建。
-const MASTER_ORIGIN = 'https://iceberg.hezihezi.com'
 router.afterEach((to) => {
   // A3：?trail= 是会话态（探索轨迹分享），不进 canonical/og:url，避免同一内容多 URL 分权
   const cleanFullPath = to.fullPath.replace(/([?&])trail=[^&]*&?/, '$1').replace(/[?&]$/, '')
-  const url = new URL(cleanFullPath, MASTER_ORIGIN).href
+  const url = canonicalUrl(cleanFullPath)
   let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')
   if (!canonical) {
     canonical = document.createElement('link')

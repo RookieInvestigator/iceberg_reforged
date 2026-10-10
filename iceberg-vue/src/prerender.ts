@@ -9,6 +9,7 @@ import raw from './data/iceberg.json'
 import handbookRaw from './data/handbook.md?raw'
 import onThisDayRaw from './data/on-this-day.csv?raw'
 import { parseCSV } from './lib/csv'
+import { canonicalUrl } from './lib/site'
 
 interface IcebergItem {
   id: string
@@ -29,11 +30,7 @@ interface IcebergData {
 const data = raw as IcebergData
 const base = import.meta.env.BASE_URL
 const SITE = '中文兔子洞冰山图'
-// 主站 origin（主从镜像策略 2026-09-05 拍板；2026-09-20 切回自定义域名）：
-// 主站 = iceberg.hezihezi.com，镜像 = GitHub Pages。
-// 两个环境的 canonical / og:url 都指向主站，让 Google 把权重归并到主站。
-// 镜像通过 vite.config.ts 的 seo-master-mirror 插件注入 noindex 做双保险。
-const ORIGIN = 'https://iceberg.hezihezi.com'
+// canonical / og:url 一律指向 site.config.json 里的域名（无论从哪个部署访问）。
 
 const featureModules = import.meta.glob('./data/features/*.md', {
   query: '?raw',
@@ -51,7 +48,7 @@ function esc(s: string): string {
 }
 
 function headFor(path: string, title: string) {
-  const canonical = ORIGIN + (path === '/' ? '/' : path)
+  const canonical = canonicalUrl(path)
   return {
     lang: 'zh-CN',
     title,
@@ -233,9 +230,9 @@ function featureDetailHtml(slug: string): string {
 /**
  * 静态壳渲染**全年档案**（按 MM-DD 分组的全部记录），而不是「今天」的记录。
  *
- * 原因：此前用构建期的 new Date() 取 MM-DD，静态 HTML 的「今天」会被冻结在构建日，
- * 除非每天部署，否则页面内容长期是错的，且与客户端 hydrate 后的结果不一致。
- * 改为渲染全量档案后：内容永不过期、205 条记录全部可被索引，无 JS 用户也能查阅任意日期。
+ * 静态内容**不得依赖构建期时间**（用构建期 `new Date()` 取 MM-DD 会把「今天」冻结在
+ * 构建日，非每日部署即长期错误，且与客户端 hydrate 结果不一致）。渲染全量档案后：
+ * 内容永不过期、205 条记录全部可被索引，无 JS 用户也能查阅任意日期。
  * 客户端接管后仍是「日历 + 默认选中今天」的交互，语义不受影响。
  */
 function onThisDayHtml(): string {

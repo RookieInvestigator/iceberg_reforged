@@ -92,6 +92,7 @@ export default {
 	sortCategory: '分类',
 	corrections: '社区订正',
 	contributedBy: '由 {name} 补充',
+	copyStaleHint: '数据可能已落后 · 请前往 {origin}',
 	markWarn: '内容存疑，请谨慎参考',
 	markNeed: '信息不完整，欢迎补充',
 	exportTitle: '导出',

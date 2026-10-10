@@ -92,6 +92,7 @@ export default {
 	sortCategory: 'Category',
 	corrections: 'Community corrections',
 	contributedBy: 'Supplemented by {name}',
+	copyStaleHint: 'Data may be out of date · visit {origin}',
 	markWarn: 'Content disputed — treat with caution',
 	markNeed: 'Incomplete — additions welcome',
 	exportTitle: 'Export',

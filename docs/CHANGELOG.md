@@ -33,6 +33,27 @@
 - `vue-tsc`（app tsconfig）通过；全量 **46 文件 347 用例**通过（新增 `bulletins` / `feedbackReview` / `overrides` / `sourceLabel` / `entryLinks` 五组）。⚠️ 当时漏跑 `tsconfig.test.json`：`feedbackReview.test.ts` 的行工厂少写 `applied`，vitest 不做类型检查所以用例全绿、tsc 却报 TS2322（见下一节「测试」）
 
 
+## 2026-10-09 — 修正「主从镜像」机制：权威域名收敛为单一来源
+
+### 修复
+
+- **删掉靠环境变量判定主从的「镜像降级」**（`vite.config.ts` 的 `seo-master-mirror` → 重写为 `seo-site-origin`）。旧逻辑：有 `CF_PAGES_BRANCH` 即「主站」（注入 `index,follow` + 验证码），否则视为「镜像」——注入 `noindex,follow`、覆盖 `robots.txt`（去掉 Sitemap）、**删掉 `sitemap.xml`**。可 GitHub Pages 那条线根本不构建应用（CI 里是手写跳转页），于是「镜像」分支**只在本地 `npm run build` 与任何 fork 的 CI 构建上命中**，方向正好搞反：本地验证生产构建拿到的是 noindex 版、sitemap 被删，fork 的站也默认不被索引
+- **权威域名从 5 处硬编码收敛为 1 处**（新增 `iceberg-vue/site.config.json` + `src/lib/site.ts`）。此前 `https://iceberg.hezihezi.com` 散在 `prerender.ts` 的 `ORIGIN`、`router/index.ts` 的 `MASTER_ORIGIN`、`index.html` 的 og:image 与 JSON-LD、`public/robots.txt` 的 Sitemap、`public/sitemap.xml` 的 7 条 `loc`，另有 `deploy.yml` 跳转页里 3 份 —— 于是「谁是官方」只由散落的字面量决定，fork 把域名一改整套 SEO 信号就跟着翻转（这正是那位 fork 把官方站写成「旧镜像」、把自己写成「主站」的机制性成因）
+- 现在：canonical / og:url / og:image / JSON-LD / `sitemap.xml` / `robots.txt` 全部由 `site.config.json` 派生（构建期 `seo-site-origin` 插件替换 `__SITE_ORIGIN__` 占位符；代码侧走 `lib/site.ts`），CI 的跳转页也从该文件读取域名并加了「两处必须一致」的守卫
+
+### 改进
+
+- **robots meta 只在 CF Pages 生产构建注入**（`CF_PAGES_BRANCH` 存在时）：`index,follow` + google-site-verification；其他构建不注入任何 robots meta，`sitemap.xml` 与 `robots.txt` 一律保留 → 本地 `npm run build` 现在可以直接拿来验收生产形态
+- README「访问地址」改写为事实口径：官方站点 + 旧地址是**搬迁跳转页**（不是镜像站），并补「镜像须知」四条（别改域名 / 保留署名 / 标明修改与非官方 / 定期同步）；删除「搜索引擎权重随跳转归并」这类会被整段照抄的表述
+- GitHub Pages 那条线在文档与注释里统一改称「旧地址跳转页」（`deploy.yml` 的 `Build redirect site` → `Build redirect stub`）
+- `CLAUDE.md`：新增设计点「权威域名单一来源」，关键常量「站点路径」改为事实描述，构建配置补 `seo-site-origin`
+
+### 测试
+
+- 新增 `src/lib/site.test.ts`（5 项）：真值形态、`canonicalUrl` 派生、转载模板同源，以及两条**守卫** —— 源码里不许再写死域名（剥掉注释后扫描，防重新硬编码）、`index.html` / `robots.txt` / `sitemap.xml` 必须用占位符
+- 实测两种构建：本地构建 **0 个 `noindex`**、`sitemap.xml` 保留、robots 与 sitemap 的域名正确；`CF_PAGES_BRANCH` 构建注入 `index,follow` + 验证码、sitemap 保留、`base` 切根路径
+
+
 ## 2026-10-09 — 术语表不再自动强调引号 / 书名号
 
 ### 修复

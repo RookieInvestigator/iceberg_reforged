@@ -116,7 +116,8 @@ iceberg-vue/
     │                               # supabase.ts, supabaseData.ts, authStore.ts, userState.ts,
     │                               # injectionKeys.ts, useEntryInteractions.ts, overlayLock.ts,
     │                               # report.ts, liquidGradient.ts, shaderCanvas.ts, pinyin.ts,
-    │                               # handbook.ts（术语表解析 + 描述强调分段 segmentDesc）
+    │                               # handbook.ts（术语表解析 + 描述强调分段 segmentDesc）,
+    │                               # site.ts（权威域名唯一来源：SITE_ORIGIN / canonicalUrl）
     ├── lib/ancient-book/           # 古籍模式（types / engine / layout / render + SpreadView/SpreadPage）
     ├── lib/iceberg/                # 冰山图 composables（数据源 useIcebergDataSource / 副表 appendix+overrides /
     │                               # 副表编辑器 useAppendixEditor / 链接归一 entryLinks / 搜索 Worker /
@@ -213,14 +214,15 @@ function storedAtom<T>(key: string, fallback: T) {
 - **搜索**：Web Worker Fuse.js，双索引（标题/全文），threshold 0.3，防抖 150ms
 - **Tooltip**：200ms 悬停延迟，滚动时阻止误触发
 - **NEW 标记**：`modifiedAt` 距最新 30 天内
-- **SEO**：`index.html` 含 description / robots / OG / Twitter 与 WebSite JSON-LD（CSP 按 `sha256-…` 哈希放行数据块，`frame-ancestors` 仅 `public/_headers` 可下发，改 CSP 时两处同步；`og:image` 恒指主站系有意归并权重）；构建期预渲染（`src/prerender.ts`）为 `/ /home /handbook /features /features/:slug /on-this-day /ancient-book /3d` 注入静态内容快照与 per-route title/canonical/og:url（`/3d` 为 WebGL 占位说明壳，`/ancient-book` 为目录摘要壳，未知路由回最小 404 壳且 canonical 跟随请求 URL）；`router.afterEach` 浏览器端动态更新 canonical 与 og:url；favicon 使用 `%BASE_URL%` 前缀；`public/` 提供 robots.txt / sitemap.xml / og-cover.png（sitemap 路由表与预渲染路由表保持一致）
+- **权威域名单一来源**（2026-10-09 修正主从镜像机制）：`iceberg-vue/site.config.json` 是唯一真值，canonical / og:url / og:image / JSON-LD / `sitemap.xml` / `robots.txt` 全由它派生 —— 构建期 `seo-site-origin` 插件替换 `index.html` 与 `public/` 静态文件里的 `__SITE_ORIGIN__` 占位符，代码侧走 `lib/site.ts` 的 `SITE_ORIGIN` / `canonicalUrl()`。**不许再写死域名**（`site.test.ts` 守卫；改域名只改 site.config.json 一处）。robots meta 只在 `CF_PAGES_BRANCH` 存在时（CF Pages 生产构建）注入 `index,follow` + 验证码，其余构建不注入任何 robots meta；**已删除**原先的「镜像降级」（noindex / 覆盖 robots.txt / 删 sitemap.xml）—— 那套靠 `CF_PAGES_BRANCH` 的有无判定主从，方向正好搞反：本地 `npm run build` 与任何 fork 的 CI 构建都会命中「镜像」分支
+- **SEO**：`index.html` 含 description / robots / OG / Twitter 与 WebSite JSON-LD（CSP 按 `sha256-…` 哈希放行数据块，`frame-ancestors` 仅 `public/_headers` 可下发，改 CSP 时两处同步）；构建期预渲染（`src/prerender.ts`）为 `/ /home /handbook /features /features/:slug /on-this-day /ancient-book /3d` 注入静态内容快照与 per-route title/canonical/og:url（`/3d` 为 WebGL 占位说明壳，`/ancient-book` 为目录摘要壳，未知路由回最小 404 壳且 canonical 跟随请求 URL）；`router.afterEach` 浏览器端动态更新 canonical 与 og:url；favicon 使用 `%BASE_URL%` 前缀；`public/` 提供 robots.txt / sitemap.xml / og-cover.png（sitemap 路由表与预渲染路由表保持一致）
 - **加载页（#app-shield）**：视觉由 `index.html` 内联样式负责（网站 icon + 标题 + 副标题 + 三点），AppShell 只负责生命周期——路由 path 变化显示、afterEach+nextTick 淡出、`vue-ready` 幂等确认、2500ms 兜底、bfcache 恢复；`<noscript>` 提供无 JS 静态说明
 
 ## 关键常量
 
 | 常量 | 值 |
 | ---- | ---- |
-| 站点路径 | `/iceberg_reforged/`（GH Pages）；CF Pages 为根路径（`CF_PAGES_BRANCH` 自动切换） |
+| 站点路径 | 官方站点 `https://iceberg.hezihezi.com/`（CF Pages，根路径）；GitHub Pages 只发布**旧地址跳转页**（不构建应用）。`base` 由 `CF_PAGES_BRANCH` 自动切换 |
 | 词条总数 | 1454（API 实时同步，见 `meta.json` / `CHANGELOG` 数据条目） |
 | 层级 / 分类 / tagMap | 8 / 15 / 69 |
 | iceberg.json 体积 | ~993KB |
@@ -235,7 +237,7 @@ function storedAtom<T>(key: string, fallback: T) {
 base: process.env.CF_PAGES_BRANCH ? '/' : '/iceberg_reforged/'
 alias: { '@': '/src' }
 esbuild: { drop: ['debugger'], pure: ['console.log', 'console.info', 'console.debug'] }  // 构建时生效，保留 error/warn
-plugins: [vue(), tailwindcss(), compression(), first-screen-preload, spaFallback(), vitePrerenderPlugin({ renderTarget: '#app', prerenderScript: 'src/prerender.ts' })]
+plugins: [vue(), tailwindcss(), compression(), first-screen-preload, seo-site-origin, spaFallback(), vitePrerenderPlugin({ renderTarget: '#app', prerenderScript: 'src/prerender.ts' })]
 manualChunks: 函数式分包（vue+vue-router / three / three-examples；fuse 仅 search.worker 内嵌，无独立 chunk）
 ```
 

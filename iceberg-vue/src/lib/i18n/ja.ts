@@ -92,6 +92,7 @@ export default {
 	sortCategory: 'カテゴリ',
 	corrections: 'コミュニティ訂正',
 	contributedBy: '{name} さんの補足',
+	copyStaleHint: 'データが古い可能性があります · {origin} へ',
 	markWarn: '内容に異論あり・ご注意ください',
 	markNeed: '情報が不完全です・追記歓迎',
 	exportTitle: '書き出す',

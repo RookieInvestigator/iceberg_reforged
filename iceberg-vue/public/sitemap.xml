@@ -1,37 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://iceberg.hezihezi.com/</loc>
+    <loc>__SITE_ORIGIN__/</loc>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://iceberg.hezihezi.com/home</loc>
+    <loc>__SITE_ORIGIN__/home</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://iceberg.hezihezi.com/handbook</loc>
+    <loc>__SITE_ORIGIN__/handbook</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://iceberg.hezihezi.com/features</loc>
+    <loc>__SITE_ORIGIN__/features</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://iceberg.hezihezi.com/on-this-day</loc>
+    <loc>__SITE_ORIGIN__/on-this-day</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://iceberg.hezihezi.com/ancient-book</loc>
+    <loc>__SITE_ORIGIN__/ancient-book</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://iceberg.hezihezi.com/3d</loc>
+    <loc>__SITE_ORIGIN__/3d</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>

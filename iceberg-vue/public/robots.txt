@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://iceberg.hezihezi.com/sitemap.xml
+Sitemap: __SITE_ORIGIN__/sitemap.xml

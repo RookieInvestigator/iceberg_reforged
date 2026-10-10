@@ -1,9 +1,10 @@
 <script setup lang="ts">
-// V2Colophon（/v2 专用）：取代 FooterSection 的版本跋。
-// 统计行 + 发丝线 + 许可/来源/导航：零新 i18n key（复用 homeStats / licenseNote 等）。
-// 公告入口一并接过来（v1 由 FooterSection 承担，v2 不再挂载它）。
+// V2Colophon：版本跋 —— 统计行 + 发丝线 + 许可/来源/导航 + 公告入口。
+// 不新增 i18n key（复用 homeStats / licenseNote 等）。
 import { ref } from 'vue';
+import { TriangleAlert } from '@lucide/vue';
 import { useI18n } from '../../lib/useI18n';
+import { SITE_HOST, SITE_ORIGIN, isProjectHost } from '../../lib/site';
 import BulletinModal from '../modals/BulletinModal.vue';
 import AboutModal from '../modals/AboutModal.vue';
 import CopyrightModal from '../modals/CopyrightModal.vue';
@@ -22,6 +23,8 @@ defineProps({
 });
 
 const { t } = useI18n();
+/** 别人部署的副本 → 提示数据可能落后 */
+const isCopy = !isProjectHost();
 const showBulletin = ref(false);
 const showAbout = ref(false);
 const showCopyright = ref(false);
@@ -36,6 +39,11 @@ const CC_URL = 'https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hans';
 <template>
   <footer class="v2colo" id="v2-colophon">
     <p class="v2colo-stats">{{ t('homeStats').replace('{count}', String(entryCount)).replace('{tiers}', String(tierCount)).replace('{cats}', String(catCount)) }} · {{ buildDate }}</p>
+    <!-- 别人部署的副本：在统计行下方提示数据可能落后 -->
+    <a v-if="isCopy" class="v2colo-copyhint" :href="SITE_ORIGIN">
+      <TriangleAlert :size="12" :stroke-width="2.2" aria-hidden="true" />
+      <span>{{ t('copyStaleHint').replace('{origin}', SITE_HOST) }}</span>
+    </a>
     <p class="v2colo-note">{{ t('licenseNote') }}</p>
     <nav class="v2colo-nav">
       <router-link to="/">{{ t('navIceberg') }}</router-link>
@@ -71,6 +79,16 @@ const CC_URL = 'https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hans';
 <style scoped>
 .v2colo { text-align: center; padding: 4rem var(--header-padding-x) 3rem; }
 .v2colo-stats { margin: 0; font-size: var(--font-sm); font-weight: 700; letter-spacing: 0.12em; color: var(--white-70); }
+/* 副本提示：与统计行同处一栏，弱化但不隐形（危险色只给图标，文字走常规可读层级） */
+.v2colo-copyhint {
+  margin: 0.5rem auto 0; display: inline-flex; align-items: center; gap: 0.35rem;
+  padding: 0.25rem 0.6rem; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-danger) 32%, transparent);
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  font-size: var(--font-tiny); letter-spacing: 0.04em; color: var(--white-65);
+  text-decoration: none; transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+.v2colo-copyhint:hover { color: var(--white-90); border-color: color-mix(in srgb, var(--color-danger) 55%, transparent); background: color-mix(in srgb, var(--color-danger) 14%, transparent); }
 .v2colo-note { margin: 1rem auto 0; max-width: 620px; font-size: var(--font-xs); line-height: 1.9; color: var(--white-40); }
 .v2colo-nav { margin-top: 1.4rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem 1.2rem; font-size: var(--font-xs); letter-spacing: 0.08em; }
 .v2colo-ext { margin-top: 0.7rem; }

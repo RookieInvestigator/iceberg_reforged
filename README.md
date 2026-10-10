@@ -6,10 +6,9 @@
 
 ## 访问地址
 
-- 主站：https://iceberg.hezihezi.com/  （Cloudflare Pages 部署）
-- 旧镜像地址（自动跳转主站）：https://rookieinvestigator.github.io/iceberg_reforged/
+- **官方站点**：<https://iceberg.hezihezi.com/>
+- 弃用地址：<https://rookieinvestigator.github.io/iceberg_reforged/> 
 
-旧镜像地址打开后自动跳转到主站（含深链保路径跳转）；搜索引擎权重随跳转归并于主站。
 
 ## 授权许可
 

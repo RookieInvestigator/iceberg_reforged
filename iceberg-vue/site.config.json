@@ -1,0 +1,9 @@
+{
+  "origin": "https://iceberg.hezihezi.com",
+  "projectHosts": [
+    "iceberg.hezihezi.com",
+    "iceberg-reforged.pages.dev",
+    "localhost",
+    "127.0.0.1"
+  ]
+}

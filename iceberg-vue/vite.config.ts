@@ -8,8 +8,13 @@ import { vitePrerenderPlugin } from 'vite-prerender-plugin'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
+import siteConfig from './site.config.json'
 
 const MAX_APPENDIX_BODY = 2 * 1024 * 1024 // JSON body 大小限制：2MB
+
+// 权威域名唯一来源（site.config.json）：构建期替换 index.html 与 public 静态文件里的
+// `__SITE_ORIGIN__` 占位符。
+const SITE_ORIGIN = String(siteConfig.origin).replace(/\/+$/, '')
 
 // Cloudflare Web Analytics 站点 token（CF 控制台 → Web Analytics → 站点 → 「JS 片段」里的 token）
 const CF_ANALYTICS_TOKEN = 'ab9b42c938f9456988f0d5bb4a4bd191'
@@ -25,8 +30,7 @@ export default defineConfig({
     {
       // perf：路由 chunk 与其静态依赖不在各入口 HTML 的自动预载序列中，
       // 构建后按入口解析静态依赖图注入 <link rel="modulepreload">，消除首屏串行瀑布
-      // （index → 路由 chunk → 依赖链）。此前只处理根 index.html，其余预渲染入口
-      // （/home /handbook /features /on-this-day）仍有瀑布，现按入口逐一处理。
+      // （index → 路由 chunk → 依赖链）。每个预渲染入口各处理一次。
       name: 'first-screen-preload',
       // 仅构建期生效：vitest 会加载 vite.config 并触发 closeBundle（实测 npm test 改写 dist），
       // apply + VITEST 双保险，保证测试命令对产物目录零副作用
@@ -147,62 +151,55 @@ export default defineConfig({
       },
     },
     {
-      // 主从镜像 SEO 策略（2026-09-05 拍板）：
-      // 主站 = 自定义域名 iceberg.hezihezi.com（Cloudflare Pages），镜像 = GitHub Pages。
-      // 主站：index,follow + google-site-verification（让 Search Console 验证通过）。
-      // 镜像：noindex,follow，无验证码 —— canonical 已指向主站，noindex 做双保险。
-      // dev 模式：不注入任何标签，保持干净。
-      // 同时在 closeBundle 时覆盖镜像的 robots.txt（不声明 Sitemap）并删除镜像的 sitemap.xml。
-      name: 'seo-master-mirror',
+      // SEO：把 `__SITE_ORIGIN__` 替换成 site.config.json 的域名（index.html 与 public 静态文件同源）；
+      // robots meta 只在 CF Pages 生产构建注入 index,follow + 验证码，其余构建不注入、也不动 sitemap。
+      name: 'seo-site-origin',
       apply: 'build',
       transformIndexHtml(html) {
-        if (process.env.VITEST) return html
+        const withOrigin = html.replaceAll('__SITE_ORIGIN__', SITE_ORIGIN)
+        if (process.env.VITEST) return withOrigin
         const isDev = process.env.NODE_ENV === 'development' || !!process.env.VITE_DEV_SERVER
-        if (isDev) return html
-        const isMaster = !!process.env.CF_PAGES_BRANCH
+        if (isDev) return withOrigin
+        if (!process.env.CF_PAGES_BRANCH) return withOrigin
         const VERIFICATION_CODE = 'vh0DrM7cFOmicWG2VcUwv1vxGhH_pzuq7OxUW3hF584'
-        const tags = isMaster
-          ? `  <meta name="robots" content="index, follow" />\n  <meta name="google-site-verification" content="${VERIFICATION_CODE}" />\n`
-          : `  <meta name="robots" content="noindex, follow" />\n`
-        return html.replace('</head>', `${tags}</head>`)
+        return withOrigin.replace(
+          '</head>',
+          `  <meta name="robots" content="index, follow" />\n  <meta name="google-site-verification" content="${VERIFICATION_CODE}" />\n</head>`,
+        )
       },
       closeBundle() {
         if (process.env.VITEST) return
         const isDev = process.env.NODE_ENV === 'development' || !!process.env.VITE_DEV_SERVER
         if (isDev) return
-        const isMaster = !!process.env.CF_PAGES_BRANCH
-        if (isMaster) {
-          console.log('[seo-master-mirror] 主站模式（Cloudflare）：index,follow + 验证码')
-          return
-        }
-        // 镜像模式（GitHub Pages）：覆盖 robots.txt，不声明 Sitemap（省爬取预算）。
-        // 不用 Disallow: / —— 需要爬虫能抓到页面才能读到 canonical（指向主站）和 noindex。
+        // public/ 下的 robots.txt 与 sitemap.xml 是静态文件，不经 HTML 变换 —— 在这里把占位符
+        // 落到 dist（单一来源的最后一环）。本插件只替换占位符，不改写其它内容。
         try {
           const dist = path.resolve(__dirname, 'dist')
-          const robotsPath = path.join(dist, 'robots.txt')
-          const sitemapPath = path.join(dist, 'sitemap.xml')
-          if (fs.existsSync(robotsPath)) {
-            fs.writeFileSync(robotsPath, 'User-agent: *\nAllow: /\n\n# 镜像站（主站：iceberg.hezihezi.com）\n# 不声明 Sitemap：镜像不需要被独立索引\n')
-            console.log('[seo-master-mirror] 镜像模式：robots.txt Allow（无 Sitemap 声明）')
+          for (const name of ['robots.txt', 'sitemap.xml']) {
+            const p = path.join(dist, name)
+            if (!fs.existsSync(p)) continue
+            const src = fs.readFileSync(p, 'utf-8')
+            if (!src.includes('__SITE_ORIGIN__')) continue
+            fs.writeFileSync(p, src.replaceAll('__SITE_ORIGIN__', SITE_ORIGIN))
+            console.log(`[seo-site-origin] ${name} 已注入权威域名 ${SITE_ORIGIN}`)
           }
-          if (fs.existsSync(sitemapPath)) {
-            fs.unlinkSync(sitemapPath)
-            console.log('[seo-master-mirror] 镜像模式：已删除 sitemap.xml')
-          }
+          console.log(
+            process.env.CF_PAGES_BRANCH
+              ? '[seo-site-origin] 生产构建（Cloudflare）：index,follow + 验证码'
+              : '[seo-site-origin] 非生产构建：不注入 robots meta（可正常本地预览）',
+          )
         } catch (e) {
-          console.warn('[seo-master-mirror] skipped:', e)
+          console.warn('[seo-site-origin] skipped:', e)
         }
       },
     },
     {
       // Cloudflare Web Analytics（手工 JS 片段嵌入，token 见上方常量）。
-      // 为什么在构建期注入而不是写死进 index.html：dev 服务与本地 preview 的 hostname（localhost）
-      // 与 CF 侧登记的站点域名不匹配，beacon 上报会被 CORS 拒绝并在控制台报错
-      // （CF FAQ：“is not allowed by Access-Control-Allow-Origin … hostname of the site loading
-      // the analytics does not match the name of the analytics site”）。构建期注入让 dev 保持
-      // 零第三方请求，生产 HTML 即 CF 片段本身（属性值由 JSON 序列化，等价形态）。
+      // 构建期注入而不是写死进 index.html：dev 服务与本地 preview 的 hostname（localhost）
+      // 与 CF 侧登记的站点域名不匹配，beacon 上报会被 CORS 拒绝并在控制台报错；
+      // 构建期注入让 dev 保持零第三方请求，生产 HTML 即 CF 片段本身（属性值由 JSON 序列化）。
       // 注入方式：走 Vite 的结构化标签 API（injectTo: 'body'），不用 html.replace('</body>', …) ——
-      // 后者会被 HTML 注释文本里的同名片段截胡（实测：标签落进注释、beacon 静默不加载），
+      // 后者会被 HTML 注释文本里的同名片段截胡（标签落进注释、beacon 静默不加载），
       // 并连带打乱 first-screen-preload 的 html.replace('<script type="module"', …) 首个匹配位置。
       // CSP 联动（改 token / 换站点 / 卸载片段时三处一并处理）：script-src 需放行
       // https://static.cloudflareinsights.com/beacon.min.js，connect-src 需放行
