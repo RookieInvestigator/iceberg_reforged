@@ -22,6 +22,10 @@ broken_links.csv
 uncertain_links.csv
 
 # ── 内部开发文档（仅开发者，不入库） ─────────────
+# 只留 README 与 CHANGELOG 对外；其余开发文档本地保留、不进 git
+/CLAUDE.md
+/docs/*.md
+!/docs/CHANGELOG.md
 docs/TODO.md
 docs/audits/
 docs/plans/
@@ -34,6 +38,7 @@ docs/plans/
 
 # ── 工具产物（临时对比/导出，不入库） ────────────
 /outputs/
+.tmp-iceberg-research/
 
 # ── 历史项目（已压缩归档至 data/archive/legacy-2026-08/） ──
 iceberg-astro/

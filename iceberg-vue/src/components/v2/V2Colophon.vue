@@ -1,10 +1,9 @@
 <script setup lang="ts">
 // V2Colophon：版本跋 —— 统计行 + 发丝线 + 许可/来源/导航 + 公告入口。
-// 不新增 i18n key（复用 homeStats / licenseNote 等）。
-import { ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { TriangleAlert } from '@lucide/vue';
 import { useI18n } from '../../lib/useI18n';
-import { SITE_HOST, SITE_ORIGIN, isProjectHost } from '../../lib/site';
+import { SITE_HOST, SITE_ORIGIN, fetchRemoteVersion, hasNewerData, isOnCanonicalOrigin } from '../../lib/site';
 import BulletinModal from '../modals/BulletinModal.vue';
 import AboutModal from '../modals/AboutModal.vue';
 import CopyrightModal from '../modals/CopyrightModal.vue';
@@ -13,8 +12,10 @@ import TermsModal from '../modals/TermsModal.vue';
 import ExportImageButton from '../items/ExportImageButton.vue';
 import type { Bulletin } from '../../lib/bulletins';
 
-defineProps({
+const props = defineProps({
   buildDate: { type: String, default: '' },
+  /** 数据快照时间（秒级 Unix）；新鲜度提示据此判定，任何部署一视同仁 */
+  generatedAt: { type: Number, default: 0 },
   entryCount: { type: Number, default: 0 },
   tierCount: { type: Number, default: 0 },
   catCount: { type: Number, default: 0 },
@@ -23,13 +24,23 @@ defineProps({
 });
 
 const { t } = useI18n();
-/** 别人部署的副本 → 提示数据可能落后 */
-const isCopy = !isProjectHost();
 const showBulletin = ref(false);
 const showAbout = ref(false);
 const showCopyright = ref(false);
 const showContact = ref(false);
 const showTerms = ref(false);
+
+// 只比内容指纹：远端真有新数据才提示（数据可能几十天不变，按天数判会一直误报）
+const newerCount = ref(0);
+onMounted(async () => {
+  const remote = await fetchRemoteVersion();
+  if (hasNewerData(remote)) newerCount.value = remote?.total || 0;
+});
+const staleHint = computed(() =>
+  newerCount.value ? t('newerData').replace('{count}', String(newerCount.value)) : '',
+);
+// 已经在站点域名上就不必再链回自己
+const showLink = computed(() => !isOnCanonicalOrigin());
 
 const GITHUB_URL = 'https://github.com/RookieInvestigator/iceberg_reforged';
 const SOURCE_URL = 'https://icebergthreads.com/zh/iceberg/fel4BTCqlMAGSa2gelRJ';
@@ -39,11 +50,12 @@ const CC_URL = 'https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hans';
 <template>
   <footer class="v2colo" id="v2-colophon">
     <p class="v2colo-stats">{{ t('homeStats').replace('{count}', String(entryCount)).replace('{tiers}', String(tierCount)).replace('{cats}', String(catCount)) }} · {{ buildDate }}</p>
-    <!-- 别人部署的副本：在统计行下方提示数据可能落后 -->
-    <a v-if="isCopy" class="v2colo-copyhint" :href="SITE_ORIGIN">
+    <!-- 数据旧了才提示：不看域名，任何部署（含本项目自己的）都按同一把尺子 -->
+    <p v-if="staleHint" class="v2colo-stale">
       <TriangleAlert :size="12" :stroke-width="2.2" aria-hidden="true" />
-      <span>{{ t('copyStaleHint').replace('{origin}', SITE_HOST) }}</span>
-    </a>
+      <span>{{ staleHint }}</span>
+      <a v-if="showLink" :href="SITE_ORIGIN">{{ SITE_HOST }}</a>
+    </p>
     <p class="v2colo-note">{{ t('licenseNote') }}</p>
     <nav class="v2colo-nav">
       <router-link to="/">{{ t('navIceberg') }}</router-link>
@@ -79,16 +91,16 @@ const CC_URL = 'https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hans';
 <style scoped>
 .v2colo { text-align: center; padding: 4rem var(--header-padding-x) 3rem; }
 .v2colo-stats { margin: 0; font-size: var(--font-sm); font-weight: 700; letter-spacing: 0.12em; color: var(--white-70); }
-/* 副本提示：与统计行同处一栏，弱化但不隐形（危险色只给图标，文字走常规可读层级） */
-.v2colo-copyhint {
+/* 数据过期提示：与统计行同处一栏，弱化但不隐形（危险色只给图标） */
+.v2colo-stale {
   margin: 0.5rem auto 0; display: inline-flex; align-items: center; gap: 0.35rem;
   padding: 0.25rem 0.6rem; border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--color-danger) 32%, transparent);
   background: color-mix(in srgb, var(--color-danger) 8%, transparent);
   font-size: var(--font-tiny); letter-spacing: 0.04em; color: var(--white-65);
-  text-decoration: none; transition: color 0.15s, border-color 0.15s, background-color 0.15s;
 }
-.v2colo-copyhint:hover { color: var(--white-90); border-color: color-mix(in srgb, var(--color-danger) 55%, transparent); background: color-mix(in srgb, var(--color-danger) 14%, transparent); }
+.v2colo-stale a { color: var(--white-65); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--color-danger) 45%, transparent); transition: color 0.15s; }
+.v2colo-stale a:hover { color: var(--white-90); }
 .v2colo-note { margin: 1rem auto 0; max-width: 620px; font-size: var(--font-xs); line-height: 1.9; color: var(--white-40); }
 .v2colo-nav { margin-top: 1.4rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.4rem 1.2rem; font-size: var(--font-xs); letter-spacing: 0.08em; }
 .v2colo-ext { margin-top: 0.7rem; }

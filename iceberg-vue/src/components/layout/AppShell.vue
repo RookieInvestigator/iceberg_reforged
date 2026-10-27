@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import router from '../../router'
 import BulletinBanner from './BulletinBanner.vue'
 import BulletinModal from '../modals/BulletinModal.vue'
@@ -28,6 +28,9 @@ let shieldHidden = false
 //      「已读」不隐藏条幅；
 //   ② 最新一条既未读也未被关闭时，进站自动弹一次公告板（每份公告只弹一次）。
 // 「已读」指针由 BulletinModal 打开时前移（自动弹窗与手动打开同一条路径，不会漏记）。
+/** 沉浸式全屏页面（3D 冰山）：公告条与自动弹窗会压在画面上，按路由 meta 关掉 */
+const immersive = computed(() => router.currentRoute.value.meta.immersive === true)
+
 const bulletins = loadBulletins()
 const bulletinState = readBulletinState()
 const bannerBulletin = ref(shouldShowBanner(bulletins, bulletinState) ? bulletins[0] : null)
@@ -62,6 +65,7 @@ function scheduleBulletinPopup() {
   if (bulletinPopupScheduled) return
   bulletinPopupScheduled = true
   // 定向深链（?item= / #hash）自身会打开词条弹窗，不要再叠一层公告
+  if (immersive.value) return
   if (/[?&]item=/.test(window.location.search) || !!window.location.hash) return
   if (!pendingBulletin(bulletins, bulletinState)) return
   bulletinTimer = window.setTimeout(() => {
@@ -149,7 +153,7 @@ onUnmounted(() => {
 <template>
   <!-- 顶部公告条：全站可见（含所有路由），关闭状态按公告 id 记忆。
        外层 div 只为量高度（--bulletin-offset），组件根元素不接受模板 ref -->
-  <div v-if="bannerBulletin" ref="bannerEl" class="bulletin-slot">
+  <div v-if="bannerBulletin && !immersive" ref="bannerEl" class="bulletin-slot">
     <BulletinBanner
       :bulletin="bannerBulletin"
       @open="showBulletin = true"

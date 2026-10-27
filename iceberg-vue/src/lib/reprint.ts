@@ -5,7 +5,7 @@ import meta from '../data/meta.json'
 import { SITE_ORIGIN } from './site'
 
 export const REPRINT_SITE = '中文兔子洞冰山图'
-/** 转载模板里的「原文链接」前缀：权威域名，与 canonical 同源（site.config.json） */
+/** 转载模板里的「原文链接」前缀：站点域名，与 canonical 同源（site.config.json） */
 export const REPRINT_URL = SITE_ORIGIN
 export const REPRINT_LICENSE = 'CC BY-SA 4.0'
 

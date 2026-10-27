@@ -5,9 +5,21 @@ import { parseWenyan, toChineseNum } from '../lib/ancient-book/engine'
 import { calcLayout } from '../lib/ancient-book/layout'
 import SpreadView from '../lib/ancient-book/SpreadView.vue'
 import { useI18n } from '../lib/useI18n'
+import { toPlainText } from '../lib/richText'
 import type { Token, PlacedCell } from '../lib/ancient-book/types'
 
 const { t } = useI18n()
+
+/** 古排正文是逐字排布，无法承载行内样式：HTML 标签与 md 标记统一降级为纯文本 */
+function plainDesc(raw?: string): string {
+  return toPlainText(
+    (raw || '')
+      .replace(/<[^>]*>/g, '')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>'),
+  )
+}
 
 interface ItemExt { id: string; title: string; category: string; tags: string[]; desc: string; link: string; tier: string }
 const tierOrder: string[] = raw.tierOrder || []
@@ -73,11 +85,11 @@ function generateData(mode: 'category' | 'tier') {
       pushAll('\f', -1)
       for (const it of items) {
         const mi = meta.length
-        meta.push({ id: it.id, title: it.title, cat: it.category, color: (raw as any).categoryColors?.[it.category] || (raw as any).defaultColor || '#FFFFFF', tags: it.tags, desc: it.desc, link: it.link, tier: it.tier })
+        meta.push({ id: it.id, title: it.title, cat: it.category, color: (raw as any).categoryColors?.[it.category] || (raw as any).defaultColor || '#FFFFFF', tags: it.tags, desc: plainDesc(it.desc), link: it.link, tier: it.tier })
         pushAll('【' + it.title + '】\n', mi)
         const ts = (it.tags || []).length > 0 ? it.tags.join('　') : ''
         if (ts) pushAll('（' + ts + '）', mi)
-        pushAll((it.desc || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'), mi)
+        pushAll(plainDesc(it.desc), mi)
         pushAll('\n\n', mi)
       }
     }
@@ -94,11 +106,11 @@ function generateData(mode: 'category' | 'tier') {
       for (const it of items) {
         const catColor = (raw as any).categoryColors?.[it.category] || (raw as any).defaultColor || '#FFFFFF'
         const mi = meta.length
-        meta.push({ id: it.id, title: it.title, cat: it.category, color: catColor, tags: it.tags, desc: it.desc, link: it.link, tier: it.tier })
+        meta.push({ id: it.id, title: it.title, cat: it.category, color: catColor, tags: it.tags, desc: plainDesc(it.desc), link: it.link, tier: it.tier })
         pushAll('【' + it.title + '】\n', mi)
         const ts = (it.tags || []).length > 0 ? it.tags.join('　') : ''
         if (ts) pushAll('（' + ts + '）', mi)
-        pushAll((it.desc || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>'), mi)
+        pushAll(plainDesc(it.desc), mi)
         pushAll('\n\n', mi)
       }
     }

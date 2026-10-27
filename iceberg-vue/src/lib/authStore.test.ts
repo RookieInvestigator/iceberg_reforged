@@ -57,7 +57,7 @@ describe('syncFavoritesWithCloud（F13 冲突矩阵）', () => {
     expect(mockSync).not.toHaveBeenCalled()
   })
 
-  it('本地新增：本地非空 → 双向 diff 同步以本地为权威，成功后校正显示', async () => {
+  it('本地新增：本地非空 → 双向 diff 同步以本地为准，成功后校正显示', async () => {
     setLocal(['a', 'b'])
     mockFetch.mockResolvedValue(['a'])
     await syncFavoritesWithCloud()
@@ -65,7 +65,7 @@ describe('syncFavoritesWithCloud（F13 冲突矩阵）', () => {
     expect(favorites.get()).toEqual(['a', 'b'])
   })
 
-  it('云端新增（本地权威删云端多余）：diff 由 syncFavorites 传播删除', async () => {
+  it('云端新增（本地集合删云端多余）：diff 由 syncFavorites 传播删除', async () => {
     setLocal(['a'])
     mockFetch.mockResolvedValue(['a', 'b'])
     await syncFavoritesWithCloud()

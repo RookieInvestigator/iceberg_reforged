@@ -5,6 +5,7 @@
 import { computed, ref } from 'vue';
 import { useI18n } from '../../lib/useI18n';
 import { useFadeInOnShow } from '../../lib/iceberg/useFadeInOnShow';
+import RichText from '../ui/RichText.vue';
 
 const props = defineProps({ show: Boolean, floating: Boolean, anchor: { type: [String, Object], default: null }, desc: String, noDesc: Boolean, category: String, color: String, tags: String });
 const emit = defineEmits(['enter', 'leave']);
@@ -40,7 +41,9 @@ const teleported = useFadeInOnShow(() => props.show);
       @mouseleave="emit('leave')"
     >
       <p class="v2tip-cat"><span :style="dotStyle">●</span> {{ category }}</p>
-      <p class="v2tip-desc" :class="{ 'tooltip-desc-empty': noDesc }">{{ desc }}</p>
+      <p class="v2tip-desc" :class="{ 'tooltip-desc-empty': noDesc }">
+        <RichText inline :text="desc || ''" />
+      </p>
       <p v-if="tags" class="v2tip-tags">{{ tags }}</p>
     </div>
   </Teleport>
@@ -52,6 +55,6 @@ const teleported = useFadeInOnShow(() => props.show);
 .v2tip { padding: 16px 18px; border-radius: var(--v2-r-md); max-width: min(380px, 88vw); color: var(--color-tooltip-text); }
 .v2tip-cat { margin: 0 0 6px; font-size: var(--font-tiny); font-weight: 700; letter-spacing: 0.18em; color: var(--color-tooltip-meta); }
 .v2tip-cat span { font-size: 8px; vertical-align: 1px; margin-right: 2px; }
-.v2tip-desc { margin: 0; font-size: var(--font-sm); line-height: 1.65; color: var(--color-tooltip-text); white-space: pre-wrap; overflow-wrap: anywhere; }
+.v2tip-desc { margin: 0; font-size: var(--font-sm); line-height: 1.65; color: var(--color-tooltip-text); overflow-wrap: anywhere; }
 .v2tip-tags { margin: 8px 0 0; padding-top: 8px; border-top: 1px solid var(--color-tooltip-border); font-size: var(--font-tiny); color: var(--color-tooltip-meta); }
 </style>

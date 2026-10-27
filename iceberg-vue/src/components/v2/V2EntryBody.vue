@@ -16,6 +16,7 @@ import CommentPanel from '../items/CommentPanel.vue';
 import EntryMarks from '../items/EntryMarks.vue';
 import EntryMetaBadges from './V2EntryMetaBadges.vue';
 import EntryRelatedLinks from './V2RelatedLinks.vue';
+import RichText from '../ui/RichText.vue';
 import { REFERENCES_MAP_KEY, type ReferenceLink } from '../../lib/injectionKeys';
 import { linkDisplay } from '../../lib/sourceLabel';
 import { pickLinks } from '../../lib/iceberg/entryLinks';
@@ -123,10 +124,15 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
       <EntryMarks :itemId="item.id" />
     </EntryMetaBadges>
 
-    <!-- 描述：核心阅读区（15px / 1.8 与 v1 对齐，属展示级例外，不收编进 5 阶梯） -->
-    <p class="v2entry-desc" :class="[item.desc ? '' : 'v2entry-desc--empty', descSpacing]">
-      {{ item.desc || t('noDescShort') }}
-    </p>
+    <!-- 描述：核心阅读区（15px / 1.8 与 v1 对齐，属展示级例外，不收编进 5 阶梯）。
+         正文支持行内标记与 `> ` 引用块，解析与渲染与手册共用 lib/richText + ui/RichText -->
+    <RichText
+      v-if="item.desc"
+      class="v2entry-desc"
+      :class="descSpacing"
+      :text="item.desc"
+    />
+    <p v-else class="v2entry-desc v2entry-desc--empty">{{ t('noDescShort') }}</p>
 
     <!-- 链接区：一个连续的列表 —— 主链接在前、参考链接紧随，**没有任何分组字样**把两者分开；
          仅用 sr-only 标题给读屏用户交代后半段语义（也让 i18n 的 referenceLinks 不成为死词） -->
@@ -183,7 +189,6 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
   /* 15px / 1.8 刻意不走 5 阶梯（收进去会跳到 14 或 16，视觉变化过大） */
   font-size: 15px;
   line-height: 1.8;
-  white-space: pre-wrap;
   -webkit-font-smoothing: antialiased;
   color: var(--white-85);
 }

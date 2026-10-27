@@ -1,4 +1,16 @@
+import {
+  hrefKind,
+  normalizeDesc,
+  safeHref,
+  segmentDesc,
+  splitParagraphs,
+  stripMdEm,
+  toPlainText,
+} from './richText'
+
 // 术语表单一事实源（HandbookView 与 V2 徽章共用）：tab 定义、深链构造、md 解析。
+// 富文本原语（行内标记 / 引用块 / 换行规整）统一在 lib/richText.ts，这里只做手册专属的
+// 文件结构解析（## 节 → ### 条目）并向后兼容地转出共用原语。
 export const HANDBOOK_TABS = [
   { key: 'criteria', heading: '划定标准', labelKey: 'handbookTabCriteria' },
   { key: 'concepts', heading: '各类概念', labelKey: 'handbookTabConcepts' },
@@ -12,6 +24,11 @@ export const handbookLink = (tab: HandbookTab, term: string, from?: string) => (
   path: '/handbook',
   query: { tab, term, ...(from ? { from } : {}) },
 })
+
+export { hrefKind, normalizeDesc, segmentDesc, splitParagraphs, stripMdEm, toPlainText }
+export type { DescSeg, HrefKind, RichBlock } from './richText'
+/** 旧名保留：手册侧曾把链接白名单叫 safeHandbookHref（词条正文也走同一套）。 */
+export const safeHandbookHref = safeHref
 
 /** 解析 handbook.md：二级标题 →（三级标题 → 描述）。释义首行若为 `> ` 开头，视为短版摘要行：
  * 从 desc 剥离（术语表不显示），由 getShortMap 另行提取（徽章 hover 优先显示短版）。 */
@@ -37,7 +54,7 @@ export function parseSections(md: string): Map<string, Record<string, string>> {
         rest = firstNl === -1 ? '' : rest.slice(firstNl + 1)
       }
       const end = rest.search(/\n(?:### |## )/)
-      const desc = end === -1 ? rest.trim() : rest.slice(0, end).trim()
+      const desc = normalizeDesc(end === -1 ? rest : rest.slice(0, end))
       if (name && desc) entries[name] = desc
     }
     sections.set(title, entries)
@@ -58,39 +75,6 @@ export function getCriteriaDescMap(rawMd: string): Record<string, string> {
 
 let shortCache: Record<string, string> | null = null
 
-/** 预览用纯文本：去掉 md 强调标记（`==...==` 只留文字）。 */
-export function stripMdEm(text: string): string {
-  return text.replace(/==/g, '')
-}
-
-export interface DescSeg { text: string; em: boolean }
-
-/**
- * 术语表描述的分段：**只认显式的 `==...==`**（可嵌套），其余字符原样输出。
- * 行为约定（由单测锁定）：标记不出现在输出里、嵌套可开可关、未闭合的 `==` 只是普通文字。
- */
-export function segmentDesc(text: string): DescSeg[] {
-  const segs: DescSeg[] = []
-  let em = false
-  let buf = ''
-  const flush = () => {
-    if (buf) { segs.push({ text: buf, em }); buf = '' }
-  }
-  let i = 0
-  while (i < text.length) {
-    // ==...== 显式强调：标记不进入输出，仅切换高亮状态（可嵌套，未闭合则一路高亮到末尾）
-    if (text.slice(i, i + 2) === '==') {
-      flush()
-      em = !em
-      i += 2
-      continue
-    }
-    buf += text[i]
-    i++
-  }
-  flush()
-  return segs
-}
 /**
  * 全节的名 → 短版表（释义首行 `> ` 开头即短版；徽章 hover 优先显示，无则回退全文）。
  * 与 parseSections 同源解析，两表互补（短版行已从 desc 剥离，不会重复出现）。

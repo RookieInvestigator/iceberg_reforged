@@ -117,7 +117,7 @@ async function toggleCommentLike(c: CommentRow) {
       c.user_liked = liked
       c.like_count = (c.like_count || 0) + (liked ? 1 : -1)
     }
-    // 回读服务端权威计数，消除多次点击/并发漂移
+    // 回读服务端计数，消除多次点击/并发漂移
     const count = await fetchInteractionCount('comment', String(c.id), 'like')
     c.like_count = count
   } catch (e: any) {

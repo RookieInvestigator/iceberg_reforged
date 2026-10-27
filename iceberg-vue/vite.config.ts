@@ -8,13 +8,21 @@ import { vitePrerenderPlugin } from 'vite-prerender-plugin'
 import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import siteConfig from './site.config.json'
 
 const MAX_APPENDIX_BODY = 2 * 1024 * 1024 // JSON body 大小限制：2MB
 
-// 权威域名唯一来源（site.config.json）：构建期替换 index.html 与 public 静态文件里的
+// 站点域名唯一来源（site.config.json）：构建期替换 index.html 与 public 静态文件里的
 // `__SITE_ORIGIN__` 占位符。
 const SITE_ORIGIN = String(siteConfig.origin).replace(/\/+$/, '')
+
+// 数据内容指纹（只哈希 tiers，**不含 generatedAt** —— 否则每次重建都变，
+// 远端比对就会误报「有新数据」）。写入 dist/version.json，并作为 __DATA_HASH__ 注入前端。
+const DATA_HASH = (() => {
+  const raw = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'src/data/iceberg.json'), 'utf-8'))
+  return createHash('sha256').update(JSON.stringify(raw.tiers ?? {})).digest('hex')
+})()
 
 // Cloudflare Web Analytics 站点 token（CF 控制台 → Web Analytics → 站点 → 「JS 片段」里的 token）
 const CF_ANALYTICS_TOKEN = 'ab9b42c938f9456988f0d5bb4a4bd191'
@@ -181,8 +189,15 @@ export default defineConfig({
             const src = fs.readFileSync(p, 'utf-8')
             if (!src.includes('__SITE_ORIGIN__')) continue
             fs.writeFileSync(p, src.replaceAll('__SITE_ORIGIN__', SITE_ORIGIN))
-            console.log(`[seo-site-origin] ${name} 已注入权威域名 ${SITE_ORIGIN}`)
+            console.log(`[seo-site-origin] ${name} 已注入站点域名 ${SITE_ORIGIN}`)
           }
+          // version.json：任何部署都能取站点的数据版本，按内容指纹判断是否真有新数据
+          const meta = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'src/data/meta.json'), 'utf-8'))
+          fs.writeFileSync(
+            path.join(dist, 'version.json'),
+            JSON.stringify({ generatedAt: meta.generatedAt, dataHash: DATA_HASH, total: meta.total }) + '\n',
+          )
+          console.log(`[seo-site-origin] version.json 已写出（dataHash=${DATA_HASH.slice(0, 12)}…）`)
           console.log(
             process.env.CF_PAGES_BRANCH
               ? '[seo-site-origin] 生产构建（Cloudflare）：index,follow + 验证码'
@@ -432,6 +447,7 @@ export default defineConfig({
     }),
   ],
   base: process.env.CF_PAGES_BRANCH ? '/' : '/iceberg_reforged/',
+  define: { __DATA_HASH__: JSON.stringify(DATA_HASH) },
   resolve: {
     alias: { '@': '/src' },
   },

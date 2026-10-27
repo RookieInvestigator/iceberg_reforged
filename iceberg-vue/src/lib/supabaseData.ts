@@ -215,7 +215,7 @@ export async function fetchMyInteractions(targetType: 'item' | 'comment', target
   return new Set((data || []).map(r => r.target_id))
 }
 
-/** 同步本地收藏到云端（本地为权威源的双向 diff：新增缺失、删除多余）。F11：错误全部抛出 */
+/** 同步本地收藏到云端（以本地为准的双向 diff：新增缺失、删除多余）。F11：错误全部抛出 */
 export async function syncFavorites(itemIds: string[]) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return

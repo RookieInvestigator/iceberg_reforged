@@ -171,7 +171,7 @@ describe('applyCategories', () => {
     expect(data.tiers.T1[0].category).toBe('C')
   })
 
-  it('main 指向未知分类：照用（权威指定）但颜色回退 defaultColor', () => {
+  it('main 指向未知分类：照用（显式指定）但颜色回退 defaultColor', () => {
     const data = mkData()
     applyCategories(data, new Map([['1', [rec('Z', 'main')]]]))
     expect(data.tiers.T1[0].category).toBe('Z')

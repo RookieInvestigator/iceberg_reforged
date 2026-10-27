@@ -3,3 +3,8 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# 数据版本号：任何部署（含镜像）都要能跨域取，用于判断远端是否真有新数据
+/version.json
+  Access-Control-Allow-Origin: *
+  Cache-Control: no-store

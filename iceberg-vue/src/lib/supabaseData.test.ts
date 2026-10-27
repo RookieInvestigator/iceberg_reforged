@@ -223,7 +223,7 @@ describe('toggleInteraction（F11 幂等 + 错误检查）', () => {
 })
 
 // ==========================================
-// F13：syncFavorites 双向 diff（本地为权威源）
+// F13：syncFavorites 双向 diff（以本地为准）
 // ==========================================
 describe('syncFavorites（F13 双向 diff）', () => {
   beforeEach(() => resetInteractions())

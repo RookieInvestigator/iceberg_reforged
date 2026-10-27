@@ -143,9 +143,16 @@ export class Iceberg3DEngine {
 
   init(): void {
     const { width, height } = this.container.getBoundingClientRect()
+    this.coarsePointer =
+      typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+    // 移动端是填充率瓶颈：关 MSAA、压低 DPR、Bloom 降分辨率，视觉差异很小但帧时间明显下降
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: !this.coarsePointer,
+      alpha: true,
+      powerPreference: 'high-performance',
+    })
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.coarsePointer ? 1.75 : 2))
     this.renderer.setSize(width, height)
     this.renderer.setClearColor(0x000000, 0)
     this.renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -169,7 +176,7 @@ export class Iceberg3DEngine {
     this.controls.enablePan = true
     this.controls.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.PAN, RIGHT: THREE.MOUSE.ROTATE }
 
-    this.flight = new CameraFlight(this.camera, this.controls, this.container)
+    this.flight = new CameraFlight(this.camera, this.controls, this.container, () => this.measureCoveredHeight())
 
     // 入场镜头：从更远的深空缓慢推近到主体，增强电影感；reduced-motion 下直接到位
     if (!prefersReducedMotion()) {
@@ -178,13 +185,16 @@ export class Iceberg3DEngine {
         { x: introFrom.x, y: introFrom.y, z: introFrom.z },
         { x: 12, y: 7, z: 18, duration: 2.2, ease: 'power2.out' })
     }
-    this.coarsePointer =
-      typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
-
     // 保留色彩输出处理；加入极克制的 Bloom，让橙色聚焦环与高亮宝石有一层柔和光晕。
     const renderScene = new RenderPass(this.scene, this.camera)
-    // Bloom 使用半分辨率渲染，显著降低后处理开销；视觉上仍保留柔和光晕
-    const bloomPass = new UnrealBloomPass(new THREE.Vector2(Math.max(1, Math.floor(width / 2)), Math.max(1, Math.floor(height / 2))), 0.2, 0.5, 0.55)
+    // Bloom 用低分辨率渲染（移动端更低）：后处理开销与像素数成正比，视觉上仍保留柔和光晕
+    const bloomScale = this.coarsePointer ? 0.32 : 0.5
+    const bloomPass = new UnrealBloomPass(
+      new THREE.Vector2(Math.max(1, Math.floor(width * bloomScale)), Math.max(1, Math.floor(height * bloomScale))),
+      0.2,
+      0.5,
+      0.55,
+    )
     const outputPass = new OutputPass()
 
     this.composer = new EffectComposer(this.renderer)
@@ -205,6 +215,7 @@ export class Iceberg3DEngine {
     this.buildFocusRing()
     this.buildStars()
     this.buildIceDust()
+
 
     this.container.addEventListener('pointerdown', this.onPointerDown)
     this.container.addEventListener('pointermove', this.onPointerMove)
@@ -494,7 +505,8 @@ export class Iceberg3DEngine {
 
   /** 渐变星空：在远处球壳撒冰蓝/白/少量暖橙星点，配合 CSS 渐变背景 */
   private buildStars() {
-    const count = 700
+    // 移动端粒子减少约 40%：星点本身不可交互，是纯粹的填充率开销
+    const count = this.coarsePointer ? 420 : 700
     const positions = new Float32Array(count * 3)
     const colors = new Float32Array(count * 3)
     const rng = mulberry32(Iceberg3DEngine.SEED ^ 0x5a7)
@@ -539,7 +551,7 @@ export class Iceberg3DEngine {
 
   /** 冰山周围的冰尘：近距离细小粒子，缓慢旋转增加深海悬浮感 */
   private buildIceDust() {
-    const count = 320
+    const count = this.coarsePointer ? 180 : 320
     const positions = new Float32Array(count * 3)
     const colors = new Float32Array(count * 3)
     const rng = mulberry32(Iceberg3DEngine.SEED ^ 0x3c1)
@@ -789,6 +801,8 @@ export class Iceberg3DEngine {
       return
     }
 
+    // 触屏没有悬停：跳过整套投影拾取（每次触摸移动都扫全量实例是纯浪费）
+    if (this.coarsePointer) return
     this.updatePointerNdc(e)
     // perf：位移阈值 4px —— 微动不触发全量拾取扫描；静止时由 20Hz 低频追踪旋转星轨
     if (this.hasPickPos && Math.abs(e.clientX - this.lastPickX) < 4 && Math.abs(e.clientY - this.lastPickY) < 4) return
@@ -853,7 +867,7 @@ export class Iceberg3DEngine {
     // 星轨持续旋转时，光标不动也需要低频重算最近实例，保证 Hover 与点击目标一致。
     if (
       this.needsPick ||
-      (this.pointerInside && !this.isDragging && elapsed >= this.nextHoverPickElapsed)
+      (!this.coarsePointer && this.pointerInside && !this.isDragging && elapsed >= this.nextHoverPickElapsed)
     ) {
       this.needsPick = false
       this.nextHoverPickElapsed = elapsed + 1 / 20
@@ -928,6 +942,25 @@ export class Iceberg3DEngine {
   }
 
   // ── 生命周期 ──
+
+  /**
+   * 详情面板在纵向的遮挡高度：移动端面板从底部升起、横向占满画布，返回其高度；
+   * 桌面侧边面板高度等于画布、只在横向占位，返回 0。
+   * 直接量 DOM，面板尺寸随断点变化时聚焦构图不用跟着改常量。
+   */
+  private measureCoveredHeight(): number {
+    const container = this.container
+    if (!container) return 0
+    const panel = container.parentElement?.querySelector<HTMLElement>('.detail-panel')
+    if (!panel) return 0
+    const containerRect = container.getBoundingClientRect()
+    if (containerRect.height <= 0) return 0
+    const panelRect = panel.getBoundingClientRect()
+    if (panelRect.height <= 0) return 0
+    const isBottomPanel =
+      panelRect.width >= containerRect.width * 0.9 && panelRect.height < containerRect.height * 0.9
+    return isBottomPanel ? Math.min(panelRect.height, containerRect.height) : 0
+  }
 
   private onResize = () => {
     if (this.disposed || !this.renderer) return

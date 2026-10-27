@@ -4,7 +4,8 @@ import { ArrowLeft } from '@lucide/vue'
 import { useRoute, useRouter } from 'vue-router'
 import { normalizeData } from '../lib/data'
 import { DiveEngine, type DiveEntry, type DiveFocus, type DiveHud } from '../lib/iceberg3d/diveEngine'
-import { useI18n } from '../lib/useI18n'
+import { useI18n } from '../lib/useI18n';
+import RichText from '../components/ui/RichText.vue'
 import raw from '../data/iceberg.json'
 
 const { t } = useI18n()
@@ -245,7 +246,9 @@ function onVisibilityChange() {
           <div class="panel-tags" v-if="selectedEntry.item.tags?.length">
             <span v-for="tag in selectedEntry.item.tags" :key="tag">#{{ tag }}</span>
           </div>
-          <p class="panel-desc">{{ selectedEntry.item.desc || t('noDescription') }}</p>
+          <div class="panel-desc">
+          <RichText :text="selectedEntry.item.desc || t('noDescription')" />
+        </div>
           <a v-if="selectedEntry.item.link" :href="selectedEntry.item.link" target="_blank" rel="noopener" class="panel-link">
             {{ t('openLinkShort') }}
           </a>
@@ -369,7 +372,7 @@ function onVisibilityChange() {
 .panel-title { margin: 0 0 1rem; font-size: 1.25rem; font-weight: 700; line-height: 1.35; color: var(--white-92); }
 .panel-tags { display: flex; flex-wrap: wrap; gap: 0.5rem 0.75rem; margin-bottom: 1.25rem; }
 .panel-tags span { font-size: var(--font-xs); color: var(--white-45); }
-.panel-desc { font-size: var(--font-sm); line-height: 1.7; color: var(--white-60); margin: 0; white-space: pre-wrap; flex: 1; }
+.panel-desc { font-size: var(--font-sm); line-height: 1.7; color: var(--white-60); margin: 0; flex: 1; }
 .panel-link {
   display: inline-flex; align-items: center; gap: 0.5rem; align-self: flex-start;
   margin-top: 1.5rem; padding: 0.5rem 1.25rem;

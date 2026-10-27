@@ -60,6 +60,29 @@ beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
+const richItem: EntryView = {
+  ...item,
+  id: 'e-rich',
+  desc: '开头==强调==与**加粗**，还有[手册](/handbook)。\n\n> 引文第一行\n> 引文第二行',
+}
+
+describe('V2 详情正文富文本', () => {
+  it('卡片正文渲染行内标记与引用块（与手册共用 RichText）', async () => {
+    const w = mount(V2EntryCard, { props: { item: richItem }, attachTo: document.body, global: { plugins: [router] } })
+    await nextTick()
+    // 卡片内容经 Teleport 落到 document.body，按真实 DOM 断言
+    const body = document.querySelector('.v2entry-body')
+    expect(body?.textContent || '').toContain('强调')
+    expect(document.querySelector('.rt-em')?.textContent).toBe('强调')
+    expect(document.querySelector('.rt-b')?.textContent).toBe('加粗')
+    expect(document.querySelector('blockquote.rt-quote')?.textContent?.trim()).toBe('引文第一行\n引文第二行')
+    // 标记符号不得漏进正文（引用块文字也不该以 > 开头）
+    expect(body?.textContent || '').not.toContain('==')
+    expect(document.querySelector('blockquote.rt-quote')?.textContent?.trim().startsWith('>')).toBe(false)
+    w.unmount()
+  })
+})
+
 describe('V2 详情弹窗冒烟', () => {
   it('V2EntryCard：inject 到 ia 并渲染出内容区', async () => {
     const w = mount(V2EntryCard, { props: { item }, attachTo: document.body, global: { plugins: [router] } })

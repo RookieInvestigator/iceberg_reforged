@@ -4,6 +4,7 @@
 // YAML/HTML 与宽度无关。字体一致性：绘制前等 document.fonts.ready。
 // 重型模块（wallExport / wallSvg / qrcode）全动态 import，不进首屏包。
 import { ref, inject, computed } from 'vue';
+import { toPlainText } from '../../lib/richText'
 import { useStore } from '@nanostores/vue';
 import BaseModal from './BaseModal.vue';
 import { useI18n } from '../../lib/useI18n';
@@ -208,7 +209,7 @@ async function doExportHtml(): Promise<void> {
           search: t('search'), reset: t('clearAll'), categories: t('categories'),
           tags: t('tags'), noResult: t('noResults'),
         },
-        descs: Object.fromEntries(items.map((it) => [it.id, it.desc || ''])),
+        descs: Object.fromEntries(items.map((it) => [it.id, toPlainText(it.desc || '')])),
         links: Object.fromEntries(items.map((it) => [it.id, it.link || ''])),
         cats: Object.fromEntries(items.map((it) => [it.id, it.category || ''])),
         // 标签筛选用 emoji（图例 data-leg-tag 存的就是 emoji，名字对不上永远是 0 命中）

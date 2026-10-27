@@ -3,11 +3,11 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import siteConfig from '../../site.config.json'
-import { SITE_ORIGIN, canonicalUrl, isProjectHost } from './site'
+import { SITE_ORIGIN, canonicalUrl, hasNewerData } from './site'
 import { REPRINT_URL } from './reprint'
 
 /**
- * 权威域名单一来源守卫：真值在 site.config.json，其余地方只许用占位符或 lib/site.ts。
+ * 站点域名单一来源守卫：真值在 site.config.json，其余地方只许用占位符或 lib/site.ts。
  */
 const SRC_ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const PROJECT_ROOT = join(SRC_ROOT, '..')
@@ -39,7 +39,7 @@ function stripComments(text: string): string {
     .join('\n')
 }
 
-describe('site.config.json 是权威域名的唯一来源', () => {
+describe('site.config.json 是站点域名的唯一来源', () => {
   it('形态：https + 无尾斜杠 + 与导出常量一致', () => {
     expect(siteConfig.origin).toMatch(/^https:\/\/[a-z0-9.-]+$/)
     expect(SITE_ORIGIN).toBe(siteConfig.origin)
@@ -56,23 +56,16 @@ describe('site.config.json 是权威域名的唯一来源', () => {
     expect(REPRINT_URL).toBe(SITE_ORIGIN)
   })
 
-  it('isProjectHost：本项目部署（含子域）为真，别人的副本为假', () => {
-    // 本项目自己的部署
-    expect(isProjectHost('iceberg.hezihezi.com')).toBe(true)
-    expect(isProjectHost('ICEBERG.HEZIHEZI.COM')).toBe(true)
-    expect(isProjectHost('iceberg-reforged.pages.dev')).toBe(true)
-    expect(isProjectHost('abc123.iceberg-reforged.pages.dev')).toBe(true) // CF Pages 预览域名
-    expect(isProjectHost('localhost')).toBe(true)
-    expect(isProjectHost('127.0.0.1')).toBe(true)
-    expect(isProjectHost('localhost:5173')).toBe(true)
-    // 别人部署的副本 → 触发「数据可能已落后」提示
-    expect(isProjectHost('iceberg.8void.com')).toBe(false)
-    expect(isProjectHost('jp0id.github.io')).toBe(false)
-    expect(isProjectHost('mirror.example.com')).toBe(false)
-    expect(isProjectHost('')).toBe(false)
-    // 反向陷阱：不能把「包含」当命中（hezihezi.com.evil.com 不是我们的域）
-    expect(isProjectHost('iceberg.hezihezi.com.evil.com')).toBe(false)
-    expect(isProjectHost('notlocalhost')).toBe(false)
+  it('hasNewerData：只比内容指纹，不看时间', () => {
+    const remote = (dataHash: string, total = 1500) => ({ generatedAt: 1, dataHash, total })
+    // 指纹不同 → 有新数据
+    expect(hasNewerData(remote('b'.repeat(64)), 'a'.repeat(64))).toBe(true)
+    // 指纹相同 → 没有新数据（哪怕本地快照很旧、远端构建时间更晚）
+    expect(hasNewerData(remote('a'.repeat(64)), 'a'.repeat(64))).toBe(false)
+    // 取不到远端 / 任一侧没有指纹 → 不提示（宁可不说，也不误报）
+    expect(hasNewerData(null, 'a'.repeat(64))).toBe(false)
+    expect(hasNewerData(remote(''), 'a'.repeat(64))).toBe(false)
+    expect(hasNewerData(remote('b'.repeat(64)), '')).toBe(false)
   })
 
   it('🔒 源码里不许再写死域名（除 site.config.json 一处真值）', () => {

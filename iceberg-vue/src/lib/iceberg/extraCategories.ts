@@ -52,7 +52,7 @@ export interface CategoryApplyStat {
  * data.tiers 条目上（消费方只有 useIcebergDataSource）。
  *
  * 未知分类的处理刻意不对称：
- *   · `role=main` 是**权威指定**，照用（颜色回退 defaultColor，构建门才拦未知分类）；
+ *   · `role=main` 是显式指定，照用（颜色回退 defaultColor，构建门才拦未知分类）；
  *   · `role=extra` 只是「额外命中筛选」，未知分类直接丢弃（不制造点不开的筛选桶）。
  */
 export function applyCategories(data: GradableData, records: CategoriesMap): CategoryApplyStat {

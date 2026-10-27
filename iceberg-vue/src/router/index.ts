@@ -16,7 +16,8 @@ const router = createRouter({
     { path: '/v2',           redirect: '/' },
     { path: '/on-this-day',  component: () => import('../views/OnThisDayView.vue') },
     { path: '/ancient-book', component: () => import('../views/AncientBookView.vue') },
-    { path: '/3d',           component: () => import('../views/Iceberg3DView.vue') },
+    // 沉浸式全屏画面：AppShell 据此隐藏公告条与自动弹窗（3D 冰山）
+    { path: '/3d',           component: () => import('../views/Iceberg3DView.vue'), meta: { immersive: true } },
     { path: '/:pathMatch(.*)*', component: () => import('../views/NotFoundView.vue') },
   ],
 })

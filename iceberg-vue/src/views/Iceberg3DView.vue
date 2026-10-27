@@ -3,7 +3,8 @@ import { ref, watch, onMounted, onUnmounted, onActivated, onDeactivated } from '
 import { ArrowLeft, ExternalLink } from '@lucide/vue'
 import { useRoute, useRouter } from 'vue-router'
 import { normalizeData } from '../lib/data'
-import { Iceberg3DEngine, type FocusState } from '../lib/iceberg3d/engine'
+import { Iceberg3DEngine, type FocusState } from '../lib/iceberg3d/engine';
+import RichText from '../components/ui/RichText.vue';
 import { useI18n } from '../lib/useI18n'
 import raw from '../data/iceberg.json'
 
@@ -19,6 +20,51 @@ const isLoading = ref(true)
 const webglUnavailable = ref(false)
 const selectedEntry = ref<FocusState | null>(null)
 let engine: Iceberg3DEngine | null = null
+
+// ── 移动端细节 ──
+// 首次进入的触屏操作提示：只在粗指针设备显示一次（localStorage 记忆）
+const HINT_KEY = 'iceberg3d-touch-hint-seen'
+const showTouchHint = ref(false)
+let hintTimer = 0
+const isCoarsePointer = () =>
+  typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
+
+function dismissTouchHint() {
+  window.clearTimeout(hintTimer)
+  showTouchHint.value = false
+  try { localStorage.setItem(HINT_KEY, '1') } catch {}
+}
+
+function initTouchHint() {
+  if (!isCoarsePointer()) return
+  try { if (localStorage.getItem(HINT_KEY)) return } catch {}
+  showTouchHint.value = true
+  hintTimer = window.setTimeout(dismissTouchHint, 5200)
+}
+
+// 底部面板下滑关闭：仅移动端布局生效，超过阈值关闭、否则回弹
+const sheetDrag = ref(0)
+let grabStartY = 0
+const isBottomSheet = () =>
+  typeof window.matchMedia === 'function' && window.matchMedia('(max-width: 640px)').matches
+
+function onGrabStart(e: TouchEvent) {
+  if (!isBottomSheet()) return
+  grabStartY = e.touches[0]?.clientY ?? 0
+  sheetDrag.value = 0
+}
+function onGrabMove(e: TouchEvent) {
+  if (!grabStartY) return
+  const dy = (e.touches[0]?.clientY ?? 0) - grabStartY
+  sheetDrag.value = Math.max(0, dy)
+}
+function onGrabEnd() {
+  if (!grabStartY) return
+  const shouldClose = sheetDrag.value > 72
+  grabStartY = 0
+  sheetDrag.value = 0
+  if (shouldClose) engine?.focusById(null)
+}
 
 /** 聚焦状态 → URL query 同步（llm-wiki 深链思路：可分享、可回退） */
 function syncUrl(focus: FocusState | null) {
@@ -66,11 +112,14 @@ onMounted(() => {
     },
   })
   engine.init()
+  initTouchHint()
 
   // 初始深链：/3d?item=xxx
   const initial = route.query[QUERY_KEY]
   if (typeof initial === 'string') engine.focusById(initial)
 })
+
+watch(selectedEntry, (entry) => { if (entry) dismissTouchHint() })
 
 onActivated(() => engine?.resume())
 onDeactivated(() => engine?.pause())
@@ -81,6 +130,7 @@ function onVisibilityChange() {
 }
 onMounted(() => document.addEventListener('visibilitychange', onVisibilityChange))
 onUnmounted(() => {
+  window.clearTimeout(hintTimer)
   document.removeEventListener('visibilitychange', onVisibilityChange)
   engine?.dispose()
   engine = null
@@ -104,7 +154,7 @@ onUnmounted(() => {
       <span class="scene-sky-overlay"></span>
     </div>
 
-    <div ref="containerRef" class="canvas-container"></div>
+    <div ref="containerRef" class="canvas-container" role="img" :aria-label="t('nav3d') + ' · ICEBERG'"></div>
 
     <!-- 大气光晕：橙色落日辉光 + 深海蓝环境光，叠加在 3D 画面上增加氛围 -->
     <div class="scene-atmosphere" aria-hidden="true"></div>
@@ -122,7 +172,22 @@ onUnmounted(() => {
     </div>
 
     <!-- 右侧信息栏 -->
-    <aside class="detail-panel" :class="{ 'open': !!selectedEntry }">
+    <!-- 触屏操作提示：首次进入显示一次，聚焦或 5s 后淡出 -->
+    <div v-if="showTouchHint" class="touch-hint" aria-hidden="true">{{ t('touch3dHint') }}</div>
+
+    <aside
+      class="detail-panel"
+      :class="{ 'open': !!selectedEntry }"
+      :style="sheetDrag ? { transition: 'none', transform: `translateY(${sheetDrag}px)` } : undefined"
+    >
+      <div
+        class="panel-grabber"
+        aria-hidden="true"
+        @touchstart.passive="onGrabStart"
+        @touchmove.passive="onGrabMove"
+        @touchend="onGrabEnd"
+        @touchcancel="onGrabEnd"
+      ><span></span></div>
       <transition name="panel-switch" mode="out-in">
         <div class="panel-inner" v-if="selectedEntry" :key="selectedEntry.item.id || selectedEntry.item.title">
 
@@ -140,7 +205,9 @@ onUnmounted(() => {
             <span v-for="t in selectedEntry.item.tags" :key="t">#{{ t }}</span>
           </div>
 
-          <p class="panel-desc">{{ selectedEntry.item.desc || t('noDescription') }}</p>
+          <div class="panel-desc">
+            <RichText :text="selectedEntry.item.desc || t('noDescription')" />
+          </div>
 
           <a v-if="selectedEntry.item.link" :href="selectedEntry.item.link" target="_blank" rel="noopener" class="panel-link">
             <ExternalLink :size="12" :stroke-width="2" />
@@ -191,6 +258,7 @@ onUnmounted(() => {
 
 .canvas-container {
   position: absolute; inset: 0; z-index: 1;
+  touch-action: none; /* 手势全部交给 OrbitControls，避免页面跟着滚 */
 }
 
 .scene-atmosphere {
@@ -224,7 +292,8 @@ onUnmounted(() => {
 .scene-ui {
   position: absolute; top: 0; left: 0; right: 0; z-index: 10;
   display: flex; justify-content: space-between;
-  padding: 1.5rem;
+  /* 刘海/挖孔：顶部与左右都让出安全区 */
+  padding: calc(1.5rem + env(safe-area-inset-top, 0px)) calc(1.5rem + env(safe-area-inset-right, 0px)) 1.5rem calc(1.5rem + env(safe-area-inset-left, 0px));
   pointer-events: none;
   transition: opacity 0.4s ease;
 }
@@ -262,6 +331,25 @@ onUnmounted(() => {
   box-shadow: 0 0 10px rgba(255, 106, 6, 0.7);
 }
 
+.touch-hint {
+  position: absolute; left: 50%; z-index: 15;
+  bottom: calc(1.75rem + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  padding: 0.55rem 1rem;
+  border: 1px solid var(--white-10);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  color: var(--white-60);
+  font-size: var(--font-xs); letter-spacing: 0.06em; white-space: nowrap;
+  pointer-events: none;
+  animation: hint-in 0.5s var(--ease-out) both;
+}
+@keyframes hint-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .touch-hint { animation: none; }
+}
+
 .detail-panel {
   position: absolute; top: 0; right: 0; bottom: 0; z-index: 20;
   width: 420px; max-width: 90vw;
@@ -278,6 +366,9 @@ onUnmounted(() => {
 .panel-inner {
   padding: 2.5rem 2rem; height: 100%;
   box-sizing: border-box; overflow-y: auto;
+  /* 惯性滚动与滚动链隔离：滑到底不再带动整页 */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   display: flex; flex-direction: column;
 }
 
@@ -298,7 +389,11 @@ onUnmounted(() => {
 
 .close-btn {
   background: none; border: none; color: var(--white-60); cursor: pointer;
-  font-size: 1.4rem; line-height: 1; padding: 0 0 0.2rem 0.5rem;
+  font-size: 1.5rem; line-height: 1;
+  /* 44px 触控热区（iOS HIG / Material 共同下限），视觉仍是小叉 */
+  min-width: 44px; min-height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  margin: -0.5rem -0.75rem -0.5rem 0;
   border-radius: 999px;
   transition: color 0.15s;
 }
@@ -322,7 +417,7 @@ onUnmounted(() => {
 
 .panel-desc {
   font-size: var(--font-sm); line-height: 1.7; color: var(--white-60);
-  margin: 0; white-space: pre-wrap; flex: 1;
+  margin: 0; flex: 1;
   transition: opacity 0.3s ease 0.12s, transform 0.3s ease 0.12s;
 }
 .panel-switch-enter-from .panel-desc,
@@ -352,13 +447,32 @@ onUnmounted(() => {
 }
 .panel-switch-enter-from, .panel-switch-leave-to { opacity: 0; }
 
+/* 抽屉把手：移动端可见，桌面端不渲染视觉 */
+.panel-grabber { display: none; }
+
 @media (max-width: 640px) {
   .detail-panel {
     width: 100%; max-width: none; border-left: none; border-top: 1px solid var(--white-06);
-    top: auto; height: 70vh; transform: translateY(100%);
+    top: auto;
+    /* dvh 跟随可视视口：iOS 工具栏收起/展开时面板不会跑到屏幕外 */
+    height: 70vh; height: 70dvh;
+    transform: translateY(100%);
   }
   .detail-panel.open { transform: translateY(0); }
-  .panel-inner { padding: 1.5rem; }
+  .panel-grabber {
+    display: flex; align-items: center; justify-content: center;
+    flex: 0 0 auto; height: 28px; margin-top: 6px;
+    touch-action: none;
+  }
+  .panel-grabber span {
+    width: 40px; height: 4px; border-radius: 999px;
+    background: var(--white-18);
+  }
+  .panel-inner {
+    /* 把手占位后由 flex 收走剩余高度，避免内容溢出面板 */
+    flex: 1 1 auto; min-height: 0; height: auto;
+    padding: 1rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
   .panel-title { font-size: 1.15rem; }
 }
 </style>

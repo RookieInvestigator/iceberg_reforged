@@ -13,6 +13,8 @@
   --color-accent: #ff6a06;
   --color-accent-bright: #ff9a3c;
   --color-accent-soft: #ffb36f;
+  /* 行内 `==强调==` 的底色（手册与词条正文共用） */
+  --color-accent-wash: rgba(245, 158, 11, 0.12);
   --color-fav: #f59e0b;
   --color-new: #feca57;
   --color-danger: #f87171;

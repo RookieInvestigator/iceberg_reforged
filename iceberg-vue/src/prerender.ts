@@ -63,7 +63,7 @@ function nav(): string {
   return `<nav class="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm">
     <a href="${base}" class="text-sky-300 hover:text-sky-200">冰山图</a>
     <a href="${base}home" class="text-sky-300 hover:text-sky-200">首页</a>
-    <a href="${base}handbook" class="text-sky-300 hover:text-sky-200">术语表</a>
+    <a href="${base}handbook" class="text-sky-300 hover:text-sky-200">手册</a>
     <a href="${base}features" class="text-sky-300 hover:text-sky-200">专题</a>
     <a href="${base}on-this-day" class="text-sky-300 hover:text-sky-200">历史上的今天</a>
     <a href="${base}ancient-book" class="text-sky-300 hover:text-sky-200">古籍</a>
@@ -178,7 +178,7 @@ function handbookHtml(): string {
     .join('')
   return `<div class="max-w-4xl mx-auto px-6 py-10 text-white">
     <a href="${base}home" class="text-sm text-sky-300 hover:text-sky-200">← 返回首页</a>
-    <h1 class="mt-4 text-2xl font-black tracking-wider">术语表</h1>
+    <h1 class="mt-4 text-2xl font-black tracking-wider">手册</h1>
     <p class="mt-3 text-sm leading-7 text-gray-400">冰山图所用的划定标准、各类概念与人物作品索引。解释由社区手工整理，随数据同步更新。</p>
     <div class="mt-6 flex flex-wrap gap-2">${tabs}</div>
     <div class="mt-8 grid gap-4 sm:grid-cols-2">${cards || '<p class="text-sm text-gray-500">这个板块还没有内容，待后续补充。</p>'}</div>
@@ -324,7 +324,7 @@ export async function prerender({ url }: { url: string }) {
     return { html: homeNavHtml(), links: baseLinks, head: headFor('/home', `首页 · ${SITE}`) }
   }
   if (url === '/handbook') {
-    return { html: handbookHtml(), links: baseLinks, head: headFor('/handbook', `术语表 · ${SITE}`) }
+    return { html: handbookHtml(), links: baseLinks, head: headFor('/handbook', `手册 · ${SITE}`) }
   }
   if (url === '/features') {
     const links = new Set([...baseLinks, ...featureEntries().map((f) => `/features/${f.slug}`)])

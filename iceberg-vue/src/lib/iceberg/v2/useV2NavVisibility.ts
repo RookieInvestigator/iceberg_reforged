@@ -1,4 +1,5 @@
 import { onMounted, onUnmounted, ref, type Ref } from 'vue'
+import { isInNavHotZone, navShouldShowOnPointer, navShouldShowOnScroll } from '../../navVisibility'
 
 // 导航显隐 + 滚动帧状态机：滚动方向感知 / 顶部热区 / 变形吸顶 / 面板开关 /
 // 层级 scroll-spy / 进度直写，**共用同一 rAF 循环**（不要再拆第二条循环）。
@@ -31,19 +32,14 @@ export function useV2NavVisibility(opts: { tierOrder: string[]; suggestOpen: Ref
 
   function onMouseMove(e: MouseEvent) {
     hotY = e.clientY
-    // 热区直达：不经过滚动帧，进来立刻显现；离开则隐藏（保底态除外）；
-    // 非贴住态（文档流中）永远可见，避免留空洞
-    if (e.clientY >= 0 && e.clientY < 96) {
-      barVisible.value = true
-      return
-    }
-    if (!stuck.value) {
-      barVisible.value = true
-      return
-    }
-    if (!expanded.value && !tierOpen.value && !searchFocus.value && !coarse.value && !suggestOpen.value) {
-      barVisible.value = false
-    }
+    // 热区直达：不经过滚动帧，进来立刻显现（规则见 lib/navVisibility）
+    const decision = navShouldShowOnPointer({
+      inHotZone: isInNavHotZone(e.clientY),
+      coarsePointer: coarse.value,
+      forceVisible: expanded.value || tierOpen.value || searchFocus.value || suggestOpen.value,
+      alwaysVisible: !stuck.value,
+    })
+    barVisible.value = decision === 'show'
   }
 
   let scrollTick = false
@@ -61,14 +57,16 @@ export function useV2NavVisibility(opts: { tierOrder: string[]; suggestOpen: Ref
       const y = window.scrollY
       const dy = y - lastY
       lastY = y
-      const inHot = hotY >= 0 && hotY < 96
-      if (!stuck.value || y < 80 || coarse.value || expanded.value || tierOpen.value || searchFocus.value || suggestOpen.value || inHot) {
-        barVisible.value = true
-      } else if (dy < -10) {
-        barVisible.value = true
-      } else if (dy > 10) {
-        barVisible.value = false
-      }
+      const decision = navShouldShowOnScroll({
+        y,
+        dy,
+        inHotZone: isInNavHotZone(hotY),
+        coarsePointer: coarse.value,
+        forceVisible: expanded.value || tierOpen.value || searchFocus.value || suggestOpen.value,
+        alwaysVisible: !stuck.value,
+      })
+      if (decision === 'show') barVisible.value = true
+      else if (decision === 'hide') barVisible.value = false
       const top = barRef.value?.getBoundingClientRect().top ?? 0
       const isStuck = top <= 12
       if (isStuck && !stuck.value) { expanded.value = false; tierOpen.value = false }
