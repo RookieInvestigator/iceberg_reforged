@@ -46,6 +46,15 @@ describe('useAppendixEditor 保存载荷', () => {
     expect(dataRows.length).toBeGreaterThanOrEqual(65)
   })
 
+  it('保存沿用 Excel 风格 BOM（categories.csv 带 BOM，其余不带）', async () => {
+    const bodies = stubSave()
+    const ed = useAppendixEditor()
+    ed.selectedId.value = 'b8b7ed6d'
+    await ed.saveAll()
+    expect(bodies['categories.csv'].startsWith('\uFEFF')).toBe(true)
+    expect(bodies['references.csv'].startsWith('\uFEFF')).toBe(false)
+  })
+
   it('表头恒等于声明（含新增的 contributors.csv）', async () => {
     const bodies = stubSave()
     const ed = useAppendixEditor()
@@ -106,5 +115,63 @@ describe('useAppendixEditor 保存载荷', () => {
     await ed.saveAll()
     expect(lines().length).toBe(base)
     expect(lines()).not.toContain('b8b7ed6d,warn,内容存疑，请谨慎参考')
+  })
+})
+
+describe('整表模式（不按词条组织，直接铺开一张副表）', () => {
+  it('tableRows 铺开全部行，且每行都带 id', () => {
+    const ed = useAppendixEditor()
+    const rows = ed.tableRows('reading')
+    expect(rows.length).toBeGreaterThan(0)
+    expect(rows.every((r) => (r.item_id || '').trim())).toBe(true)
+  })
+
+  it('新增行缺 id → invalidRows 报警且保存被整批拒绝（一个文件都不写）', async () => {
+    const bodies = stubSave()
+    const ed = useAppendixEditor()
+    const def = APPENDIX_TABLES.find((t) => t.key === 'extra')!
+    ed.addTableRow(def)
+    const row = ed.tableRows('extra')[ed.tableRows('extra').length - 1]
+    ed.setTableRowCell(def, row, 'note', '临时备注')
+    expect(ed.invalidRows.value).toHaveLength(1)
+    await ed.saveAll()
+    expect(ed.saveError.value).toContain('保存被拒绝')
+    expect(bodies['extra.csv']).toBeUndefined()
+
+    // 补上 id 后即可保存，行落在该词条下
+    ed.setTableRowCell(def, row, 'item_id', 'b8b7ed6d')
+    expect(ed.invalidRows.value).toHaveLength(0)
+    await ed.saveAll()
+    expect(bodies['extra.csv']).toContain('临时备注')
+  })
+
+  it('改 id 列会「换桶」：保存后行落在新 id 下，旧 id 不留残影', async () => {
+    const bodies = stubSave()
+    const ed = useAppendixEditor()
+    const def = APPENDIX_TABLES.find((t) => t.key === 'reading')!
+    const row = ed.tableRows('reading')[0]
+    const oldId = (row.item_id || '').trim()
+    const title = row.title
+    expect(oldId).toBeTruthy()
+
+    ed.setTableRowCell(def, row, 'item_id', 'ffffffff')
+    await ed.saveAll()
+    const lines = bodies['reading.csv'].replace(/^\uFEFF/, '').trim().split(/\r?\n/).slice(1)
+    const moved = lines.filter((l) => l.startsWith('ffffffff,'))
+    expect(moved).toHaveLength(1)
+    expect(moved[0]).toContain(title)
+    expect(lines.filter((l) => l.startsWith(oldId + ',')).some((l) => l.includes(title))).toBe(false)
+  })
+
+  it('removeTableRow 删行后保存，该行不再出现', async () => {
+    const bodies = stubSave()
+    const ed = useAppendixEditor()
+    const def = APPENDIX_TABLES.find((t) => t.key === 'reading')!
+    const before = ed.tableRows('reading').length
+    const target = ed.tableRows('reading')[0]
+    ed.removeTableRow(def, target)
+    expect(ed.tableRows('reading').length).toBe(before - 1)
+    await ed.saveAll()
+    expect(bodies['reading.csv']).not.toContain(target.title)
   })
 })

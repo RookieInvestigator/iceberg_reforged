@@ -2,10 +2,10 @@
  * 副表编辑器的**编辑模型**。
  *
  * 视图只负责画，这里负责「数据长什么样、改一下落到哪张表」：
- *   · 载入六张副表（列名/键/越界判定都来自 lib/iceberg/appendix.ts，一处定义）；
+ *   · 载入七张副表（列名/键/越界判定都来自 lib/iceberg/appendix.ts，一处定义）；
  *   · 行级读写（增删改）与 dirty / 保存 / 越界上报；
  *   · 按区域分派的「所见即所得」写入口：标量字段 → overrides，分类 → categories，
- *     链接 → references，关联 → related，署名 → contributors。
+ *     链接 → references，推荐书目 → reading，关联 → related，署名 → contributors。
  *
  * 抽成 composable 是因为这份状态要被「所见即所得」「原始行」「左栏列表」三块 UI 共用，
  * 塞在视图里只能靠 props/emit 层层透传。
@@ -24,6 +24,7 @@ import {
   appendixViolation,
   detectEol,
   hasBom,
+  isEmptyAppendixRow,
   readAppendixRaw,
   serializeAppendixTable,
   shouldDropOnSave,
@@ -148,6 +149,19 @@ export interface AppendixEditor {
   extraOf: (flag: ExtraFlag) => { on: boolean; note: string }
   toggleExtraFlag: (flag: ExtraFlag) => void
   setExtraNote: (flag: ExtraFlag, note: string) => void
+  // ── 推荐阅读书目（reading.csv）──
+  // ── 整表模式（不按词条组织，直接铺开某张副表的全部行）──
+  tableRows: (key: AppendixKey) => Row[]
+  addTableRow: (def: AppendixTableDef) => void
+  removeTableRow: (def: AppendixTableDef, row: Row) => void
+  setTableRowCell: (def: AppendixTableDef, row: Row, col: string, val: string) => void
+  /** 新增行里「填了内容但 id 列仍空着」——保存会被拒绝（否则会写出孤儿行） */
+  invalidRows: ComputedRef<string[]>
+
+  readingRows: ComputedRef<Row[]>
+  addReading: () => void
+  removeReading: (i: number) => void
+  setReadingField: (i: number, col: 'title' | 'by' | 'at' | 'url' | 'recommender' | 'note', val: string) => void
   // ── 保存 ──
   saveAll: () => Promise<void>
 }
@@ -166,7 +180,7 @@ export function useAppendixEditor(): AppendixEditor {
   const fileEol = new Map<string, '\n' | '\r\n'>()
   for (const def of tables) {
     const rawCsv = rawTables[def.key] || ''
-    fileBom.set(def.key, hasBom(rawCsv))
+    fileBom.set(def.key, def.bom ?? hasBom(rawCsv))
     fileEol.set(def.key, detectEol(rawCsv))
     const store: Store = new Map()
     for (const row of parseCSV(rawCsv)) {
@@ -445,10 +459,121 @@ export function useAppendixEditor(): AppendixEditor {
     bumpKey('extra')
   }
 
+  // ── 推荐阅读书目：挂在当前选中的词条上（一行 = 一本书）──
+  const readingRows = computed(() => {
+    void tick.value
+    return selectedId.value ? rowsOf('reading').slice() : []
+  })
+  function addReading() {
+    addRow(defOf('reading'))
+  }
+  function removeReading(i: number) {
+    removeRow(defOf('reading'), i)
+  }
+  function setReadingField(
+    i: number,
+    col: 'title' | 'by' | 'at' | 'url' | 'recommender' | 'note',
+    val: string,
+  ) {
+    setCell(defOf('reading'), i, col, val)
+  }
+
+  // ── 整表模式（不按词条组织）──
+  // 行对象与词条模式共用同一份 store：任何一边改，另一边立刻可见。
+  /** 某表的全部行（按 item_id 首次出现顺序 + 行内顺序），返回行对象引用（就地编辑） */
+  function tableRows(key: AppendixKey): Row[] {
+    void tick.value
+    const store = stores.get(key)!
+    const out: Row[] = []
+    for (const [, list] of store) out.push(...list)
+    return out
+  }
+  /**
+   * 整表模式新增行：id 列留空由用户填，先挂在空 id 桶（`''`）里。
+   * 只填了别的列、id 仍空 → invalidRows 拦住保存（避免写出孤儿行）。
+   */
+  function addTableRow(def: AppendixTableDef) {
+    const store = stores.get(def.key)!
+    if (!store.has('')) store.set('', [])
+    const row: Row = {}
+    for (const h of def.headers) row[h] = ''
+    freshRows.add(row)
+    store.get('')!.push(row)
+    bump(def)
+  }
+  function removeTableRow(def: AppendixTableDef, row: Row) {
+    const store = stores.get(def.key)!
+    const id = (row[def.idColumn] || '').trim()
+    const list = store.get(id)
+    if (!list) return
+    const i = list.indexOf(row)
+    if (i < 0) return
+    list.splice(i, 1)
+    if (!list.length) store.delete(id)
+    bump(def)
+  }
+  /**
+   * 改单元格。**id 列要「换桶」**：store 是按 id 分组的 Map，
+   * 只改字段值不搬家，保存时这一行仍会在旧桶里被写成新 id —— 表里就会出现
+   * 同一个 id 两处、或改动看起来没生效。
+   */
+  function setTableRowCell(def: AppendixTableDef, row: Row, col: string, val: string) {
+    if (col === def.idColumn) {
+      const store = stores.get(def.key)!
+      const from = (row[def.idColumn] || '').trim()
+      row[col] = val
+      const to = val.trim()
+      if (from !== to) {
+        const src = store.get(from)
+        if (src) {
+          const i = src.indexOf(row)
+          if (i >= 0) src.splice(i, 1)
+          if (!src.length) store.delete(from)
+        }
+        if (!store.has(to)) store.set(to, [])
+        store.get(to)!.push(row)
+      }
+      bump(def)
+      return
+    }
+    row[col] = val
+    bump(def)
+  }
+
+  const invalidRows = computed(() => {
+    void tick.value
+    const out: string[] = []
+    for (const def of tables) {
+      const store = stores.get(def.key)!
+      let n = 0
+      for (const [id, rows] of store) {
+        if (id) continue
+        for (const r of rows) if (!isEmptyAppendixRow(def, r)) n++
+      }
+      if (n) out.push(`${def.file}：有 ${n} 行缺 ${def.idColumn}`)
+    }
+    return out
+  })
+
   const totalChanges = computed(() => tables.reduce((n, def) => n + getRows(def).length, 0))
 
   // ── 保存 ──
   async function saveAll() {
+    // 安全网：七张表全空 = 副表根本没被载入（glob 路径写错 / 新增表文件后 dev server 缓存未失效）。
+    // 此时保存会把所有 csv 写成只有表头 —— 直接拒绝，比「静默清空」安全。
+    const loadedRows = tables.reduce((n, def) => {
+      let c = 0
+      for (const [, list] of stores.get(def.key)!) c += list.length
+      return n + c
+    }, 0)
+    if (loadedRows === 0) {
+      saveError.value = '载入失败：七张副表都是空的（多半是 dev server 缓存没失效，或副表文件缺失）。为免清空副表，保存已拒绝 —— 重启 dev server 再试。'
+      return
+    }
+    if (invalidRows.value.length) {
+      saveError.value = `保存被拒绝 —— ${invalidRows.value.join('；')}（补上 id 或删掉这些行）`
+      return
+    }
     if (violations.value.length) {
       saveError.value = `保存被拒绝 —— 副表越界：${violations.value.join('；')}`
       return
@@ -503,6 +628,8 @@ export function useAppendixEditor(): AppendixEditor {
     relatedList, addRelated, removeRelated, reverseRelatedOf,
     contributorRows, addContributor, removeContributor,
     extraFlags: EXTRA_FLAGS, extraRows, extraOf, toggleExtraFlag, setExtraNote,
+    readingRows, addReading, removeReading, setReadingField,
+    tableRows, addTableRow, removeTableRow, setTableRowCell, invalidRows,
     saveAll,
   }
 }

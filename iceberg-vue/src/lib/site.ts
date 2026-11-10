@@ -12,10 +12,24 @@ export const SITE_HOST: string = SITE_ORIGIN.replace(/^https?:\/\//, '')
 declare const __DATA_HASH__: string
 export const LOCAL_DATA_HASH: string = typeof __DATA_HASH__ !== 'undefined' ? __DATA_HASH__ : ''
 
-/** 路由 path → 绝对 canonical URL（`/` 保留尾斜杠） */
+/**
+ * 路由 path → 绝对 canonical URL（**一律带尾斜杠**，查询串原样保留）。
+ *
+ * 为什么必须补尾斜杠：CF Pages 把 `/handbook` 308 到 `/handbook/`，而预渲染产出的
+ * 静态目录也是 `/handbook/index.html`（真实地址就是带斜杠那个）。曾经这里原样拼接，
+ * 导致 `/handbook/` 页面声明 canonical = `/handbook`、访问它又被 308 踢回来 ——
+ * canonical 指向一个重定向地址，Google 会判定「canonical 环」而不采信本站声明的
+ * canonical（GSC 报 *Google chose different canonical*）。
+ *
+ * 查询串（如 `?trail=`）不参与规范化，调用方负责先清干净。
+ */
 export function canonicalUrl(fullPath: string): string {
-  const p = fullPath.startsWith('/') ? fullPath : `/${fullPath}`
-  return SITE_ORIGIN + p
+  const raw = fullPath.startsWith('/') ? fullPath : `/${fullPath}`
+  const cut = raw.search(/[?#]/)
+  const pathname = cut < 0 ? raw : raw.slice(0, cut)
+  const suffix = cut < 0 ? '' : raw.slice(cut)
+  const withSlash = pathname.endsWith('/') ? pathname : `${pathname}/`
+  return SITE_ORIGIN + withSlash + suffix
 }
 
 /** 当前是否就在站点域名上 —— 只决定提示里要不要放外链，不做任何门禁 */

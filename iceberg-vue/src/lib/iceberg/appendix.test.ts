@@ -27,14 +27,14 @@ import {
  */
 
 const EMPTY_RAW = {
-  overrides: '', categories: '', references: '', related: '', contributors: '', extra: '',
+  overrides: '', categories: '', references: '', reading: '', related: '', contributors: '', extra: '',
 }
 
 describe('APPENDIX_TABLES 表定义', () => {
-  it('六张表，key / file 唯一', () => {
-    expect(APPENDIX_TABLES).toHaveLength(6)
-    expect(new Set(APPENDIX_TABLES.map((t) => t.key)).size).toBe(6)
-    expect(new Set(APPENDIX_TABLES.map((t) => t.file)).size).toBe(6)
+  it('七张表，key / file 唯一', () => {
+    expect(APPENDIX_TABLES).toHaveLength(7)
+    expect(new Set(APPENDIX_TABLES.map((t) => t.key)).size).toBe(7)
+    expect(new Set(APPENDIX_TABLES.map((t) => t.file)).size).toBe(7)
   })
 
   it('每张表的 idColumn 与键列都必须在 headers 里（否则编辑器/解析会静默落空）', () => {
@@ -119,6 +119,35 @@ describe('parseAppendix', () => {
       { label: '错角色', url: 'https://example.com', role: 'ref' },
     ])
     expect(apx.violations).toEqual(['references.csv:无法识别的 role「x」（只认 main / ref）'])
+  })
+
+  it('reading：书目挂词条、缺 id/书名丢弃、重复书名去重、坏 URL 丢链接保书目', () => {
+    const apx = parseAppendix({
+      ...EMPTY_RAW,
+      reading:
+        'item_id,title,by,at,url,recommender,note\n' +
+        'a,都市传说,布鲁范德,1981,https://example.com/book,编辑部,奠基之作\n' +
+        'a,都市传说,布鲁范德,1981,,,重复行\n' +
+        ',孤儿书,,,,\n' +
+        'a,,无书名,,,,\n' +
+        'a,坏链接书,,,javascript:alert(1),,\n' +
+        'b,都市传说,布鲁范德,1981,,,同一本书挂另一个词条\n',
+    })
+    expect(apx.reading.get('a')).toEqual([
+      {
+        title: '都市传说',
+        by: '布鲁范德',
+        at: '1981',
+        url: 'https://example.com/book',
+        recommender: '编辑部',
+        note: '奠基之作',
+      },
+      { title: '坏链接书', by: '', at: '', url: '', recommender: '', note: '' },
+    ])
+    // 同一本书可以挂到多个词条
+    expect(apx.reading.get('b')).toHaveLength(1)
+    expect(apx.reading.has('')).toBe(false)
+    expect(apx.violations).toEqual(['reading.csv:非法 URL「javascript:alert(1)」（已忽略链接、保留书目）'])
   })
 
   it('related：双向索引、自环丢弃、保序去重', () => {

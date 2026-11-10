@@ -9,15 +9,23 @@ import raw from './data/iceberg.json'
 import handbookRaw from './data/handbook.md?raw'
 import onThisDayRaw from './data/on-this-day.csv?raw'
 import { parseCSV } from './lib/csv'
-import { canonicalUrl } from './lib/site'
+import { canonicalUrl, SITE_ORIGIN } from './lib/site'
+import { normalizeData } from './lib/data'
+import { loadAppendix } from './lib/iceberg/appendix'
+import { applyOverrides } from './lib/iceberg/overrides'
+import { applyCategories, itemCategories } from './lib/iceberg/extraCategories'
+import { categorySlug } from './lib/iceberg/categorySlug'
+import { toPlainText } from './lib/richText'
 
 interface IcebergItem {
   id: string
   title: string
   category: string
+  categories?: string[]
   tags?: string[]
   desc?: string
   link?: string
+  emojis?: string[]
 }
 interface IcebergData {
   introText?: string
@@ -31,6 +39,38 @@ const data = raw as IcebergData
 const base = import.meta.env.BASE_URL
 const SITE = '中文兔子洞冰山图'
 // canonical / og:url 一律指向 site.config.json 里的域名（无论从哪个部署访问）。
+
+/**
+ * 与浏览器端**同一条装配链**：normalizeData → 副表解析 → 标量订正 → 分类装配。
+ *
+ * 分类聚合页要直出「被副表订正过的」标题和正文：只读原始 iceberg.json 会漏掉
+ * `overrides.csv` 的覆盖值与 `categories.csv` 的副分类（挂了副分类的词条在原始
+ * 数据里只有主分类，用它筛选就会漏词条）。因此这里复刻 `useIcebergDataSource`
+ * 的装配顺序，而不是另写一份数据读取 —— 抽两份必然漂移。
+ */
+const assembledItems: Array<IcebergItem & { tier: string }> = (() => {
+  const normalized = normalizeData(raw)
+  const appendix = loadAppendix()
+  const nameToEmoji: Record<string, string> = {}
+  for (const [emoji, name] of Object.entries(normalized.tagMap || {})) nameToEmoji[name] = emoji
+  applyOverrides(Object.values(normalized.tiers).flat(), appendix.overrides, { nameToEmoji })
+  applyCategories(normalized, appendix.categories)
+  const out: Array<IcebergItem & { tier: string }> = []
+  for (const [tierName, items] of Object.entries(normalized.tiers)) {
+    for (const batch of items || []) out.push({ ...batch, tier: tierName })
+  }
+  return out
+})()
+
+/** 分类名 → 该分类下词条（按 `categories` 判，含副表追加的副分类），按标题排序 */
+function itemsOfCategory(category: string) {
+  return assembledItems
+    .filter((it) => itemCategories(it as never).includes(category))
+    .sort((a, b) => a.title.localeCompare(b.title, 'zh-CN'))
+}
+
+const CATEGORY_NAMES = Object.keys((data.categoryColors as Record<string, string>) || {})
+
 
 const featureModules = import.meta.glob('./data/features/*.md', {
   query: '?raw',
@@ -47,28 +87,46 @@ function esc(s: string): string {
     .replace(/'/g, '&#39;')
 }
 
-function headFor(path: string, title: string) {
+function headFor(path: string, title: string, jsonLd?: unknown) {
   const canonical = canonicalUrl(path)
+  const elements: unknown[] = [
+    { type: 'link', props: { rel: 'canonical', href: canonical } },
+    { type: 'meta', props: { property: 'og:url', content: canonical } },
+  ]
+  // JSON-LD：走 head.elements 由插件序列化成 <script type="application/ld+json">。
+  // 这是静态标记不是可执行脚本，CSP 的 script-src 不拦 ld+json（浏览器不会执行它）。
+  if (jsonLd) {
+    elements.push({
+      type: 'script',
+      props: { type: 'application/ld+json' },
+      children: JSON.stringify(jsonLd),
+    })
+  }
   return {
     lang: 'zh-CN',
     title,
-    elements: new Set([
-      { type: 'link', props: { rel: 'canonical', href: canonical } },
-      { type: 'meta', props: { property: 'og:url', content: canonical } },
-    ]),
+    elements: new Set(elements),
   }
 }
 
+/** 姊妹站（三站互链）：绝对地址，爬虫从静态壳就能顺着走出去 */
+const SISTER_LINKS: Array<[string, string]> = [
+  ['https://hezihezi.com', 'hezihezi.com'],
+  ['https://blog.hezihezi.com', 'blog.hezihezi.com'],
+]
+
 function nav(): string {
+  const sisters = SISTER_LINKS.map(([href, label]) => `<a href="${href}">${esc(label)}</a>`).join('')
   return `<nav class="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm">
     <a href="${base}" class="text-sky-300 hover:text-sky-200">冰山图</a>
-    <a href="${base}home" class="text-sky-300 hover:text-sky-200">首页</a>
-    <a href="${base}handbook" class="text-sky-300 hover:text-sky-200">手册</a>
-    <a href="${base}features" class="text-sky-300 hover:text-sky-200">专题</a>
-    <a href="${base}on-this-day" class="text-sky-300 hover:text-sky-200">历史上的今天</a>
-    <a href="${base}ancient-book" class="text-sky-300 hover:text-sky-200">古籍</a>
-    <a href="${base}3d" class="text-sky-300 hover:text-sky-200">3D 冰山</a>
-  </nav>`
+    <a href="${base}home/" class="text-sky-300 hover:text-sky-200">首页</a>
+    <a href="${base}handbook/" class="text-sky-300 hover:text-sky-200">手册</a>
+    <a href="${base}features/" class="text-sky-300 hover:text-sky-200">专题</a>
+    <a href="${base}on-this-day/" class="text-sky-300 hover:text-sky-200">历史上的今天</a>
+    <a href="${base}ancient-book/" class="text-sky-300 hover:text-sky-200">古籍</a>
+    <a href="${base}3d/" class="text-sky-300 hover:text-sky-200">3D 冰山</a>
+  </nav>
+  <nav class="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">${sisters}</nav>`
 }
 
 function parseFrontmatter(src: string): Record<string, string> {
@@ -90,17 +148,27 @@ function stripFrontmatter(src: string): string {
 }
 
 function homeHtml(): string {
-  const total = Object.values(data.tiers).reduce((n, t) => n + (t?.length || 0), 0)
+  const total = assembledItems.length
+  // 全量标题直出：每层只放前 8 条会让全站 HTML 只覆盖 68/1461（4.7%）词条标题，
+  // 首页对内链毫无贡献。12909 字符标题全进 HTML 后，首页才是真正的内链枢纽。
+  //
+  // ① 一行一条：单行挤 1461 个元素时 deflate 的历史窗口（32KB）会在一条超长行里
+  //    不停滚动而错开同位置结构；换行后每行的重复前缀落在窗口内的同一偏移上。
+  // ② 这里刻意**不用链接**。词条没有独立 URL（深链是 #id），`href="#id"` 原本指向
+  //    本页并不存在的 id，是 1461 个死锚点；补 id 能修好，但同一串十六进制会在一个
+  //    词条里出现两次，而随机十六进制几乎压不动 —— 实测 gzip 从 42.2KB 涨到 45.6KB。
+  //    这些锚点在客户端接管时会被整块替换掉，本来也不承担导航，故直接输出纯文本。
+  //    真正的内链交给上方 15 条分类导航（那是可查可跳的真 URL）。
   const sections = (data.tierOrder || [])
     .map((tierName) => {
       const items = data.tiers[tierName] || []
-      const links = items
-        .slice(0, 8)
-        .map((it) => `<a href="#${esc(it.id)}" class="text-gray-300 hover:text-white">${esc(it.title)}</a>`)
-        .join('<span class="text-gray-600"> · </span>')
+      // 样式挂在容器上：1461 条标题若各带 class，光是重复的属性就多出 150KB
+      const links = items.map((it) => esc(it.title)).join('\n')
       return `<section class="py-4 border-t border-white/5">
         <h2 class="text-sm font-bold tracking-[0.2em] text-gray-100">${esc(tierName)} <span class="font-normal text-gray-500">${items.length} 条</span></h2>
-        <p class="mt-2 text-xs leading-7 text-gray-400">${links}${items.length > 8 ? '<span class="text-gray-600"> 等</span>' : ''}</p>
+        <p class="mt-2 text-xs leading-7 text-gray-400">
+${links}
+        </p>
       </section>`
     })
     .join('')
@@ -108,9 +176,81 @@ function homeHtml(): string {
   return `<div class="max-w-3xl mx-auto px-6 py-10 text-white">
     <h1 class="text-2xl font-black tracking-wider">${SITE}</h1>
     <p class="mt-4 text-sm leading-7 text-gray-400 whitespace-pre-wrap">${esc(data.introText || '')}</p>
-    <p class="mt-3 text-xs text-gray-500">${total} 词条 · ${data.tierOrder.length} 层级 · ${Object.keys(data.categoryColors || {}).length} 分类</p>
+    <p class="mt-3 text-xs text-gray-500">${total} 词条 · ${data.tierOrder.length} 层级 · ${CATEGORY_NAMES.length} 分类</p>
     ${nav()}
+    ${categoryNavHtml()}
     ${sections}
+  </div>`
+}
+
+/**
+ * 静态壳的极简样式表（内联 `<style>`）。
+ *
+ * 这些页面是给爬虫与无 JS 访客看的第一眼，样式只需可读；把 Tailwind 类名逐个写到
+ * 1461 条锚点上会让 HTML 凭空多出一两百 KB（类名重复的字节并不是内容）。
+ * `style-src 'unsafe-inline'` 已在 CSP 里放行，内联样式表不受影响。
+ */
+const SHELL_CSS = `
+body{background:#08080a;color:#e8e8ea;font:400 15px/1.75 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;margin:0}
+.wrap{max-width:720px;margin:0 auto;padding:40px 24px}
+h1{font-size:24px;font-weight:900;letter-spacing:.04em;margin:0 0 4px}
+h2{font-size:16px;font-weight:700;margin:0}
+a{color:#cfd3d8;text-decoration:none}
+a:hover{color:#fff;text-decoration:underline}
+nav{display:flex;flex-wrap:wrap;gap:6px 14px;margin:18px 0;font-size:14px}
+nav .n{color:#8a8f96}
+.meta{font-size:12px;color:#7a7f86}
+.tier{margin-top:22px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07)}
+.tier p{margin:6px 0 0;font-size:13px;line-height:1.9;color:#a9aeb5}
+.cat{margin-top:26px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07)}
+.cat h2{font-size:15px;margin-bottom:2px}
+.cat .desc{margin:6px 0 0;font-size:14px;line-height:1.85;color:#b6bbc2;white-space:pre-line}
+.cat .tags{margin:2px 0 0;font-size:12px;color:#7a7f86}
+.intro{white-space:pre-wrap;color:#a9aeb5;font-size:14px}
+`
+
+/** 分类导航：15 条内链，让聚合页从首页一跳可达（爬虫靠内链发现，外链才有分权意义） */
+function categoryNavHtml(current?: string): string {
+  const links = CATEGORY_NAMES.map((name) => {
+    const label = current === name ? `<strong>${esc(name)}</strong>` : esc(name)
+    return `  <a href="${base}category/${categorySlug(name)}/">${label}</a> <span class="n">${itemsOfCategory(name).length}</span>`
+  }).join('\n')
+  return `<nav>
+${links}
+</nav>`
+}
+
+/**
+ * 分类聚合页静态壳：该分类下**全部词条**的标题 + 层级 + 标签 + 正文。
+ *
+ * 这是全站可索引正文的主力（15 页 ≈ 1.4MB，比逐条预渲染省二十多倍体积）。
+ * 正文走 toPlainText：静态壳不需要富文本标记，只要可读的纯文本（爬虫与无 JS 用户）。
+ * 词条标题链回 `/#<id>`：hash 不是独立 URL，但它能真的打开词条 —— 静态壳只负责
+ * 「正文有真实 URL」，不假装每个词条也有。
+ */
+function categoryHtml(name: string): string {
+  const items = itemsOfCategory(name)
+  // 标题链回 `/#<id>`：这是站内唯一能定位到单个词条的地址（客户端接管后按 hash 打开详情）。
+  // 链接跨文档，所以本页不需要对应的 `id` —— 也就不存在「href 找不到目标」的死锚点。
+  const articles = items
+    .map((it) => {
+      const tags = (it.tags || []).map((tag) => esc(tag)).join(' · ')
+      const body = toPlainText(it.desc || '').trim()
+      return `<article class="cat">
+        <h2><a href="${base}#${esc(it.id)}">${esc(it.title)}</a></h2>
+        <p class="tags">${esc(it.tier)}${tags ? ' · ' + tags : ''}</p>
+        <p class="desc">${body ? esc(body) : '此词条尚待补充描述'}</p>
+      </article>`
+    })
+    .join('\n')
+
+  return `<style>${SHELL_CSS}</style><div class="wrap">
+    <p class="meta"><a href="${base}">← 冰山图</a></p>
+    <h1>${esc(name)}</h1>
+    <p class="meta">此分类共 ${items.length} 条词条，按标题排序。</p>
+    ${categoryNavHtml(name)}
+    ${articles || '<p class="meta">这个分类暂无词条。</p>'}
+    ${nav()}
   </div>`
 }
 
@@ -177,7 +317,7 @@ function handbookHtml(): string {
     })
     .join('')
   return `<div class="max-w-4xl mx-auto px-6 py-10 text-white">
-    <a href="${base}home" class="text-sm text-sky-300 hover:text-sky-200">← 返回首页</a>
+    <a href="${base}home/" class="text-sm text-sky-300 hover:text-sky-200">← 返回首页</a>
     <h1 class="mt-4 text-2xl font-black tracking-wider">手册</h1>
     <p class="mt-3 text-sm leading-7 text-gray-400">冰山图所用的划定标准、各类概念与人物作品索引。解释由社区手工整理，随数据同步更新。</p>
     <div class="mt-6 flex flex-wrap gap-2">${tabs}</div>
@@ -186,19 +326,30 @@ function handbookHtml(): string {
   </div>`
 }
 
+/**
+ * 占位专题不产出可索引页面。
+ *
+ * `000-placeholder.md` 只是演示专题系统用法的样例（标题写着「示例专题」），
+ * 一旦预渲染就成了一个真实 URL：被爬虫抓到 → 收录一个「示例专题 · 待完善」的空壳，
+ * 拉低整站质量信号。它以 `000-` 前缀标记，这里统一过滤掉：
+ * 不参与列表渲染、不预渲染、不进 sitemap。写真实专题时用正常 slug 即可。
+ */
+const PLACEHOLDER_SLUG = /^000-/
+
 function featureEntries(): Array<{ slug: string; fm: Record<string, string> }> {
   return Object.entries(featureModules)
     .map(([path, src]) => {
       const slug = path.split('/').pop()!.replace(/\.md$/, '')
       return { slug, fm: parseFrontmatter(src) }
     })
+    .filter((f) => !PLACEHOLDER_SLUG.test(f.slug))
     .sort((a, b) => (b.fm.date || '').localeCompare(a.fm.date || ''))
 }
 
 function featuresHtml(): string {
   const cards = featureEntries()
     .map(
-      (f) => `<a href="${base}features/${esc(f.slug)}" class="block rounded-lg border border-white/10 bg-white/[0.03] p-5 hover:bg-white/[0.06]">
+      (f) => `<a href="${base}features/${esc(f.slug)}/" class="block rounded-lg border border-white/10 bg-white/[0.03] p-5 hover:bg-white/[0.06]">
         <time class="text-xs text-gray-500">${esc(f.fm.date || '')}</time>
         <h2 class="mt-1 text-base font-bold">${esc(f.fm.title || f.slug)}</h2>
         <p class="mt-2 text-xs leading-6 text-gray-400">${esc(f.fm.description || '')}</p>
@@ -218,7 +369,7 @@ function featureDetailHtml(slug: string): string {
   const fm = entry?.fm || {}
   const src = featureModules[Object.keys(featureModules).find((p) => p.endsWith(`/${slug}.md`)) || '']
   return `<div class="max-w-3xl mx-auto px-6 py-10 text-white">
-    <p><a href="${base}features" class="text-xs text-sky-300">← 专题列表</a></p>
+    <p><a href="${base}features/" class="text-xs text-sky-300">← 专题列表</a></p>
     <time class="mt-6 block text-xs text-gray-500">${esc(fm.date || '')}</time>
     <h1 class="mt-1 text-2xl font-black tracking-wider">${esc(fm.title || slug)}</h1>
     <p class="mt-3 text-sm text-gray-400">${esc(fm.description || '')}</p>
@@ -315,7 +466,8 @@ function threeDHtml(): string {
 
 export async function prerender({ url }: { url: string }) {
   // /dive 是 DEV 专用实验页，不参与预渲染与 sitemap
-  const baseLinks = new Set(['/home', '/handbook', '/features', '/on-this-day', '/ancient-book', '/3d'])
+  const categoryRoutes = CATEGORY_NAMES.map((name) => `/category/${categorySlug(name)}`)
+  const baseLinks = new Set(['/home', '/handbook', '/features', '/on-this-day', '/ancient-book', '/3d', ...categoryRoutes])
 
   if (url === '/') {
     return { html: homeHtml(), links: baseLinks, head: headFor('/', SITE) }
@@ -334,6 +486,42 @@ export async function prerender({ url }: { url: string }) {
     const slug = url.slice('/features/'.length)
     return { html: featureDetailHtml(slug), links: baseLinks, head: headFor(url, `${featureEntries().find((f) => f.slug === slug)?.fm.title || '专题'} · ${SITE}`) }
   }
+  if (url.startsWith('/category/')) {
+    const slug = url.slice('/category/'.length).replace(/\/$/, '')
+    const name = CATEGORY_NAMES.find((n) => categorySlug(n) === slug)
+    if (!name) return notFoundShell(url, baseLinks)
+    const items = itemsOfCategory(name)
+    const canonical = canonicalUrl(url)
+    return {
+      html: categoryHtml(name),
+      links: baseLinks,
+      head: headFor(url, `${name} · ${SITE}`, {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name,
+        url: canonical,
+        inLanguage: 'zh-CN',
+        isPartOf: { '@type': 'WebSite', name: SITE, url: SITE_ORIGIN + '/' },
+        // 词条没有独立 URL，ItemList 只声明标题与顺序 —— 不编造不存在的地址
+        mainEntity: {
+          '@type': 'ItemList',
+          numberOfItems: items.length,
+          itemListElement: items.slice(0, 30).map((it, i) => ({
+            '@type': 'ListItem',
+            position: i + 1,
+            name: it.title,
+          })),
+        },
+        breadcrumb: {
+          '@type': 'BreadcrumbList',
+          itemListElement: [
+            { '@type': 'ListItem', position: 1, name: '冰山图', item: SITE_ORIGIN + '/' },
+            { '@type': 'ListItem', position: 2, name, item: canonical },
+          ],
+        },
+      }),
+    }
+  }
   if (url === '/on-this-day') {
     return { html: onThisDayHtml(), links: baseLinks, head: headFor('/on-this-day', `历史上的今天 · ${SITE}`) }
   }
@@ -343,11 +531,15 @@ export async function prerender({ url }: { url: string }) {
   if (url === '/3d') {
     return { html: threeDHtml(), links: baseLinks, head: headFor('/3d', `3D 冰山 · ${SITE}`) }
   }
-  // 未知路由（如 404）：渲染最小占位壳，但 canonical/标题跟随请求 URL，
-  // 避免误用首页 canonical 造成搜索引擎去重误判。
+  return notFoundShell(url, baseLinks)
+}
+
+/** 未知路由（如 404）：渲染最小占位壳，但 canonical/标题跟随请求 URL，
+ *  避免误用首页 canonical 造成搜索引擎去重误判。 */
+function notFoundShell(url: string, links: Set<string>) {
   return {
     html: `<div class="max-w-3xl mx-auto px-6 py-10 text-white"><h1 class="text-2xl font-black tracking-wider">页面不存在</h1><p class="mt-3 text-sm text-gray-400">你试图进入的页面不存在。</p>${nav()}</div>`,
-    links: baseLinks,
+    links,
     head: headFor(url, `页面不存在 · ${SITE}`),
   }
 }

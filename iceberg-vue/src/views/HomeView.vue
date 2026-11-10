@@ -26,6 +26,7 @@ const router = useRouter()
 const { t } = useI18n()
 const currentLang = useStore(lang)
 
+const isDev = import.meta.env.DEV
 const showAbout = ref(false)
 const showCopyright = ref(false)
 const showLinks = ref(false)
@@ -196,6 +197,8 @@ onUnmounted(() => {
             <button class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="router.push('/handbook')">{{ t('homeGlossary') }}</button>
             <button type="button" class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="showAbout = true">{{ t('homeAbout') }}</button>
             <button type="button" class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="showLinks = true">{{ t('homeLinks') }}</button>
+            <!-- 开发模式专属：数据总览入口（生产构建不存在） -->
+            <button v-if="isDev" type="button" class="border-none bg-transparent p-0 text-left text-xs text-white-20 no-underline cursor-pointer transition-colors duration-200 hover:text-white-70" @click="router.push('/dev-data')">开发数据 <span class="text-white-15">· DEV</span></button>
           </nav>
 
           <!-- 彩蛋：制作中的冰山图（低调，不醒目；hover 才轻微提亮） -->

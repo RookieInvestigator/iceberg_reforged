@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // V2Interactivity：主图交互中枢（搜索 Worker / 相关索引 / 过滤管线 / Tooltip 控制器 /
 // 弹窗前后导航 / 随机 / 已读标记）；三个二级界面为 V2EntryCard / V2Sheet / V2Tooltip。
-import { ref, watchEffect, onMounted, onUnmounted, nextTick, markRaw, inject, provide, defineAsyncComponent } from 'vue';
+import { ref, watch, watchEffect, onMounted, onUnmounted, nextTick, markRaw, inject, provide, defineAsyncComponent } from 'vue';
 import { useStore } from '@nanostores/vue';
-import { searchQuery, searchMode, NEW_MARK_WINDOW_DAYS } from '../../lib/filterStore';
-import { detailMode, readItems, showReadMark } from '../../lib/settingsStore';
+import { searchQuery, searchMode, searchFuzzyMode, NEW_MARK_WINDOW_DAYS } from '../../lib/filterStore';
+import { detailMode, readItems, showReadMark, showTrail } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, RELATED_MAP_KEY, ID_ALIASES_KEY, type RenderItem } from '../../lib/injectionKeys';
 import { useSearchWorker } from '../../lib/iceberg/useSearchWorker';
@@ -45,12 +45,13 @@ const dm = useStore(detailMode);
 const rList = useStore(readItems);
 const query = useStore(searchQuery);
 const sMode = useStore(searchMode);
+const fuzzyMode = useStore(searchFuzzyMode);
 
 const newCutoff = Date.now() / 1000 - NEW_MARK_WINDOW_DAYS * 24 * 60 * 60;
 const itemModAt = new Map(allItems.map(i => [i.id, i.modifiedAt || 0]));
 
 // ── codeq 拆分：搜索 Worker / 相关词条索引 / 过滤管线 / Tooltip 控制器 ──
-const { searchResults, initSearch } = useSearchWorker(query, sMode)
+const { searchResults, initSearch } = useSearchWorker(query, sMode, fuzzyMode)
 const { pickRelated } = useRelatedIndex(itemMap, relatedMap)
 useFilterPipeline(allItems, { filterVisible, dimItems, searchResults, resolveId, newCutoff, itemModAt })
 // 可见文档序索引 / 匹配集（wallState 单遍维护）：前后导航 O(1) 查表、随机池 O(1)
@@ -86,7 +87,25 @@ function markRead(id: string) {
   if (el) el.classList.add('read');
 }
 
-// P1-5: 可见词条前后导航 id（桌面弹窗用；移动抽屉不展示左右箭头）
+/** 已读标记调度：空闲时再写，避免把打开详情的主任务拖长（同类任务合并成一次） */
+let markReadIdle: number | null = null;
+let pendingMarkReadId = ''
+function scheduleMarkRead(id: string) {
+  pendingMarkReadId = id;
+  if (markReadIdle !== null) return;
+  const run = () => {
+    markReadIdle = null;
+    const target = pendingMarkReadId;
+    pendingMarkReadId = '';
+    if (target) markRead(target);
+  };
+  markReadIdle =
+    typeof window.requestIdleCallback === 'function'
+      ? window.requestIdleCallback(run, { timeout: 400 })
+      : window.setTimeout(run, 60);
+}
+
+// P1-5: 可见词条前后导航 id（桌面弹窗用 ←/→ 按钮与键盘，移动抽屉用左右滑动）
 // navIndex 由 wallState 单遍维护可见文档序位置 → O(1) 查表，与分片挂载兼容
 // （不依赖 DOM 补齐状态），弹窗打开零过滤零 DOM 查询
 function navIdsFor(raw: RenderItem) {
@@ -99,15 +118,31 @@ function navIdsFor(raw: RenderItem) {
   };
 }
 
-// A3：探索轨迹 —— 面包屑读取的栈（经 TRAIL_KEY 下发卡片），URL ?trail= 同步（replaceState，不占历史）
+// A3：探索轨迹 —— 面包屑读取的栈（经 TRAIL_KEY 下发卡片）
 const { trail, push: trailPush, reset: trailReset, surface: trailSurface } = useTrail()
 provide(TRAIL_KEY, { trail })
-function syncTrailToUrl() {
+const trailOn = useStore(showTrail)
+
+/**
+ * 把当前浏览状态写回地址栏（replaceState，不占历史）。
+ *
+ * 两条规则：
+ * - **hash 始终指向当前打开的词条**。原先 hash 只在首次打开时由深链写入，之后
+ *   下潜全靠 `?trail=` 的末项 —— 下三层后地址栏还是 `#<第一条>`，复制出去指错人。
+ * - `?trail=` **只在「显示探索轨迹」打开时才写**。这个开关默认关闭，但原实现
+ *   无条件写 query，等于关掉的功能仍污染地址栏（实测打开一条后就成了 `?trail=<id>`）。
+ */
+function syncUrl() {
   const url = new URL(window.location.href)
-  const code = encodeTrail(trail.value.map((n) => n.id))
+  const ids = trail.value.map((n) => n.id)
+  const code = trailOn.value ? encodeTrail(ids) : ''
   if (code) url.searchParams.set('trail', code)
   else url.searchParams.delete('trail')
-  window.history.replaceState(null, '', url.pathname + url.search + url.hash)
+  const hash = ids.length ? `#${ids[ids.length - 1]}` : ''
+  const next = url.pathname + url.search + hash
+  if (window.location.pathname + window.location.search + window.location.hash !== next) {
+    window.history.replaceState(null, '', next)
+  }
 }
 
 /** 单一意图：打开词条（A2 收敛原先 4 条路径；A3：fromId 决定轨迹语义——
@@ -125,24 +160,24 @@ function openEntry(raw: RenderItem, fromId?: string | null) {
   } else {
     trailReset({ id: raw.id, title: raw.title })
   }
-  syncTrailToUrl()
+  syncUrl()
+  // 已读标记会让全部碎片的已读态重算（1461 项），推后到首帧之后，别压在打开抽屉的同一个任务里
+  scheduleMarkRead(raw.id)
   const depth = Math.max(0, trail.value.findIndex((n) => n.id === raw.id))
   const presenter = resolvePresenter({ viewport: window.innerWidth, detailMode: dm.value });
   if (presenter === 'sheet') {
-    markRead(raw.id);
     const { explicit, recommended } = pickRelated(raw);
-    openSheet(toEntryView(raw, { related: explicit, recommended, depth }));
+    // 抽屉不显示左右箭头，但需要 prevId/nextId 支撑「左右滑动切换」与边界判断
+    const nav = navIdsFor(raw);
+    openSheet(toEntryView(raw, { related: explicit, recommended, prevId: nav.prevId, nextId: nav.nextId, depth }));
   } else if (presenter === 'modal') {
-    // 标记已读
-    markRead(raw.id);
-
     const { explicit, recommended } = pickRelated(raw);
-    // 手机端底部抽屉不展示左右箭头，无需构建前后导航 id（省去移动端全量节点扫描）
+    // navIdsFor 走 navIdx 的 O(1) 查表；抽屉同样要 id 才能左右滑动切换
+    const nav = navIdsFor(raw);
     if (window.innerWidth < MOBILE_BP) {
-      openSheet(toEntryView(raw, { related: explicit, recommended, depth }));
+      openSheet(toEntryView(raw, { related: explicit, recommended, prevId: nav.prevId, nextId: nav.nextId, depth }));
       return;
     }
-    const nav = navIdsFor(raw);
     modalItem.value = toEntryView(raw, { related: explicit, recommended, prevId: nav.prevId, nextId: nav.nextId, depth });
   } else if (raw.link) {
     window.open(raw.link, '_blank', 'noopener');
@@ -158,16 +193,21 @@ function onModalNav(item: { id: string; from?: string }) {
 function closeModal() {
   modalItem.value = null
   trailSurface()
-  syncTrailToUrl()
+  syncUrl()
 }
 
 function closeSheet() {
   sheetItem.value = null
   trailSurface()
-  syncTrailToUrl()
+  syncUrl()
 }
 
 function findItem(el: HTMLElement) { return itemMap.get(el.dataset.id || ''); }
+
+// 轨迹开关是实验项：拨动时立刻把地址栏对齐（打开就补 ?trail=、关掉就摘掉），
+// 不用等下一次打开词条。栈空时不动 —— 那可能是 tooltip 模式下的深链 hash，
+// 不该因为切了个设置项就把它抹掉
+watch(trailOn, () => { if (trail.value.length) syncUrl() })
 
 // Random entry（F15：随机池 = 当前筛选下的匹配集合 wallState.wallMatched，
 // 管线单遍产出、hide/dim 皆有效；无命中时不做随机，避免抽到不符合条件的词条）
@@ -254,16 +294,22 @@ onMounted(() => {
     c.addEventListener('click', onClick);
     c.addEventListener('keydown', onKeyDown);
   }
-  // A3：?trail= 恢复（分享/刷新）—— 栈重建后打开末项（经 openEntry 落深度），
-  // 恢复成功则跳过 ?item=/hash 旧链（trail 已含全部信息）
-  const restoredIds = decodeTrail(new URLSearchParams(window.location.search).get('trail'))
-    .map((id) => itemMap.get(resolveId(id)))
-    .filter((it): it is RenderItem => !!it)
+  // A3：?trail= 恢复（分享/刷新）—— 栈重建后打开末项（经 openEntry 落深度）。
+  // 只在「显示探索轨迹」打开时才认这个参数：这是实验功能，关掉时地址栏里
+  // 也不该有 trail，更不该据此恢复出一条用户看不见的路径。
+  const restoredIds = trailOn.value
+    ? decodeTrail(new URLSearchParams(window.location.search).get('trail'))
+        .map((id) => itemMap.get(resolveId(id)))
+        .filter((it): it is RenderItem => !!it)
+    : []
   if (restoredIds.length > 0) {
     trail.value = restoredIds.map((r) => ({ id: r.id, title: r.title }))
     const last = restoredIds[restoredIds.length - 1]
     const from = restoredIds.length > 1 ? restoredIds[restoredIds.length - 2].id : undefined
     hashNavTimer = window.setTimeout(() => openEntry(last, from), 600)
+  } else {
+    // 关掉轨迹功能时，地址栏里残留的 ?trail= 直接洗掉（旧链接 / 切换开关后的遗留）
+    if (new URLSearchParams(window.location.search).has('trail')) syncUrl()
   }
   // Hash navigation — 弹窗模式直接打开 Modal，tooltip 模式滚动定位
   // F18：延时保存 id，卸载时取消

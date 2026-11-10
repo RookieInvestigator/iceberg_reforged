@@ -47,16 +47,16 @@ const hidden = computed(() => filtered.value.length - shown.value)
 </template>
 
 <style scoped>
-.side { width: 288px; flex-shrink: 0; display: flex; flex-direction: column; border-right: 1px solid var(--white-09); }
-.hd { padding: 0.6rem; display: flex; flex-direction: column; gap: 0.4rem; border-bottom: 1px solid var(--white-07); }
-.inp { width: 100%; padding: 0.42rem 0.55rem; font-size: var(--font-sm); border-radius: 7px; background: var(--white-06); border: 1px solid var(--white-14); color: var(--white-92); }
+.side { width: 288px; flex-shrink: 0; display: flex; flex-direction: column; }
+.hd { padding: 0.55rem 0.7rem; display: flex; flex-direction: column; gap: 0.35rem; border-bottom: 1px solid var(--white-06); }
+.inp { width: 100%; padding: 0.32rem 0.55rem; font-size: var(--font-xs); border-radius: 6px; background: var(--white-03); border: 1px solid var(--white-10); color: var(--white-92); }
 .inp::placeholder { color: var(--white-45); }
 .inp:focus { border-color: var(--color-accent); outline: none; }
-.sel { padding: 0.32rem 0.5rem; font-size: var(--font-xs); border-radius: 7px; background: var(--white-06); border: 1px solid var(--white-14); color: var(--white-70); }
+.sel { padding: 0.28rem 0.5rem; font-size: var(--font-xs); border-radius: 6px; background: var(--white-03); border: 1px solid var(--white-10); color: var(--white-70); }
 .list { flex: 1; overflow-y: auto; padding: 0.25rem 0; }
-.row { display: flex; align-items: center; gap: 0.45rem; width: 100%; padding: 0.4rem 0.8rem; font-size: var(--font-sm); text-align: left; background: none; border: none; color: var(--white-65); cursor: pointer; border-left: 2px solid transparent; }
-.row:hover { background: var(--white-05); color: var(--white-90); }
-.row.on { background: var(--white-08); color: #fff; border-left-color: var(--color-accent); }
+.row { display: flex; align-items: center; gap: 0.45rem; width: 100%; padding: 0.5rem 0.7rem; font-size: var(--font-xs); text-align: left; background: none; border: none; color: var(--white-70); cursor: pointer; border-left: 2px solid transparent; }
+.row:hover { background: var(--white-03); color: var(--white-90); }
+.row.on { background: var(--white-06); color: var(--white-92); border-left-color: var(--color-accent); }
 .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: var(--white-15); }
 .dot.fill { background: var(--color-success); }
 .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

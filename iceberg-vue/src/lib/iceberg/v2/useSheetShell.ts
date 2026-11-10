@@ -51,6 +51,9 @@ export function useSheetShell(open: Ref<boolean>, onClose: () => void) {
     }
   }
 
+  // immediate 不能省：抽屉是首次打开那一刻才挂载的（V2Interactivity 的 sheetMounted），
+  // 挂载时 open 已经是 true —— 不带 immediate 的 watch 收不到这次变化，于是
+  // **第一次**打开根本不上锁，背景照样能滚，第二次起才正常（实测 390×844）。
   watch(open, (isOpen) => {
     if (isOpen) {
       previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
@@ -73,7 +76,7 @@ export function useSheetShell(open: Ref<boolean>, onClose: () => void) {
       }
       previousFocus = null
     }
-  })
+  }, { immediate: true })
 
   onMounted(() => document.addEventListener('keydown', onKey))
   onUnmounted(() => {

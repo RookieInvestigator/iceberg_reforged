@@ -16,6 +16,7 @@ import {
   HERO_TITLES_KEY,
   RELATED_MAP_KEY,
   REFERENCES_MAP_KEY,
+  READING_MAP_KEY,
   RENDER_ITEMS_KEY,
   TAG_MAP_KEY,
   TIER_ORDER_KEY,
@@ -72,6 +73,7 @@ export function useIcebergDataSource() {
   provide(HERO_TITLES_KEY, allItemsRaw.map((i) => i.title))
   provide(RELATED_MAP_KEY, appendix.related)
   provide(REFERENCES_MAP_KEY, appendix.references)
+  provide(READING_MAP_KEY, appendix.reading)
   provide(CONTRIBUTORS_MAP_KEY, appendix.contributors)
   provide(EXTRA_MAP_KEY, appendix.extra)
   provide(CATEGORIES_MAP_KEY, appendix.categories)
@@ -84,6 +86,7 @@ export function useIcebergDataSource() {
     descMap,
     relatedMap: appendix.related,
     referencesMap: appendix.references,
+    readingMap: appendix.reading,
     overridesMap: appendix.overrides,
     categoriesMap: appendix.categories,
     contributorsMap: appendix.contributors,

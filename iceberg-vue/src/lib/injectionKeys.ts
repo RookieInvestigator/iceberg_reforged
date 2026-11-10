@@ -1,6 +1,6 @@
 import type { InjectionKey, ShallowRef } from 'vue'
 import type { IcebergItem } from './data'
-import type { CategoryRecord, ContributorRecord, ExtraRecord } from './iceberg/appendix'
+import type { CategoryRecord, ContributorRecord, ExtraRecord, ReadingRecord } from './iceberg/appendix'
 
 /**
  * 主冰山图（IndexNextView）全量下发数据的注入键（codeq 第二波：11 个字符串 key 全部类型化，
@@ -34,6 +34,12 @@ export interface ReferenceLink {
 export const REFERENCES_MAP_KEY: InjectionKey<Map<string, ReferenceLink[]>> = Symbol('referencesMap')
 
 /** 署名副表（contributors.csv）：`item_id → [{by,at}]`，供词条卡片的「社区贡献」图标 tooltip */
+/**
+ * 推荐阅读书目副表（reading.csv）：`item_id → ReadingRecord[]`。
+ * 一行 = 「某词条 → 一本书」；同一本书可挂多个词条（各写一行）。
+ */
+export const READING_MAP_KEY: InjectionKey<Map<string, ReadingRecord[]>> = Symbol('readingMap')
+
 export const CONTRIBUTORS_MAP_KEY: InjectionKey<Map<string, ContributorRecord[]>> = Symbol('contributorsMap')
 
 /** 标记副表（extra.csv）：`item_id → [{flag,note}]`（警示 / 需补充），供词条卡片的标记图标行 */

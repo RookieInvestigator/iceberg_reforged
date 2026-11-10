@@ -8,6 +8,7 @@
  * | 标量字段   | `overrides.csv`  | `item_id,field,value`           | (item_id,field)        | `field ∈ {title,desc,tags}`，新值覆盖旧值 |
  * | 分类       | `categories.csv` | `item_id,category,role`         | (item_id,category)     | `role=main` 覆盖主分类（每词条至多一条）；`role=extra`（缺省）追加副分类（OR 叠加） |
  * | 链接       | `references.csv` | `source_id,label,url,role`      | (source_id,url,role)   | `role=main` 覆盖主链接；`role=ref`（缺省）附加参考链接，见 entryLinks.ts |
+ * | 推荐书目   | `reading.csv`    | `item_id,title,by,at,url,recommender,note` | (item_id,title)  | 书 / 论文，挂在词条上；同一本书可挂多个词条 |
  * | 关联词条   | `related.csv`    | `source_id,target_id`           | (source_id,target_id)  | 双向索引，见下方 parse |
  * | 署名       | `contributors.csv` | `item_id,by,at`               | (item_id,by)           | 谁贡献过这个词条；`at` 只存档不展示 |
  * | 标记       | `extra.csv`      | `item_id,flag,note`             | (item_id,flag)         | 行的存在即标记为真；`flag ∈ {warn,need}`，`note` 是 tooltip 文案 |
@@ -23,7 +24,14 @@
 import { isSafeHttpUrl } from '../data'
 import { parseCSV } from '../csv'
 
-export type AppendixKey = 'overrides' | 'categories' | 'references' | 'related' | 'contributors' | 'extra'
+export type AppendixKey =
+  | 'overrides'
+  | 'categories'
+  | 'references'
+  | 'reading'
+  | 'related'
+  | 'contributors'
+  | 'extra'
 
 export interface AppendixTableDef {
   key: AppendixKey
@@ -38,6 +46,12 @@ export interface AppendixTableDef {
   /** 唯一键（同键 last-wins / 去重） */
   keyColumns: string[]
   writtenBy: string
+  /**
+   * 文件是否以 UTF-8 BOM 开头（Excel 风格的几张表）。必须显式声明：
+   * `?raw` 导入会被 esbuild 剥掉 BOM，靠 hasBom(raw) 永远判成 false，
+   * 编辑器一保存就会把 BOM 抹掉、在 diff 里留下无意义的一行改动。
+   */
+  bom?: boolean
 }
 
 export const APPENDIX_TABLES: readonly AppendixTableDef[] = [
@@ -60,6 +74,7 @@ export const APPENDIX_TABLES: readonly AppendixTableDef[] = [
     idColumn: 'item_id',
     keyColumns: ['item_id', 'category'],
     writtenBy: '反馈工作台采纳 + 副表编辑器手填',
+    bom: true,
   },
   {
     key: 'references',
@@ -70,6 +85,16 @@ export const APPENDIX_TABLES: readonly AppendixTableDef[] = [
     idColumn: 'source_id',
     keyColumns: ['source_id', 'url', 'role'],
     writtenBy: '反馈工作台采纳 + 副表编辑器手填',
+  },
+  {
+    key: 'reading',
+    file: 'reading.csv',
+    label: '推荐阅读书目（书 / 论文）',
+    area: '推荐书目',
+    headers: ['item_id', 'title', 'by', 'at', 'url', 'recommender', 'note'],
+    idColumn: 'item_id',
+    keyColumns: ['item_id', 'title'],
+    writtenBy: '副表编辑器手填',
   },
   {
     key: 'related',
@@ -156,6 +181,21 @@ export interface ReferenceRecord {
   role: LinkRole
 }
 
+/**
+ * 推荐阅读书目（`reading.csv` 的一行）。
+ * `by` 是**作者**（与 contributors.csv 的提交者区分）；`at` 是出版年；
+ * `url` 可选（纸质书留空）；`recommender` 是**谁推荐了这本书**。
+ * 同一本书可以挂到多个词条：每个词条各写一行（推荐者可按行不同）。
+ */
+export interface ReadingRecord {
+  title: string
+  by: string
+  at: string
+  url: string
+  recommender: string
+  note: string
+}
+
 /** 署名：谁为这个词条出过力（`by` 为提交者显示名；`at` 为日期，仅存档不展示） */
 export interface ContributorRecord {
   by: string
@@ -175,6 +215,8 @@ export interface AppendixData {
   categories: Map<string, CategoryRecord[]>
   /** source_id → 链接记录（role=main / ref） */
   references: Map<string, ReferenceRecord[]>
+  /** item_id → 推荐阅读书目（保序去重 (item_id,title)） */
+  reading: Map<string, ReadingRecord[]>
   /** 双向关联：source → target 与 target → source 都存在 */
   related: Map<string, string[]>
   /** item_id → 署名记录（保序去重 (item_id,by)，同 by 取较晚的 at） */
@@ -189,6 +231,7 @@ export interface AppendixRaw {
   overrides: string
   categories: string
   references: string
+  reading: string
   related: string
   contributors: string
   extra: string
@@ -202,7 +245,7 @@ export function readAppendixRaw(): AppendixRaw {
     eager: true,
   }) as Record<string, string>
   const out: AppendixRaw = {
-    overrides: '', categories: '', references: '', related: '', contributors: '', extra: '',
+    overrides: '', categories: '', references: '', reading: '', related: '', contributors: '', extra: '',
   }
   for (const def of APPENDIX_TABLES) {
     out[def.key] = mods[`../../data/appendix/${def.file}`] || ''
@@ -216,6 +259,7 @@ export function parseAppendix(raw: AppendixRaw): AppendixData {
     overrides: new Map(),
     categories: new Map(),
     references: new Map(),
+    reading: new Map(),
     related: new Map(),
     contributors: new Map(),
     extra: new Map(),
@@ -270,6 +314,28 @@ export function parseAppendix(raw: AppendixRaw): AppendixData {
     // label 允许为空：展示层按域名统一派生站点名（见 lib/sourceLabel.ts）
     list.push({ label, url, role })
     out.references.set(src, list)
+  }
+
+  // ── reading.csv：item_id → [{title,by,at,url,recommender,note}]，保序去重 (item_id,title) ──
+  for (const row of parseCSV(raw.reading)) {
+    const id = (row.item_id || '').trim()
+    const title = (row.title || '').trim()
+    if (!id || !title) continue
+    const rawUrl = (row.url || '').trim()
+    // 链接可选：填了但不合法 → 丢掉链接、保留书目（书本身还在），并记违规
+    const url = rawUrl && isSafeHttpUrl(rawUrl) ? rawUrl : ''
+    if (rawUrl && !url) violations.add(`reading.csv:非法 URL「${rawUrl}」（已忽略链接、保留书目）`)
+    const list = out.reading.get(id) || []
+    if (list.some((r) => r.title === title)) continue
+    list.push({
+      title,
+      by: (row.by || '').trim(),
+      at: (row.at || '').trim(),
+      url,
+      recommender: (row.recommender || '').trim(),
+      note: (row.note || '').trim(),
+    })
+    out.reading.set(id, list)
   }
 
   // ── related.csv：双向索引（source → target 与 target → source） ─────────────

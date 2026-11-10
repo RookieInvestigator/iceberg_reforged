@@ -24,6 +24,13 @@ const DATA_HASH = (() => {
   return createHash('sha256').update(JSON.stringify(raw.tiers ?? {})).digest('hex')
 })()
 
+// 词条总数（meta.json）：index.html 的 noscript 里要写「收录 N 词条」。
+// 曾经手写成 1454，数据涨到 1461 后无人更新 —— 改为构建期替换，永不再对不上。
+const META_TOTAL = (() => {
+  const meta = JSON.parse(fs.readFileSync(path.resolve(__dirname, 'src/data/meta.json'), 'utf-8'))
+  return Number(meta.total) || 0
+})()
+
 // Cloudflare Web Analytics 站点 token（CF 控制台 → Web Analytics → 站点 → 「JS 片段」里的 token）
 const CF_ANALYTICS_TOKEN = 'ab9b42c938f9456988f0d5bb4a4bd191'
 
@@ -164,7 +171,13 @@ export default defineConfig({
       name: 'seo-site-origin',
       apply: 'build',
       transformIndexHtml(html) {
-        const withOrigin = html.replaceAll('__SITE_ORIGIN__', SITE_ORIGIN)
+        // 词条数写死在 noscript 里迟早与现实脱节（曾经写成 1454，实际已 1461）。
+        // 从 meta.json 取真值，所有构建都替换。
+        const withTotal = html.replaceAll(
+          '__TOTAL_ENTRIES__',
+          String(META_TOTAL),
+        )
+        const withOrigin = withTotal.replaceAll('__SITE_ORIGIN__', SITE_ORIGIN)
         if (process.env.VITEST) return withOrigin
         const isDev = process.env.NODE_ENV === 'development' || !!process.env.VITE_DEV_SERVER
         if (isDev) return withOrigin
@@ -443,8 +456,53 @@ export default defineConfig({
     vitePrerenderPlugin({
       renderTarget: '#app',
       prerenderScript: path.resolve(__dirname, 'src/prerender.ts'),
+      // 分类聚合页（15 条）由 prerender 的 links 递归发现 —— 首页静态壳里带全套分类内链，
+      // 插件会顺着 links 自动生成 /category/<slug>/index.html，这里不必逐条列举。
       additionalPrerenderRoutes: ['/home', '/handbook', '/features', '/on-this-day', '/ancient-book', '/3d'],
     }),
+    {
+      // DEV 工具：Supabase 注册用户总数。
+      // auth.users 不在 PostgREST 的暴露范围内（anon / authenticated 都读不到），
+      // 只有 service_role 能调 GoTrue 的 Admin API。key 只在 Node 侧读，绝不进浏览器包；
+      // configureServer 只在 dev server 生效，生产构建不会注册这个中间件。
+      name: 'dev-admin-stats',
+      configureServer(server) {
+        const readEnv = (name: string) => {
+          if (process.env[name]) return process.env[name] as string
+          try {
+            const env = fs.readFileSync(path.resolve(__dirname, '.env'), 'utf-8')
+            const m = env.match(new RegExp('^\\s*' + name + '\\s*=\\s*(\\S+)', 'm'))
+            return m ? m[1] : ''
+          } catch {
+            return ''
+          }
+        }
+        server.middlewares.use('/__admin/user-count', async (req, res) => {
+          const send = (code: number, body: unknown) => {
+            res.statusCode = code
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify(body))
+          }
+          if (req.method !== 'GET') return send(405, { error: 'GET only' })
+          const url = readEnv('VITE_SUPABASE_URL').replace(/\/$/, '')
+          const key = readEnv('SUPABASE_SERVICE_ROLE_KEY')
+          if (!url || !key) return send(503, { error: '需要在 .env 配置 VITE_SUPABASE_URL 与 SUPABASE_SERVICE_ROLE_KEY' })
+          try {
+            const resp = await fetch(`${url}/auth/v1/admin/users?page=1&per_page=1`, {
+              headers: { apikey: key, Authorization: `Bearer ${key}` },
+            })
+            if (!resp.ok) return send(502, { error: `Admin API HTTP ${resp.status}: ${(await resp.text()).slice(0, 200)}` })
+            // GoTrue 的 Admin list users 不返回 total 字段 —— 总数在 `x-total-count` 响应头里
+            const headerTotal = resp.headers.get('x-total-count')
+            const body = (await resp.json()) as { total?: number; users?: unknown[] }
+            const total = headerTotal ? Number(headerTotal) : (typeof body.total === 'number' ? body.total : null)
+            send(200, { total: Number.isFinite(total as number) ? total : null })
+          } catch (e) {
+            send(502, { error: e instanceof Error ? e.message : String(e) })
+          }
+        })
+      },
+    },
   ],
   base: process.env.CF_PAGES_BRANCH ? '/' : '/iceberg_reforged/',
   define: { __DATA_HASH__: JSON.stringify(DATA_HASH) },

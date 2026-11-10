@@ -49,28 +49,53 @@ watch(tierItems, (ti) => {
 
 const hasNoResults = computed(() => filterVisible.value !== null && filterVisible.value.size === 0)
 
-// 首屏只挂前 2 层（视口 + 缓冲），其余每 rAF 补齐一层；安全网 flush 由视图层统一绑定
+// 首屏只挂前 2 层（视口 + 缓冲），其余在**空闲时段**补齐；安全网 flush 由视图层统一绑定。
+//
+// 为什么不用逐帧 rAF：实测（gzip + headless Chrome，1440×900）首屏 2→8 层的补齐正好
+// 压在入场动画那 1.5s 上，产生了 415~466ms 的单帧和 ~1.2s 的累计卡顿；同一构建把补齐
+// 换成空闲回调后，首屏长帧消失、补齐移到用户不再盯着首屏的时段（数字见 CHANGELOG）。
+// requestIdleCallback 缺席（Safari 等）时退回 setTimeout，行为等价、只是不挑空闲。
 const totalTiers = props.data.tierOrder.length
 const mountedTiers = ref(initialMountCount(totalTiers, true))
 let mountRaf = 0
+let mountIdle = 0
+function clearMountTask() {
+  if (mountRaf) { cancelAnimationFrame(mountRaf); mountRaf = 0 }
+  if (mountIdle) {
+    if (typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(mountIdle)
+    else window.clearTimeout(mountIdle)
+    mountIdle = 0
+  }
+}
 function flushWall() {
   if (mountedTiers.value >= totalTiers) return
   mountedTiers.value = totalTiers
-  if (mountRaf) { cancelAnimationFrame(mountRaf); mountRaf = 0 }
+  clearMountTask()
 }
 function tickMount() {
   mountRaf = 0
+  mountIdle = 0
   mountedTiers.value = nextMountCount(mountedTiers.value, totalTiers)
-  if (mountedTiers.value < totalTiers) mountRaf = requestAnimationFrame(tickMount)
+  if (mountedTiers.value >= totalTiers) return
+  if (typeof window.requestIdleCallback === 'function') {
+    // timeout 兜底：空闲一直不到（长任务不断）时也要在 1s 内挂完
+    mountIdle = window.requestIdleCallback(tickMount, { timeout: 1000 })
+  } else {
+    mountIdle = window.setTimeout(tickMount, 120)
+  }
 }
 defineExpose({ flushWall })
 
 onMounted(() => {
-  if (mountedTiers.value < totalTiers) mountRaf = requestAnimationFrame(tickMount)
+  if (mountedTiers.value < totalTiers) {
+    if (typeof window.requestIdleCallback === 'function') {
+      mountIdle = window.requestIdleCallback(tickMount, { timeout: 1000 })
+    } else {
+      mountIdle = window.setTimeout(tickMount, 120)
+    }
+  }
 })
-onUnmounted(() => {
-  if (mountRaf) cancelAnimationFrame(mountRaf)
-})
+onUnmounted(clearMountTask)
 </script>
 
 <template>

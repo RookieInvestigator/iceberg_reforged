@@ -1,0 +1,373 @@
+/* DEV 页面统一视觉语言（只在开发模式的 DEV 页面里被引入，生产构建不产出）。
+ *
+ * 约定：
+ * - 底色一律 #05070c，内容区最大宽度 1200；
+ * - 表面 = --dev-surface + --white-06 描边 + 12px 圆角，不用阴影；
+ * - 标题小、重、全大写字母间距；数字一律 tabular-nums；
+ * - 强调色只用于「可操作」与「当前项」，不做装饰。 */
+
+.dev-page {
+  min-height: 100vh;
+  padding: 1rem clamp(1rem, 3vw, 2rem) 2rem;
+  background: #05070c;
+  color: var(--white-85);
+  font-family: var(--font-sans);
+}
+
+/* fill 布局：满高不滚动，内容自己管滚动（编辑器 / 工作台） */
+.dev-shell--fill {
+  min-height: 0;
+  height: calc(100dvh - var(--bulletin-offset, 0px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.dev-shell--fill .dev-body { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+
+.dev-content { width: 100%; }
+
+/* 顶栏：一行，不单独占一块（高度 ≈ 26px） */
+.dev-topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-bottom: 0.45rem;
+  margin-bottom: 0.55rem;
+  border-bottom: 1px solid var(--white-06);
+  flex: none;
+}
+.dev-shell--fill .dev-topbar { margin-bottom: 0.5rem; }
+.dev-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 0.05rem; }
+.dev-tab {
+  padding: 0.16rem 0.5rem;
+  border-radius: 5px;
+  font-size: var(--font-tiny);
+  color: var(--white-40);
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+.dev-tab:hover { color: var(--white-85); background: var(--white-04); }
+.dev-tab.is-active { color: var(--white-92); background: var(--white-08); font-weight: 700; }
+.dev-back {
+  margin-left: auto;
+  /* 窄屏时顶栏标签会折成两行，这行不许被挤成「← 返回 / 首页」两段 */
+  flex: none;
+  white-space: nowrap;
+  font-size: var(--font-micro);
+  color: var(--white-30);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.dev-back:hover { color: var(--white-70); }
+
+/* 页头 */
+.dev-head { margin-bottom: 0.6rem; }
+.dev-title-row { display: flex; align-items: baseline; gap: 0.7rem; flex-wrap: wrap; }
+.dev-title {
+  margin: 0;
+  font-size: clamp(1.05rem, 1.8vw, 1.3rem);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--white-92);
+}
+.dev-badge {
+  font-size: var(--font-micro);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  color: #000;
+  background: var(--color-accent);
+}
+.dev-sub { margin: 0.25rem 0 0; color: var(--white-40); font-size: var(--font-micro); }
+.dev-head-row { display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.dev-head-row .dev-head { flex: 1 1 22rem; margin-bottom: 0; }
+.dev-head-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+:root { --dev-surface: rgba(255, 255, 255, 0.035); --dev-pane: rgba(0, 0, 0, 0.22); }
+
+/* 表面 */
+.dev-card {
+  padding: 1.1rem 1.2rem;
+  border-radius: 12px;
+  background: var(--dev-surface);
+  border: 1px solid var(--white-06);
+  min-width: 0;
+}
+.dev-card--wide { grid-column: 1 / -1; }
+.dev-card--flush { padding: 0; overflow: hidden; }
+
+.dev-h2 {
+  margin: 0 0 0.85rem;
+  font-size: var(--font-xs);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--white-45);
+}
+.dev-h2-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-bottom: 0.85rem; }
+.dev-h2-row .dev-h2 { margin: 0; }
+.dev-h3 {
+  margin: 1rem 0 0.55rem;
+  font-size: var(--font-tiny);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--white-45);
+}
+.dev-note { margin: 0.2rem 0 0.6rem; font-size: var(--font-xs); color: var(--white-40); }
+.dev-note--err { color: #ff8a80; }
+.dev-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+
+/* KPI */
+.dev-kpis {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+}
+.dev-kpis--tight { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 0.55rem; }
+.dev-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 10px;
+  background: var(--dev-surface);
+  border: 1px solid var(--white-06);
+}
+.dev-kpi-num { font-size: 1.3rem; font-weight: 700; color: var(--white-92); font-variant-numeric: tabular-nums; }
+.dev-kpi-label { font-size: var(--font-micro); color: var(--white-40); letter-spacing: 0.12em; }
+
+/* 条形图 */
+.dev-bars { display: flex; flex-direction: column; gap: 0.4rem; }
+.dev-bar-row { display: grid; grid-template-columns: minmax(72px, 34%) 1fr 3.2rem; align-items: center; gap: 0.6rem; }
+.dev-bar-label {
+  font-size: var(--font-tiny);
+  color: var(--white-60);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dev-bar { height: 8px; border-radius: 999px; background: var(--white-06); overflow: hidden; }
+.dev-bar-fill { display: block; height: 100%; border-radius: 999px; background: var(--color-accent-soft); }
+.dev-bar-num { font-size: var(--font-tiny); color: var(--white-55); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 表格 */
+.dev-table { width: 100%; border-collapse: collapse; font-size: var(--font-xs); }
+.dev-table th, .dev-table td { padding: 0.45rem 0.35rem; text-align: left; border-bottom: 1px solid var(--white-06); }
+.dev-table th { color: var(--white-40); font-weight: 500; white-space: nowrap; }
+.dev-table td { color: var(--white-72); font-variant-numeric: tabular-nums; }
+.dev-table tbody tr:hover td { background: var(--white-02); }
+
+/* 控件 */
+.dev-input {
+  min-width: 8rem;
+  padding: 0.32rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--white-10);
+  background: var(--white-03);
+  color: var(--white-85);
+  font: inherit;
+  font-size: var(--font-xs);
+}
+.dev-input:focus { outline: none; border-color: var(--white-25); }
+.dev-check { display: inline-flex; align-items: center; gap: 0.35rem; font-size: var(--font-xs); color: var(--white-55); }
+.dev-btn {
+  padding: 0.28rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--white-10);
+  background: var(--white-04);
+  color: var(--white-65);
+  font: inherit;
+  font-size: var(--font-xs);
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.dev-btn:hover { color: var(--white-92); border-color: var(--white-20); }
+.dev-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.dev-btn--primary {
+  color: #000;
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent-soft);
+  font-weight: 700;
+}
+.dev-btn--primary:hover { color: #000; background: var(--color-accent-bright); border-color: var(--color-accent-bright); }
+.dev-btn.is-active { color: var(--white-92); border-color: var(--white-25); background: var(--white-10); }
+.dev-seg { display: inline-flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--white-06); }
+.dev-seg-btn {
+  padding: 0.22rem 0.7rem;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--white-60);
+  font: inherit;
+  font-size: var(--font-xs);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.dev-seg-btn:hover { color: var(--white-90); }
+.dev-seg-btn.on { background: var(--white-14); color: #fff; font-weight: 700; }
+.dev-link {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+  color: var(--white-70);
+  text-align: left;
+  max-width: 20rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.dev-link:hover { color: var(--color-accent-soft); text-decoration: underline; text-underline-offset: 3px; }
+
+/* 状态色（与反馈工作台一致） */
+.dev-ok { color: #43c96a; }
+.dev-no { color: #e2564b; }
+.dev-dim { color: var(--white-25); }
+
+/* 工作区容器：DEV 页里「有实质内容的大容器」统一成这一种表面 */
+.dev-workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--white-06);
+  border-radius: 12px;
+  background: var(--dev-surface);
+}
+/* 分区（左列表 / 右详情）：比容器略深，分隔线统一 1px */
+.dev-pane {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--dev-pane);
+}
+.dev-pane + .dev-pane {
+  border-left: 1px solid var(--white-06);
+  background: transparent;
+}
+/* 工具条（筛选行）：贴在工作区上方的窄条 */
+.dev-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.7rem;
+  padding: 0.45rem 0.7rem;
+  background: var(--white-02);
+  border: 1px solid var(--white-06);
+  border-radius: 10px;
+  margin-bottom: 0.5rem;
+  flex: none;
+}
+
+/* ══ 组件兼容层 ══
+ * DEV 各页里功能相同的零散组件（按钮 / 输入 / 小标签 / 等宽小字 / 列表行 / 空状态）
+ * 历史上各写了一套尺寸与配色。这里用最低优先级的 `.dev-page .dev-body :is(...)` 统一成
+ * 与 `.dev-btn` / `.dev-input` / `.dev-chip` 相同的度量，组件内部不用改类名。
+ * 只统一「外观度量」，不动布局、状态色（.ok/.no/.warn/.danger 保持原语义）。 */
+
+/* 次要按钮：与 .dev-btn 同度量 */
+.dev-page .dev-body :is(.add-txt, .mini, .more, .rd-btn, .rd-mini) {
+  padding: 0.28rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid var(--white-10);
+  background: var(--white-04);
+  color: var(--white-65);
+  font-size: var(--font-xs);
+  font-weight: 400;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.dev-page .dev-body :is(.add-txt, .mini, .more, .rd-btn, .rd-mini):hover {
+  color: var(--white-92);
+  border-color: var(--white-20);
+}
+.dev-page .dev-body :is(.rd-mini) { padding: 0.1rem 0.45rem; font-size: var(--font-micro); }
+
+/* 输入族：与 .dev-input 同度量 */
+.dev-page .dev-body :is(.inp, .sel, .cell, .by-in, .by-date, .rd-area, .rd-input) {
+  padding: 0.3rem 0.55rem;
+  border-radius: 6px;
+  border: 1px solid var(--white-10);
+  background: var(--white-03);
+  color: var(--white-90);
+  font-size: var(--font-xs);
+}
+.dev-page .dev-body :is(.cell-sm) { padding: 0.22rem 0.4rem; font-size: var(--font-micro); }
+.dev-page .dev-body :is(.inp, .sel, .cell, .rd-area, .rd-input):focus {
+  outline: none;
+  border-color: var(--white-25);
+}
+
+/* 小标签族：统一成同一枚 chip（圆角 999 / micro / white-12 描边 / white-04 底） */
+.dev-page .dev-body :is(.tier, .cat-sel, .mk, .role, .chip, .rl-kind, .rl-status, .rd-edited-tag) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--white-12);
+  background: var(--white-04);
+  color: var(--white-60);
+  font-size: var(--font-micro);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+.dev-page .dev-body .cat-sel { font-weight: 700; }
+.dev-page .dev-body :is(.role-main, .chip-up) { border-style: dashed; color: var(--white-45); }
+
+/* 等宽小字（文件名 / 字段名 / ID）：同一字体族与字号 */
+.dev-page .dev-body :is(.file, .fi, .mono) {
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font-size: var(--font-micro);
+  color: var(--white-45);
+}
+
+/* 列表行：同内边距与 hover */
+.dev-page .dev-body :is(.rl-row, .pop-row, .link) {
+  padding: 0.5rem 0.7rem;
+  border-radius: 6px;
+}
+.dev-page .dev-body :is(.rl-row, .pop-row, .link):hover { background: var(--white-03); }
+
+/* 空状态 */
+.dev-page .dev-body :is(.rl-empty, .pop-empty, .none, .rd-empty) {
+  color: var(--white-30);
+  font-size: var(--font-xs);
+}
+
+/* 分组标题：与 .dev-h3 同字距与颜色 */
+.dev-page .dev-body :is(.rd-h) { color: var(--white-45); letter-spacing: 0.14em; }
+
+/* 分组标题（编辑器 / 原始行的区块标题）：统一字重、字号、颜色、字距 */
+.dev-page .dev-body :is(.sec-hd h3, .hd h3) {
+  font-size: var(--font-xs);
+  font-weight: 700;
+  color: var(--white-55);
+  letter-spacing: 0.06em;
+}
+/* 区块分隔线 */
+.dev-page .dev-body .sec {
+  margin-top: 1.4rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--white-06);
+}
+/* 下拉浮层（编辑器里的标签 / 关联选择器）：同一圆角、描边、底色 */
+.dev-page .dev-body .pop {
+  border-radius: 10px;
+  border: 1px solid var(--white-10);
+  background: #12151b;
+}
+/* 表格/列表容器 */
+.dev-page .dev-body .tbl {
+  margin-bottom: 1rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--white-06);
+  border-radius: 12px;
+  background: var(--white-02);
+}

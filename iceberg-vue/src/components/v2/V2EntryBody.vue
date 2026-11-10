@@ -8,6 +8,7 @@
 // layout 只作为根元素 class 的开关，全部形态差异交给容器 CSS（.v2entry-body--*），
 // 模板里不出现 isCard 三元。
 import { computed, inject, ref, watch } from 'vue';
+import { useStore } from '@nanostores/vue';
 import { ExternalLink } from '@lucide/vue';
 import { useI18n } from '../../lib/useI18n';
 import { normalizeTags } from '../../lib/tags';
@@ -16,13 +17,16 @@ import CommentPanel from '../items/CommentPanel.vue';
 import EntryMarks from '../items/EntryMarks.vue';
 import EntryMetaBadges from './V2EntryMetaBadges.vue';
 import EntryRelatedLinks from './V2RelatedLinks.vue';
+import EntryReading from './V2EntryReading.vue';
 import RichText from '../ui/RichText.vue';
-import { REFERENCES_MAP_KEY, type ReferenceLink } from '../../lib/injectionKeys';
+import { REFERENCES_MAP_KEY, READING_MAP_KEY, type ReferenceLink } from '../../lib/injectionKeys';
+import type { ReadingRecord } from '../../lib/iceberg/appendix';
 import { linkDisplay } from '../../lib/sourceLabel';
 import { pickLinks } from '../../lib/iceberg/entryLinks';
 import { CATEGORY_COLORS_KEY, DEFAULT_COLOR_KEY } from '../../lib/injectionKeys';
 import { extraBadges } from '../../lib/iceberg/extraCategories';
 import { TRAIL_KEY, ENTRY_IA_KEY } from '../../lib/iceberg/v2/keys';
+import { showTrail } from '../../lib/settingsStore';
 
 const props = defineProps<{
   item: EntryView
@@ -44,6 +48,7 @@ const { commentsOpen, supabaseReady } = ia
 
 // A3：探索轨迹面包屑（栈来自 V2Interactivity；回跳走 navigate-from 复用统一入口）。
 // 放 body 顶部，桌面卡与移动抽屉都有；超 4 环折叠为首 + … + 末，切词条复位。
+const trailOn = useStore(showTrail);
 const trailState = inject(TRAIL_KEY, null)
 const trailRings = computed(() => trailState?.trail.value ?? [])
 const trailCollapsed = ref(true)
@@ -64,6 +69,11 @@ const referencesMap = inject(REFERENCES_MAP_KEY, new Map<string, ReferenceLink[]
 // 空结果复用同一常量，避免每次 computed 造新数组触发下游无谓更新
 const NO_REFS: ReferenceLink[] = []
 const refLinks = computed(() => referencesMap.get(props.item?.id || '') ?? NO_REFS)
+
+// 推荐阅读书目副表：一行 = 某词条 → 一本书（同一本书可挂多个词条）
+const readingMap = inject(READING_MAP_KEY, new Map<string, ReadingRecord[]>())
+const NO_READING: ReadingRecord[] = []
+const reading = computed(() => readingMap.get(props.item?.id || '') ?? NO_READING)
 
 // 链接副表：role=main 可覆盖主链接（改 URL / 只改显示名），其余为附加参考链接
 const picked = computed(() => pickLinks(props.item?.link, refLinks.value))
@@ -91,7 +101,7 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
 
 <template>
   <div class="v2entry-body" :class="`v2entry-body--${layout}`">
-    <nav v-if="trailRings.length > 1" class="trail" :aria-label="t('trailNav')">
+    <nav v-if="trailOn && trailRings.length > 1" class="trail" :aria-label="t('trailNav')">
       <template v-for="(ring, i) in visibleRings" :key="ring.id">
         <span class="trail-sep" aria-hidden="true">›</span>
         <button
@@ -157,6 +167,11 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
           </a>
         </li>
       </ul>
+    </div>
+
+    <!-- 推荐阅读书目：延伸到站外的书 / 论文，比关联词条更弱一档 -->
+    <div v-if="reading.length" class="v2entry-sec v2entry-sec--reading">
+      <EntryReading :items="reading" />
     </div>
 
     <!-- 拓展信息区：关联词条（跳板，沉底弱化） -->

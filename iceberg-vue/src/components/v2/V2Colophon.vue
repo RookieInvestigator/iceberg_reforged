@@ -42,7 +42,11 @@ const staleHint = computed(() =>
 // 已经在站点域名上就不必再链回自己
 const showLink = computed(() => !isOnCanonicalOrigin());
 
+// 姊妹站：三站互链（首页 / 博客 / 本站）。域名是专有名词，不需要翻译
+const HOME_URL = 'https://hezihezi.com';
+const BLOG_URL = 'https://blog.hezihezi.com';
 const GITHUB_URL = 'https://github.com/RookieInvestigator/iceberg_reforged';
+
 const SOURCE_URL = 'https://icebergthreads.com/zh/iceberg/fel4BTCqlMAGSa2gelRJ';
 const CC_URL = 'https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hans';
 </script>
@@ -70,6 +74,8 @@ const CC_URL = 'https://creativecommons.org/licenses/by-sa/4.0/deed.zh-hans';
       <ExportImageButton linklike class="v2colo-linklike" :coverTitle="t('siteTitle')" :coverMeta="`${buildDate} · ${entryCount} ${t('entries')}`" :coverIntro="introText" />
     </nav>
     <nav class="v2colo-nav v2colo-ext">
+      <a :href="HOME_URL" target="_blank" rel="noopener noreferrer">hezihezi.com</a>
+      <a :href="BLOG_URL" target="_blank" rel="noopener noreferrer">blog.hezihezi.com</a>
       <a :href="SOURCE_URL" target="_blank" rel="noopener noreferrer">IcebergThreads</a>
       <a :href="GITHUB_URL" target="_blank" rel="noopener noreferrer">{{ t('aboutRepo') }}</a>
       <a :href="CC_URL" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>

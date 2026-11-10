@@ -1,5 +1,5 @@
 {
-  "generatedAt": 1793115371,
+  "generatedAt": 1794320528,
   "tierOrder": [
     "Tier 1",
     "Tier 2",
@@ -23,7 +23,7 @@
     "预言・谶纬": "#FF8D0A",
     "历史疑案・假说": "#00FFD5",
     "心理・社会现象": "#00FF0A",
-    "神秘物件・现象": "#BDBDBD",
+    "神秘内容・物件・现象": "#BDBDBD",
     "阴谋论・边缘理论": "#A666F4",
     "艺术・创作物": "#FF75BC"
   },
@@ -102,14 +102,14 @@
   "tierCounts": {
     "Tier 1": 158,
     "Tier 2": 306,
-    "Tier 3": 313,
-    "Tier 4": 274,
-    "Tier 5": 204,
-    "Tier 6": 117,
-    "Tier 7": 55,
+    "Tier 3": 315,
+    "Tier 4": 277,
+    "Tier 5": 206,
+    "Tier 6": 118,
+    "Tier 7": 56,
     "Tier 8": 34
   },
-  "total": 1461,
+  "total": 1470,
   "contributors": [
     "1214179656",
     "Akilulf",

@@ -1,4 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- loc 一律带尾斜杠：CF Pages 会把 /home 308 到 /home/，预渲染产出的目录也是
+     /home/index.html。sitemap 写不带斜杠的地址等于主动提交一堆「重定向页」，
+     GSC 会判成 Page with redirect 而不收录。新增路由时照此格式。
+     分类聚合页（/category/<slug>/）是站内可索引正文的主力：词条本身没有独立 URL
+     （深链是 #id 的 hash），1461 条正文全靠这 15 页进入 HTML。
+     /features/ 不收：唯一一篇 000-placeholder.md 是演示样例，被 PLACEHOLDER_SLUG 过滤后
+     列表页只剩「暂无专题文章」254 字，属于薄内容。等有真实专题再加回来。 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>__SITE_ORIGIN__/</loc>
@@ -6,33 +13,103 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>__SITE_ORIGIN__/home</loc>
+    <loc>__SITE_ORIGIN__/home/</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>__SITE_ORIGIN__/handbook</loc>
+    <loc>__SITE_ORIGIN__/handbook/</loc>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>__SITE_ORIGIN__/features</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>__SITE_ORIGIN__/on-this-day</loc>
+    <loc>__SITE_ORIGIN__/on-this-day/</loc>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>__SITE_ORIGIN__/ancient-book</loc>
+    <loc>__SITE_ORIGIN__/ancient-book/</loc>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>__SITE_ORIGIN__/3d</loc>
+    <loc>__SITE_ORIGIN__/3d/</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/urban-legend/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/haunted-place/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/true-crime/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/cryptid/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/folklore/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/fringe-science/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/internet-oddity/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/hoax/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/mythology/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/prophecy/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/historical-mystery/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/psycho-social/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/mystic-object/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/conspiracy/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>__SITE_ORIGIN__/category/art-creation/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
   </url>
 </urlset>

@@ -18,6 +18,13 @@ const newRef = ref<{ url: string; label: string } | null>(null)
 const newBy = ref('')
 const newAt = ref('')
 
+/** 反向关联（只读）：related.csv 是双向索引，谁把本词条设成了 target —— 整表扫描由编辑器提供 */
+const reverseRelated = computed(() => {
+  const id = props.ed.selectedId.value
+  return id ? props.ed.reverseRelatedOf(id) : []
+})
+const titleOfId = (id: string) => (props.ed.itemMap.get(id) as { title?: string } | undefined)?.title || id
+
 const usedRelated = computed(() => new Set(props.ed.relatedList.value.map(r => r.id)))
 const upstreamTitles = computed(() => props.ed.upstream.value.related.map(id => ({
   id, title: (props.ed.itemMap.get(id) as any)?.title || id,
@@ -210,6 +217,31 @@ function commitBy() {
       </datalist>
     </section>
 
+    <!-- 推荐阅读书目（reading.csv）：一行 = 这个词条 → 一本书 -->
+    <section class="sec">
+      <div class="sec-hd">
+        <h3>推荐阅读书目</h3>
+        <span class="gap" />
+        <button class="add-txt" @click="ed.addReading()">+ 添加书目</button>
+      </div>
+      <div v-for="(b, i) in ed.readingRows.value" :key="i" class="book">
+        <input class="cell" :value="b.title || ''" placeholder="书名"
+          @input="ed.setReadingField(i, 'title', ($event.target as HTMLInputElement).value)" />
+        <input class="cell" :value="b.by || ''" placeholder="作者"
+          @input="ed.setReadingField(i, 'by', ($event.target as HTMLInputElement).value)" />
+        <input class="cell cell-sm" :value="b.at || ''" placeholder="年份"
+          @input="ed.setReadingField(i, 'at', ($event.target as HTMLInputElement).value)" />
+        <input class="cell mono grow" :value="b.url || ''" placeholder="https://…（可选）"
+          @input="ed.setReadingField(i, 'url', ($event.target as HTMLInputElement).value)" />
+        <input class="cell cell-sm" :value="b.recommender || ''" placeholder="推荐者"
+          @input="ed.setReadingField(i, 'recommender', ($event.target as HTMLInputElement).value)" />
+        <button class="mini" @click="ed.removeReading(i)">移除</button>
+        <input class="cell span-all" :value="b.note || ''" placeholder="一句话推荐理由（可选）"
+          @input="ed.setReadingField(i, 'note', ($event.target as HTMLInputElement).value)" />
+      </div>
+      <p v-if="!ed.readingRows.value.length" class="none">暂无推荐书目；点「+ 添加书目」挂一本到这个词条</p>
+    </section>
+
     <!-- 关联词条 -->
     <section class="sec">
       <div class="sec-hd">
@@ -226,6 +258,21 @@ function commitBy() {
         <div v-if="pop === 'rel'" class="pop pop-rel">
           <EntryPicker :ed="ed" :used="usedRelated" @pick="ed.addRelated($event)" />
         </div>
+      </div>
+
+      <!-- 反向关联（只读）：别的词条在 related.csv 里指向本词条。双向索引，
+           要改关系请去对面词条；这里点一下可以直接切过去。 -->
+      <div class="rev" @click.stop>
+        <span class="rev-k" title="related.csv 里的反向行（对方 → 本词条）">← 反向</span>
+        <button
+          v-for="rev in reverseRelated"
+          :key="rev.sourceId"
+          type="button"
+          class="chip chip-rev"
+          :title="`${titleOfId(rev.sourceId)}：点一下切到该词条`"
+          @click="ed.selectedId.value = rev.sourceId"
+        >{{ titleOfId(rev.sourceId) }}</button>
+        <span v-if="!reverseRelated.length" class="none">暂无</span>
       </div>
     </section>
   </article>
@@ -314,4 +361,17 @@ function commitBy() {
 .cell { padding: 0.3rem 0.5rem; font-size: var(--font-sm); background: var(--white-06); border: 1px solid var(--white-14); border-radius: 7px; color: var(--white-92); }
 .cell:focus { border-color: var(--color-accent); outline: none; }
 .cell.grow { flex: 1; min-width: 13rem; }
+.book {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0;
+}
+.book + .book { border-top: 1px dashed var(--white-06); }
+.span-all { flex: 1 1 100%; }
+.rev { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.45rem; }
+.rev-k { font-size: var(--font-micro); color: var(--white-30); letter-spacing: 0.08em; }
+.chip-rev { opacity: 0.6; border-style: dashed; cursor: pointer; transition: opacity 0.15s; }
+.chip-rev:hover { opacity: 1; }
 </style>

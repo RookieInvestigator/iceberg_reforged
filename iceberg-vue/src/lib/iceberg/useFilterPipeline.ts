@@ -4,7 +4,7 @@ import { activeCategories, activeTags, tagFilterMode, hiddenCategories, hiddenTa
 import { favorites, readItems, showReadMark, showNewMark, filterMode } from '../settingsStore'
 import { tierVisibleCounts } from './wallCounts'
 import { buildNavIndex, docOrder, navIndex, wallMatched } from './wallState'
-import { itemCategories } from './extraCategories'
+import { matchesFilter, type FilterSnapshot } from './filterMatch'
 import type { RenderItem } from '../injectionKeys'
 
 interface PipelineOptions {
@@ -37,34 +37,17 @@ export function useFilterPipeline(allItems: RenderItem[], opts: PipelineOptions)
   const sNew = useStore(showNewMark);
   const sRead = useStore(showReadMark);
 
-  // F15：主筛选与随机入口共用的纯匹配函数 —— 同一快照 → 随机池与可见集合完全一致
-  function filterSnapshot() {
+  // F15：主筛选与随机入口共用的纯判定函数在 ./filterMatch.ts（唯一实现，带门禁用例）
+  function filterSnapshot(): FilterSnapshot {
     return {
-      spl: spl.value, favF: favF.value, fList: fList.value.map(id => resolveId(id)), // F30：收藏旧 id 转换
+      spl: spl.value,
+      favF: favF.value,
+      favSet: new Set(fList.value.map(id => resolveId(id))), // F30：收藏旧 id 转换
       hCats: hiddenCats.value, hTags: hiddenT.value,
       cats: activeCats.value, tags: activeT.value, tagMode: tagMode.value,
       resultSet: searchResults.value ? new Set(searchResults.value) : null,
+      newCutoff,
     };
-  }
-  function matchesFilter(item: RenderItem, snap: ReturnType<typeof filterSnapshot>) {
-    const { spl, favF, fList, hCats, hTags, cats, tags, tagMode, resultSet } = snap;
-    if (spl === 'hasLink') { if (!item.link) return false; }
-    else if (spl === 'hasDesc') { if (!item.desc) return false; }
-    else if (spl === 'isNew') { if ((item.modifiedAt || 0) < newCutoff) return false; }
-    else if (spl === 'noLinkNoDesc') { if (item.link || item.desc) return false; }
-    if (favF && !fList.includes(item.id)) return false;
-    // 多分类副表（叠加 OR）：隐藏看任一分类，选中看交集
-    const catsOf = itemCategories(item);
-    if (hCats.length > 0 && hCats.some(c => catsOf.includes(c))) return false;
-    if (hTags.length > 0 && hTags.some(t => (item.emojis || []).includes(t))) return false;
-    if (cats.length > 0 && !cats.some(c => catsOf.includes(c))) return false;
-    if (tags.length > 0) {
-      return tagMode === 'AND'
-        ? tags.every(t => (item.emojis || []).includes(t))
-        : tags.some(t => (item.emojis || []).includes(t));
-    }
-    if (resultSet && !resultSet.has(item.id)) return false;
-    return true;
   }
 
   // Filter（F14：统一快照 + 单一调度器取消旧帧，最后一帧严格对应最新状态）

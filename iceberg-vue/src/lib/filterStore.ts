@@ -6,6 +6,13 @@ export const activeTags = atom<string[]>([]);
 export const searchQuery = atom('');
 export const tagFilterMode = atom('OR');
 export const searchMode = atom('full');
+/**
+ * 搜索匹配方式（顶栏「精确 / 模糊」切换）：
+ * - `fuzzy`（默认）：先精确匹配；一条都没有时才跑拼音/缩写模糊层（`pinyin-match`）。
+ * - `exact`：只做精确匹配，不跑模糊层 —— 想确认「站里到底有没有这个词」时用。
+ * 与 `searchMode`（全文 / 标题）正交，两者组合出四种检索范围。
+ */
+export const searchFuzzyMode = atom<'fuzzy' | 'exact'>('fuzzy');
 export const hiddenCategories = atom<string[]>([]);
 export const hiddenTags = atom<string[]>([]);
 export const specialFilter = atom('all');

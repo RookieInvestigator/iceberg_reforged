@@ -6,12 +6,14 @@ import BaseModal from '../modals/BaseModal.vue';
 import V2EntryBody from './V2EntryBody.vue';
 import V2EntryActions from './V2EntryActions.vue';
 import EntrySearchButton from '../items/EntrySearchButton.vue';
-import { ref, toRef, provide, onMounted, onUnmounted } from 'vue';
+import { computed, ref, toRef, provide, onMounted, onUnmounted } from 'vue';
 import { useStore } from '@nanostores/vue';
 import { v2DetailSurface } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
 import { useEntryInteractions } from '../../lib/useEntryInteractions';
 import { ENTRY_IA_KEY } from '../../lib/iceberg/v2/keys';
+import { useSwipeNav } from '../../lib/iceberg/v2/useSwipeNav';
+import { ChevronLeft, ChevronRight } from '@lucide/vue';
 import type { EntryView } from '../../lib/iceberg/entryView';
 
 const props = defineProps<{ item: EntryView }>();
@@ -35,7 +37,17 @@ function setCommentEl(el: HTMLElement | null) {
   commentSectionEl.value = el
 }
 
-// ←/→ 键盘切换相邻词条（聚焦输入时不响应；Esc 由 BaseModal 处理）
+// ←/→ 键盘切换相邻词条；触屏用左右滑动（语义一致：右滑上一条、左滑下一条）
+const swipePrevHint = ref<HTMLElement | null>(null)
+const swipeNextHint = ref<HTMLElement | null>(null)
+const { swipeEl } = useSwipeNav({
+  prevId: () => props.item?.prevId ?? null,
+  nextId: () => props.item?.nextId ?? null,
+  onNavigate: (id) => emit('navigate', { id }),
+  prevHint: swipePrevHint,
+  nextHint: swipeNextHint,
+})
+
 function onKey(e: KeyboardEvent) {
   const tag = document.activeElement?.tagName
   if (tag === 'INPUT' || tag === 'TEXTAREA') return
@@ -48,11 +60,22 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <BaseModal v-if="item" :title="titleCopied ? t('titleCopied') : item.title" :titleClick="() => copyTitle(item.title)" size="lg" titleClass="v2-entry-title tracking-wide" :surface="surf === 'light' ? 'light' : 'dark'" @close="$emit('close')">
+  <BaseModal v-if="item" :token="item.id" :title="titleCopied ? t('titleCopied') : item.title" :titleClick="() => copyTitle(item.title)" size="lg" titleClass="v2-entry-title tracking-wide" :surface="surf === 'light' ? 'light' : 'dark'" @close="$emit('close')">
     <template #header-actions>
       <EntrySearchButton :title="item.title" />
     </template>
-    <V2EntryBody :item="item" layout="card" @navigate="emit('navigate', $event)" @comment-el="setCommentEl" />
+    <div class="v2card-wrap">
+      <!-- 滑动方向提示：挂在 wrap 上，拖动时留在边缘 -->
+      <div ref="swipePrevHint" class="v2swipe-hint v2swipe-hint--prev" aria-hidden="true">
+        <ChevronRight :size="22" :stroke-width="1.8" />
+      </div>
+      <div ref="swipeNextHint" class="v2swipe-hint v2swipe-hint--next" aria-hidden="true">
+        <ChevronLeft :size="22" :stroke-width="1.8" />
+      </div>
+      <div ref="swipeEl" class="v2card-swipe">
+        <V2EntryBody :item="item" layout="card" @navigate="emit('navigate', $event)" @comment-el="setCommentEl" />
+      </div>
+    </div>
     <template #footer>
       <V2EntryActions :item="item" layout="card" @navigate="emit('navigate', $event)" />
     </template>
@@ -63,4 +86,33 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 /* 动作条「紧贴面板底部」：默认 .modal-footer 的 8px 上下 padding 偏松，
    改用与 sheet 的 .v2sheet-foot 共享的 --v2-dock-padding 变量（见 styles/v2.css）。 */
 :deep(.modal-footer) { padding: var(--v2-dock-padding); }
+
+/* 箭头锚点：不参与平移，箭头才能留在边缘 */
+.v2card-wrap { position: relative; }
+
+/* 滑动容器：横向手势归 JS（左右滑动切换），纵向滚动归浏览器 */
+.v2card-swipe {
+  position: relative;
+  touch-action: pan-y;
+  overscroll-behavior-x: contain;
+}
+
+/* 滑动方向提示：默认透明，由 useSwipeNav 按拖动进度写 opacity */
+.v2swipe-hint {
+  position: absolute;
+  top: 50%;
+  margin-top: -17px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: var(--white-92);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s linear;
+}
+.v2swipe-hint--prev { left: 8px; }
+.v2swipe-hint--next { right: 8px; }
 </style>

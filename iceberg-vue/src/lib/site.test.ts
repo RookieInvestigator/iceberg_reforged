@@ -46,14 +46,30 @@ describe('site.config.json 是站点域名的唯一来源', () => {
     expect(SITE_ORIGIN.endsWith('/')).toBe(false)
   })
 
-  it('canonicalUrl：根路径保留尾斜杠，其余原样拼接，容错缺前导斜杠', () => {
+  it('canonicalUrl：一律带尾斜杠（CF Pages 子页真实地址都是 /x/），容错缺前导斜杠', () => {
     expect(canonicalUrl('/')).toBe(`${SITE_ORIGIN}/`)
-    expect(canonicalUrl('/home')).toBe(`${SITE_ORIGIN}/home`)
-    expect(canonicalUrl('on-this-day')).toBe(`${SITE_ORIGIN}/on-this-day`)
+    expect(canonicalUrl('/home')).toBe(`${SITE_ORIGIN}/home/`)
+    expect(canonicalUrl('on-this-day')).toBe(`${SITE_ORIGIN}/on-this-day/`)
+    // 已带斜杠不重复追加
+    expect(canonicalUrl('/handbook/')).toBe(`${SITE_ORIGIN}/handbook/`)
+    // 查询串不参与规范化，只作用于 pathname
+    expect(canonicalUrl('/3d?x=1')).toBe(`${SITE_ORIGIN}/3d/?x=1`)
+    expect(canonicalUrl('/features/a?x=1')).toBe(`${SITE_ORIGIN}/features/a/?x=1`)
+    // hash 同理
+    expect(canonicalUrl('/3d#top')).toBe(`${SITE_ORIGIN}/3d/#top`)
   })
 
   it('转载模板的原文链接同源（不再各写一份常量）', () => {
     expect(REPRINT_URL).toBe(SITE_ORIGIN)
+  })
+
+  it('sitemap 的 loc 全部带尾斜杠（否则 6/7 条被 GSC 判为重定向页）', () => {
+    const xml = readFileSync(join(PROJECT_ROOT, 'public/sitemap.xml'), 'utf-8')
+    const locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1])
+    expect(locs.length).toBeGreaterThan(0)
+    for (const loc of locs) {
+      expect(loc, `${loc} 缺尾斜杠`).toMatch(/\/$/)
+    }
   })
 
   it('hasNewerData：只比内容指纹，不看时间', () => {

@@ -95,6 +95,8 @@ export const bgMode = storedAtom('iceberg-bg-mode', 'liquid'); // 'liquid'(标�
 export const favorites = storedAtom('iceberg-favorites', [] as string[]);
 export const readItems = storedAtom('iceberg-read-items', [] as string[]);
 export const showReadMark = storedAtom('iceberg-show-read-mark', true);
+/** 实验性：详情页顶部「探索轨迹」面包屑（默认关闭，轨迹本身照常记录） */
+export const showTrail = storedAtom('iceberg-show-trail', false);
 export const showNewMark = storedAtom('iceberg-show-new-mark', true);
 /** 实验功能：非冰山图模式 —— 无层级，全部词条随机散落 */
 export const scatterMode = storedAtom('iceberg-scatter-mode', false);
@@ -104,11 +106,11 @@ export const v2DetailSurface = storedAtom('iceberg-v2-detail-surface', 'dark');
 export const searchEngine = storedAtom<SearchEngine>('iceberg-search-engine', 'baidu');
 
 export function applySimpleMode() {
-  detailMode.set('tooltip'); filterMode.set('dim'); immersiveMode.set(false);
+  detailMode.set('tooltip'); filterMode.set('dim'); immersiveMode.set(false); showTrail.set(false);
   bgMode.set('black'); showReadMark.set(false); showNewMark.set(false); showRandomBtn.set(false); floatMode.set('none');
 }
 export function applyStandardMode() {
   detailMode.set('modal'); filterMode.set('hide'); immersiveMode.set(true);
-  showRandomBtn.set(true); showReadMark.set(true); showNewMark.set(true); bgMode.set('liquid'); floatMode.set('static');
+  showRandomBtn.set(true); showReadMark.set(true); showNewMark.set(true); showTrail.set(false); bgMode.set('liquid'); floatMode.set('static');
 }
 

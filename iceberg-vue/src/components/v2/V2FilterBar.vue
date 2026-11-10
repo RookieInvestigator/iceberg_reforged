@@ -8,10 +8,10 @@ import { computed, inject, onMounted, onUnmounted } from 'vue'
 import { useStore } from '@nanostores/vue'
 import {
   activeCategories, activeTags, searchQuery, toggleCategory, toggleTag,
-  tagFilterMode, searchMode, hiddenCategories, hiddenTags, specialFilter,
+  tagFilterMode, searchMode, searchFuzzyMode, hiddenCategories, hiddenTags, specialFilter,
   favFilter, hideCategory, hideTag, hasActiveFilter,
 } from '../../lib/filterStore'
-import { wallMatched } from '../../lib/iceberg/wallState'
+import { wallMatched, searchHitsFuzzy, searchHitsExactCount } from '../../lib/iceberg/wallState'
 import { useI18n } from '../../lib/useI18n'
 import {
   CATEGORY_COLORS_KEY, TAG_MAP_KEY, DEFAULT_COLOR_KEY, TIER_ORDER_KEY,
@@ -36,6 +36,7 @@ const activeT = useStore(activeTags)
 const query = useStore(searchQuery)
 const tagMode = useStore(tagFilterMode)
 const sMode = useStore(searchMode)
+const fMode = useStore(searchFuzzyMode)
 const hiddenCats = useStore(hiddenCategories)
 const hiddenT = useStore(hiddenTags)
 const splFilter = useStore(specialFilter)
@@ -46,17 +47,20 @@ const hasActive = computed(() => hasActiveFilter({
 }))
 const total = computed(() => Object.values(facet.cats).reduce((n, c) => n + c, 0))
 // wallMatched：管线产出的命中集；null = 尚未计算，按全量显示
+// 命中全部来自模糊层才加 ≈（精确命中也算进来时，普通数字 + 下拉里的说明就够）
 const visibleText = computed(() => {
   const hit = wallMatched.value?.size
   if (!hasActive.value || hit == null) return String(total.value)
-  return `${hit} / ${total.value}`
+  const allFuzzy = searchHitsFuzzy.value && searchHitsExactCount.value === 0
+  return `${allFuzzy ? '≈' : ''}${hit} / ${total.value}`
 })
 
 // 滚动帧/显隐/面板开关/层级跳转见 useV2NavVisibility，搜索速查见 useV2SearchSuggest。
 // 本组件只保留筛选域（分类/标签/特殊/收藏）+ 召唤入口 + 模板。
 const {
-  suggestOpen, suggestIdx, suggestRows, searchInputRef,
-  onSearchInputEvent, onSearchFocus, onSuggestKey, chooseSuggest,
+  suggestOpen, suggestIdx, suggestRows, suggestSettled, suggestFuzzy, suggestMixed,
+  suggestSwitchToFuzzy, searchInputRef,
+  onSearchInputEvent, onSearchFocus, onSuggestKey, chooseSuggest, switchToFuzzy,
 } = useV2SearchSuggest()
 const {
   expanded, searchFocus, barVisible, stuck, curTier, atTop, tierOpen,
@@ -155,13 +159,24 @@ function toggleSpecial(key: string) {
         <span class="v2nav-kbd" aria-hidden="true">/</span>
         <transition name="tier-fade">
           <div v-if="suggestOpen && query.trim()" id="v2nav-suggest-list" class="v2nav-suggest no-scrollbar" role="listbox">
+            <!-- 模糊模式：精确命中与拼音/缩写命中同列，这里说明有没有混着近似结果 -->
+            <p v-if="suggestFuzzy && suggestRows.length" class="v2nav-sughint">
+              {{ suggestMixed ? t('searchFuzzyMixedHint') : t('searchFuzzyHint') }}
+            </p>
             <button v-for="(row, i) in suggestRows" :key="row.id" type="button" role="option" :id="'v2nav-opt-' + i" :aria-selected="i === suggestIdx"
               class="v2nav-sugrow" :class="{ on: i === suggestIdx }"
               @click="chooseSuggest(row)" @mousemove="suggestIdx = i">
               <span class="v2nav-sugtitle">{{ row.title }}</span>
               <span class="v2nav-sugcat">{{ row.category }}</span>
+              <span v-if="row.snippet" class="v2nav-sugsnip">{{ row.snippet }}</span>
             </button>
-            <p v-if="!suggestRows.length" class="v2nav-sugempty">{{ t('noResults') }}</p>
+            <!-- 精确模式零命中：提示切到模糊，而不是只丢一句「没有匹配」 -->
+            <button v-if="suggestSwitchToFuzzy" type="button" class="v2nav-sugswitch" @click="switchToFuzzy">
+              <span>{{ t('searchTryFuzzy') }}</span>
+              <span class="v2nav-sugswitch-go">→</span>
+            </button>
+            <!-- 只在这条查询的 Worker 结果已经回来时才说「无结果」，否则是「还没搜完」 -->
+            <p v-else-if="!suggestRows.length && suggestSettled" class="v2nav-sugempty">{{ t('noResults') }}</p>
           </div>
         </transition>
       </div>
@@ -169,8 +184,14 @@ function toggleSpecial(key: string) {
         <button type="button" class="v2nav-tool v2nav-tool-dim v2nav-hide-sm" :aria-pressed="sMode === 'full'" @click="searchMode.set(sMode === 'full' ? 'title' : 'full')">
           {{ sMode === 'full' ? t('searchFullText') : t('searchTitleOnly') }}
         </button>
-        <span class="v2nav-sep v2nav-hide-sm" aria-hidden="true" />
-        <button type="button" class="v2nav-tool v2nav-tool-dim v2nav-hide-sm" @click="focusSearch" aria-label="command palette">⌘K</button>
+        <button
+          type="button"
+          class="v2nav-tool v2nav-tool-dim v2nav-hide-sm"
+          :aria-pressed="fMode === 'fuzzy'"
+          @click="searchFuzzyMode.set(fMode === 'fuzzy' ? 'exact' : 'fuzzy')"
+        >
+          {{ fMode === 'fuzzy' ? t('searchFuzzy') : t('searchExact') }}
+        </button>
         <span class="v2nav-sep v2nav-hide-sm" aria-hidden="true" />
         <button type="button" class="v2nav-tool" :class="{ on: expanded || hasActive }" :aria-expanded="expanded" @click="togglePanel('bar')">
           {{ t('filter') }}<span v-if="hasActive" class="v2bar-dot" aria-hidden="true" />
@@ -216,7 +237,9 @@ function toggleSpecial(key: string) {
           <button type="button" class="v2bar-pill" :class="{ on: sMode === 'full' }" :aria-pressed="sMode === 'full'" @click="searchMode.set(sMode === 'full' ? 'title' : 'full')">
             {{ sMode === 'full' ? t('searchFullText') : t('searchTitleOnly') }}
           </button>
-          <button type="button" class="v2bar-pill" @click="focusSearch">⌘K {{ t('search') }}</button>
+          <button type="button" class="v2bar-pill" :class="{ on: fMode === 'fuzzy' }" :aria-pressed="fMode === 'fuzzy'" @click="searchFuzzyMode.set(fMode === 'fuzzy' ? 'exact' : 'fuzzy')">
+            {{ fMode === 'fuzzy' ? t('searchFuzzy') : t('searchExact') }}
+          </button>
         </div>
       </section>
     </div>
@@ -424,12 +447,33 @@ function toggleSpecial(key: string) {
   padding: 6px; max-height: 320px; overflow-y: auto;
 }
 .v2nav-sugrow {
-  display: flex; align-items: baseline; gap: 0.6rem; width: 100%;
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 0.6rem; width: 100%;
   background: transparent; border: none; border-radius: var(--v2-r-sm); cursor: pointer;
   color: var(--white-70); font-size: var(--font-sm); text-align: left; padding: 0.55rem 0.7rem;
 }
 .v2nav-sugrow.on { background: var(--white-08); color: var(--white-90); }
+/* 模糊层说明行：拼音/缩写命中时放在候选上方 */
+.v2nav-sughint {
+  margin: 0; padding: 0.35rem 0.7rem 0.2rem;
+  font-size: var(--font-micro); font-weight: 700; letter-spacing: 0.04em;
+  color: var(--color-accent-soft);
+}
+/* 精确模式零命中 → 一键切模糊（整行可点） */
+.v2nav-sugswitch {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+  width: 100%; padding: 0.55rem 0.7rem;
+  background: none; border: none; border-radius: var(--v2-r-sm); cursor: pointer;
+  color: var(--white-55); font-size: var(--font-xs); text-align: left;
+}
+.v2nav-sugswitch:hover { background: var(--white-06); color: var(--white-90); }
+.v2nav-sugswitch-go { flex: none; color: var(--color-accent-soft); }
 .v2nav-sugtitle { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v2nav-sugcat { flex: none; font-size: var(--font-tiny); color: var(--white-30); }
+/* 正文命中摘要：占满第二行，说明「为什么这条会被搜出来」 */
+.v2nav-sugsnip {
+  flex: 1 0 100%; min-width: 0; margin-top: 0.15rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: var(--font-tiny); color: var(--white-30); font-weight: 400;
+}
 .v2nav-sugempty { margin: 0; padding: 0.8rem; text-align: center; font-size: var(--font-xs); color: var(--white-30); }
 </style>

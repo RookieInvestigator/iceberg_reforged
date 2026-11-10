@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DevShell from '../components/dev/DevShell.vue';
 // FeedbackReviewView：反馈审核工作台（DEV 专用，路由只在 import.meta.env.DEV 注册）。
 //
 // 把「看当前值 vs 建议值 → 决定采纳/驳回/待定」搬进本地页面：
@@ -318,46 +319,47 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="fr">
-    <header class="fr-bar">
-      <h1 class="fr-title">反馈审核工作台 <span class="fr-dev">DEV</span></h1>
+  <DevShell title="反馈审核工作台" layout="fill">
+    <template #subtitle>
       <span class="fr-src">{{ source === 'supabase' ? 'Supabase 实时' : source === 'csv' ? 'CSV 离线' : '未载入' }}</span>
+      <span class="fr-sep" aria-hidden="true">·</span>
       <span class="fr-src">提交者 {{ submitterLabel }}</span>
-      <div class="fr-stats">
+      <span class="fr-sep" aria-hidden="true">·</span>
+      <span class="fr-stats">
         <span>共 {{ stat.total }}</span>
         <span class="ok">采纳 {{ stat.accept }}</span>
         <span class="no">驳回 {{ stat.reject }}</span>
         <span>待定 {{ stat.later }}</span>
         <span class="dim">未决 {{ stat.undecided }}</span>
-      </div>
+      </span>
+    </template>
+    <template #actions>
       <div class="fr-progress" :title="`已决 ${stat.total - stat.undecided} / ${stat.total}`">
         <span :style="{ width: stat.total ? ((stat.total - stat.undecided) / stat.total * 100) + '%' : '0%' }" />
       </div>
-      <div class="fr-actions">
-        <button type="button" class="fr-btn" @click="loadFromSupabase">刷新</button>
-        <label class="fr-btn">
-          导入 CSV
-          <input type="file" accept=".csv,text/csv" hidden @change="onPickCsv" />
-        </label>
-        <button type="button" class="fr-btn" @click="clearAll">清空决定</button>
-        <span class="fr-save" :class="{ on: diskSaved }">{{ diskSaved ? '决定已写入 data/feedback' : '本地已存' }}</span>
-      </div>
-    </header>
+      <button type="button" class="dev-btn" @click="loadFromSupabase">刷新</button>
+      <label class="dev-btn">
+        导入 CSV
+        <input type="file" accept=".csv,text/csv" hidden @change="onPickCsv" />
+      </label>
+      <button type="button" class="dev-btn" @click="clearAll">清空决定</button>
+      <span class="fr-save" :class="{ on: diskSaved }">{{ diskSaved ? '决定已写入 data/feedback' : '本地已存' }}</span>
+    </template>
 
-    <div class="fr-filters">
-      <select v-model="fetchScope" class="fr-input" title="拉取范围：直接作为 Supabase 查询的 status 过滤">
+    <div class="fr-filters dev-toolbar">
+      <select v-model="fetchScope" class="dev-input" title="拉取范围：直接作为 Supabase 查询的 status 过滤">
         <option value="open">状态：待审 open</option>
         <option value="accepted">状态：已采纳</option>
         <option value="rejected">状态：已驳回</option>
         <option value="all">状态：全部</option>
       </select>
       <span v-if="loading" class="fr-src">载入中…</span>
-      <select v-model="kindFilter" class="fr-input">
+      <select v-model="kindFilter" class="dev-input">
         <option value="all">全部类型</option><option value="link">含链接</option><option value="desc">含描述</option>
         <option value="title">含标题</option><option value="meta">含分类/标签</option><option value="unsupported">未知字段</option>
       </select>
-      <label class="fr-check"><input v-model="undecidedOnly" type="checkbox" /> 只看未决（隐藏已决定）</label>
-      <input v-model="query" class="fr-input fr-search" type="search" placeholder="搜词条名 / id / 说明" />
+      <label class="dev-check"><input v-model="undecidedOnly" type="checkbox" /> 只看未决（隐藏已决定）</label>
+      <input v-model="query" class="dev-input fr-search" type="search" placeholder="搜词条名 / id / 说明" />
       <span class="fr-filtered">
         已决 {{ stat.total - stat.undecided }} / {{ stat.total }}
         <template v-if="undecidedOnly && stat.total - stat.undecided">（隐藏 {{ stat.total - stat.undecided }} 条已决定）</template>
@@ -369,9 +371,9 @@ onUnmounted(() => {
     <p v-if="error" class="fr-msg err">{{ error }}</p>
     <p v-else-if="notice" class="fr-msg">{{ notice }}</p>
 
-    <main class="fr-main">
-      <ReviewList :rows="filtered" :titles="titles" :decisions="decisions" :active-index="activeIndex" @pick="(i) => (activeIndex = i)" />
-      <ReviewDetail :row="activeRow" :item="activeItem" :decision="activeDecision" :edits="activeDecision?.edits"
+    <main class="fr-main dev-workspace">
+      <ReviewList class="dev-pane" :rows="filtered" :titles="titles" :decisions="decisions" :active-index="activeIndex" @pick="(i) => (activeIndex = i)" />
+      <ReviewDetail class="dev-pane" :row="activeRow" :item="activeItem" :decision="activeDecision" :edits="activeDecision?.edits"
         :by-name="activeByName" :name-state="nameState"
         :category-options="categoryOptions" :tag-options="tagOptions" :tag-emoji="tagEmoji"
         @decide="(d, reason) => decide(d, reason)" @edit="onEdit" />
@@ -389,8 +391,8 @@ onUnmounted(() => {
     </section>
 
     <footer class="fr-foot">
-      <button type="button" class="fr-btn" :disabled="applying || applyReady === false" @click="runApply(false)">预演（不落盘）</button>
-      <button type="button" class="fr-btn primary" :disabled="applying || !accepted || applyReady === false" @click="runApply(true)">
+      <button type="button" class="dev-btn" :disabled="applying || applyReady === false" @click="runApply(false)">预演（不落盘）</button>
+      <button type="button" class="dev-btn dev-btn--primary" :disabled="applying || !accepted || applyReady === false" @click="runApply(true)">
         {{ applying ? '正在生成…' : `生成副表（采纳 ${accepted} 条）` }}
       </button>
       <span v-if="applyReady === false" class="fr-hint err">
@@ -406,45 +408,42 @@ onUnmounted(() => {
         </template>
       </span>
     </footer>
-  </div>
+  </DevShell>
 </template>
 
 <style scoped>
 /* 整屏固定层：DEV 工作台要独占视口 —— 100vh 会被顶部的公告条顶下去约 50px，
    导致底部命令栏落到折叠线以下；fixed 之后顶部/底部工具条各自 flex:none，只有两栏内部滚动 */
-.fr { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; overflow: hidden; background: #0a0c10; color: var(--white-70); }
-.fr-bar, .fr-filters, .fr-foot, .fr-msg { flex: none; }
-.fr-bar { display: flex; align-items: center; gap: 0.9rem; padding: 0.7rem 1.1rem; border-bottom: 1px solid var(--white-08); }
-.fr-title { margin: 0; font-size: var(--font-sm); font-weight: 700; color: var(--white-90); letter-spacing: 0.06em; }
-.fr-dev { font-size: var(--font-micro); color: #0a0c10; background: var(--color-accent-soft); border-radius: 3px; padding: 0 0.3rem; }
+.fr-main, .fr-filters, .fr-foot, .fr-report { min-height: 0; }
 .fr-src { font-size: var(--font-micro); color: var(--white-30); }
+.fr-sep { color: var(--white-15); margin: 0 0.15rem; }
 .fr-stats { display: flex; gap: 0.7rem; font-size: var(--font-tiny); color: var(--white-45); }
 .fr-stats .ok { color: #43c96a; }
 .fr-stats .no { color: #e2564b; }
 .fr-stats .dim { color: var(--white-25); }
-.fr-progress { flex: 1; height: 3px; min-width: 60px; background: var(--white-08); border-radius: 999px; overflow: hidden; }
+.fr-progress { width: 120px; height: 3px; background: var(--white-08); border-radius: 999px; overflow: hidden; }
 .fr-progress span { display: block; height: 100%; background: var(--color-accent); transition: width 0.2s; }
 .fr-actions { display: flex; align-items: center; gap: 0.4rem; }
-.fr-btn { padding: 0.35rem 0.7rem; background: var(--white-04); border: 1px solid var(--white-12); border-radius: var(--v2-r-sm); color: var(--white-70); font-size: var(--font-tiny); cursor: pointer; }
-.fr-btn:hover { color: var(--white-90); border-color: var(--white-25); }
+.dev-btn { padding: 0.35rem 0.7rem; background: var(--white-04); border: 1px solid var(--white-12); border-radius: var(--v2-r-sm); color: var(--white-70); font-size: var(--font-tiny); cursor: pointer; }
+.dev-btn:hover { color: var(--white-90); border-color: var(--white-25); }
 .fr-save { font-size: var(--font-micro); color: var(--white-25); }
 .fr-save.on { color: #43c96a; }
-.fr-filters { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 1.1rem; border-bottom: 1px solid var(--white-05); }
-.fr-input { padding: 0.3rem 0.5rem; background: var(--white-04); border: 1px solid var(--white-10); border-radius: var(--v2-r-sm); color: var(--white-80); font-size: var(--font-tiny); }
+.fr-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.7rem; }
+.dev-input { padding: 0.3rem 0.5rem; background: var(--white-04); border: 1px solid var(--white-10); border-radius: var(--v2-r-sm); color: var(--white-80); font-size: var(--font-tiny); }
 .fr-search { flex: 0 1 260px; }
-.fr-check { display: flex; align-items: center; gap: 0.3rem; font-size: var(--font-tiny); color: var(--white-45); }
+.dev-check { display: flex; align-items: center; gap: 0.3rem; font-size: var(--font-tiny); color: var(--white-45); }
 .fr-filtered { margin-left: auto; font-size: var(--font-micro); color: var(--white-30); }
 .fr-msg { margin: 0; padding: 0.4rem 1.1rem; font-size: var(--font-tiny); color: var(--white-45); background: var(--white-02); }
 .fr-msg.err { color: #e2564b; }
 /* 两栏各自滚动的前提：grid 行必须是「可用高度」而不是按内容撑高（minmax(0,1fr)），
    且两个 grid item 允许收缩（min-height: 0）—— 否则内容一长就把行顶高、整页溢出而非内部滚动 */
-.fr-main { flex: 1; display: grid; grid-template-columns: 360px 1fr; grid-template-rows: minmax(0, 1fr); min-height: 0; }
+.fr-main { display: grid; grid-template-columns: 360px 1fr; grid-template-rows: minmax(0, 1fr); }
 .fr-main > * { min-height: 0; }
-.fr-main > :first-child { border-right: 1px solid var(--white-08); }
+
 @media (max-width: 1080px) { .fr-main { grid-template-columns: 280px 1fr; } }
 .fr-foot { display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 1.1rem; border-top: 1px solid var(--white-08); }
-.fr-btn.primary { color: #0a0c10; background: var(--color-accent-soft); border-color: var(--color-accent-soft); font-weight: 700; }
-.fr-btn.primary:disabled, .fr-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.dev-btn.primary { color: #0a0c10; background: var(--color-accent-soft); border-color: var(--color-accent-soft); font-weight: 700; }
+.dev-btn.primary:disabled, .dev-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .fr-report { flex: none; max-height: 34vh; display: flex; flex-direction: column; border-top: 1px solid var(--white-08); background: #070910; }
 .fr-report-head { display: flex; flex-wrap: wrap; gap: 0.8rem; padding: 0.4rem 1.1rem; font-size: var(--font-micro); }
 .fr-report-ok { color: #43c96a; }

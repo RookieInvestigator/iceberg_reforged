@@ -3,7 +3,7 @@ import { computed, ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useStore } from '@nanostores/vue';
 import BaseModal from './BaseModal.vue';
-import { fontSize, floatMode, filterMode, showRandomBtn, bgMode, sortMode, detailMode, showReadMark, showNewMark, immersiveMode, scatterMode, v2DetailSurface, searchEngine, applySimpleMode, applyStandardMode, flushPersistedWrites, cancelPersistedWrites } from '../../lib/settingsStore';
+import { fontSize, floatMode, filterMode, showRandomBtn, bgMode, sortMode, detailMode, showReadMark, showNewMark, showTrail, immersiveMode, scatterMode, v2DetailSurface, searchEngine, applySimpleMode, applyStandardMode, flushPersistedWrites, cancelPersistedWrites } from '../../lib/settingsStore';
 import { lang as langAtom } from '../../lib/i18nStore';
 import { useI18n } from '../../lib/useI18n';
 
@@ -20,6 +20,7 @@ const dm = useStore(detailMode);
 const sr = useStore(showRandomBtn);
 const srd = useStore(showReadMark);
 const snw = useStore(showNewMark);
+const strl = useStore(showTrail);
 const dbg = useStore(bgMode);
 const lang = useStore(langAtom);
 const srt = useStore(sortMode);
@@ -164,6 +165,11 @@ function clearData() {
             :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', srd ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
             {{ t('dimRead') }}
             <span :class="srd ? 'text-white' : 'text-white/55'">{{ srd ? '●' : '○' }}</span>
+          </button>
+          <button @click="showTrail.set(!strl)"
+            :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', strl ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+            {{ t('showTrail') }}
+            <span :class="strl ? 'text-white' : 'text-white/55'">{{ strl ? '●' : '○' }}</span>
           </button>
           <button @click="scatterMode.set(!sct)"
             :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', sct ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">

@@ -58,10 +58,14 @@ describe('BaseModal', () => {
     wrapper.unmount()
   })
 
-  it('Escape 触发 close', async () => {
+  it('Escape 先播关闭过渡再抛 close（关闭也有动画，不是硬消失）', async () => {
     const wrapper = mount(BaseModal, { props: { title: '测试' }, attachTo: document.body })
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     await nextTick()
+    // 立即 emit 会让父组件的 v-if 同步销毁整个组件，Transition 来不及播 leave
+    expect(wrapper.emitted('close')).toBeUndefined()
+    // happy-dom 与 test-utils 都不真播 CSS 过渡 / after-leave —— 走 220ms 兜底
+    await new Promise((r) => setTimeout(r, 320))
     expect(wrapper.emitted('close')).toHaveLength(1)
     wrapper.unmount()
   })
