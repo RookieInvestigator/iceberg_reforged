@@ -7,15 +7,25 @@ import type { PlacedCell } from './types';
  */
 export const PC = { bg: '#f5eedc', tx: '#221c18', cr: '#b22d1e', mu: '#7a6e61' };
 
-/** 单元格 grid 定位/尺寸样式（原 cHTML 的 style 部分） */
+/**
+ * 单元格 grid 定位/尺寸样式。
+ *
+ * 双行小字（古籍「小字双行」）：一个大字格内放两列小字，每列占半格宽；
+ * 每列可放 2 个字 —— 即**一格 4 个小字**（2 列 × 2 字）。
+ *
+ * 定位要点：`.gd` 是 `direction: rtl`，`justify-self: start` 在 rtl 下
+ * 已经贴**右**边缘，所以右列（sc=0）不需要位移，左列（sc=1）左移半格。
+ * （上一版误加 `+cw/2`，导致整块小字偏右半格。）
+ */
 export function cellStyle(c: PlacedCell, COLS: number, ROWS: number): string {
   if (c.cm) {
-    let s = `grid-column:${c.cl + 1};grid-row:${c.rw + 1};`;
-    const spanSlots = c.rs || 1;
-    s += `width:calc(var(--fs)*0.5);height:calc(var(--rh)*0.5*${spanSlots});`;
-    s += 'justify-self:center;align-self:start;';
-    s += (c.sc === 0 ? 'margin-left:' : 'margin-right:') + 'calc(var(--fs)*0.5);';
-    if (c.sr === 1) s += 'margin-top:calc(var(--rh)*0.5);';
+    let s = `grid-area:${c.rw + 1} / ${c.cl + 1};`;
+    s += `width:calc(var(--cw) * 0.5);height:calc(var(--rh) * 0.5);`;
+    s += 'justify-self:start;align-self:start;';
+    // rtl 下 start = 右边缘：右列原位，左列左移半格
+    const dx = c.sc === 0 ? '0px' : 'calc(var(--cw) * -0.5)';
+    const dy = c.sr === 1 ? 'calc(var(--rh) * 0.5)' : '0px';
+    s += `transform:translate(${dx}, ${dy});`;
     return s;
   }
   let style = `grid-column:${c.cl + 1};grid-row:${c.rw + 1}`;
@@ -44,19 +54,25 @@ export function punctKind(pn: string | undefined): 'stop' | 'pause' | null {
 }
 
 /**
- * 书名页/卷名页的标题分段（原 spreadHTML 内联解析）：
- * 按 hw 字符收集，遇换行或全角空格分段。
+ * 书名页/卷名页的标题分段。
+ *
+ * 只取**本页标题本身**：从 `⚑`/`⚐` 之后开始，到第一个非 hw 单元格为止。
+ * 旧实现把所有 hw 都收进来，导致卷首页把后续词条标题也拼进大字标题里
+ * （「廣知一北京公交车三七五…」挤成一团）。
  */
 export function titleParts(cells: PlacedCell[]): string[] {
   const parts: string[] = [];
   let cur = '';
+  let started = false;
   for (const cell of cells) {
-    if (cell.c === '⚑' || cell.c === '⚐' || cell.c === '\f') continue;
+    if (cell.c === '⚑' || cell.c === '⚐') { started = true; continue; }
+    if (!started) continue;
+    if (cell.c === '\f') break;
     if (cell.nl) { if (cur) { parts.push(cur); cur = ''; } continue; }
-    if (cell.hw) {
-      if (cell.c === '　') { if (cur) { parts.push(cur); cur = ''; } }
-      else { cur += cell.c + (cell.pn || ''); }
-    }
+    // 标题结束：遇到非 hw 单元格（正文/夹注）就停
+    if (!cell.hw) break;
+    if (cell.c === '　') { if (cur) { parts.push(cur); cur = ''; } }
+    else { cur += cell.c + (cell.pn || ''); }
   }
   if (cur) parts.push(cur);
   return parts;

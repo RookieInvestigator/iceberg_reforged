@@ -1,299 +1,674 @@
-/* ═══════════ 中文兔子洞冰山圖 · 古籍模式 CSS (終極純淨版) ═══════════ */
-/* 说明：.c.hw.hp > span 的生效规则在文件末尾的「徹底修復」版本（0.95em / 700）；
-   .nz 的 mix-blend-mode: multiply 为墨水晕染效果，有意保留。 */
+/* ═══════════════════════════════════════════════════════════════
+   古籍模式 · 直排版式
+   ─────────────────────────────────────────────────────────────
+   依据 W3C clreq 直排章节与传统古籍开本规范，整体重写（非层叠补丁）：
 
-/* Noto Serif TC 自托管于 public/fonts/（语料子集，脚本 scripts/subset_fonts.py 生成，
-   src/styles/fonts.css 经 global.css 首行引入），竖排特性 vrt2/vert 由 pyftsubset 默认保留；
-   fallback 链含系统中文字体：Songti SC（macOS）/ SimSun（Windows）保证子集外生僻字回退质量 */
-/* ─── 1. 基礎變數與全局設定 ─── */
+   · 密排（§6.3.1）：字格 = 字号 × 1.08，只留汉字字面侧白，不做疏排
+   · 天头 > 地脚：16% : 10%（比例 1.6:1），合计 26%
+   · 订口 < 书口：内侧 1 份、外侧 1.5 份，给装订留位
+   · 版心（中缝）= 字格 × 1.2，不再比字格宽
+   · 句读（§2.1.2）：直排时点号位于字面**右上**，不向下溢出
+   · 西文（§2.1.3）：整词顺时针旋转 90°，与汉字间留 ≤1/4 字宽
+   · 字体：简体宋体 Noto Serif SC（正文语料是简体，用 TC 会大量回退系统字体）
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── 1. 版面变量与纸张 ─────────────────────────────────────── */
 .wr {
-  --cw: 24px;   /* 字格寬 */
-  --rh: 24px;   /* 字格高 (行高) */
-  --fs: 20px;   /* 基礎字號 */
-  --sw: 16px;   /* 版心(中縫)寬度 */
-  --cols: 10;   /* 預設列數 */
-  --rows: 22;   /* 預設行數 */
+  /* 由 layout.ts 按视口注入；此处仅兜底 */
+  --cw: 23px;   /* 字格宽（密排） */
+  --rh: 24px;   /* 行距 */
+  --fs: 21px;   /* 字号 */
+  --sw: 28px;   /* 版心（中缝） */
+  --cols: 10;
+  --rows: 22;
+  --head-h: 96px;   /* 天头 */
+  --foot-h: 60px;   /* 地脚 */
+  --inner-w: 18px;  /* 订口 */
+  --outer-w: 27px;  /* 书口 */
+  --nav-h: 64px;    /* 导航栏预留 */
 
-  --pc-bg: #f5eedc; /* 宣紙底色 */
-  --pc-tx: #221c18; /* 松煙墨色 */
-  --pc-cr: #b22d1e; /* 硃砂紅色 */
-  --pc-mu: #7a6e61; /* 附註淡墨 */
+  --pc-bg: #f5eedc;  /* 宣纸 */
+  --pc-tx: #221c18;  /* 松烟墨 */
+  --pc-cr: #b22d1e;  /* 朱砂 */
+  --pc-mu: #7a6e61;  /* 淡墨 */
 
-  height: 100vh; /* 旧浏览器兜底 */
-  height: 100dvh; width: 100vw; overflow: hidden;
-  font-family: 'Noto Serif TC', 'TW-Sung', 'Songti SC', 'SimSun', 'MingLiU', 'Kozuka Mincho Pr6N', serif;
-  font-feature-settings: "vrt2", "vert";
-  color: var(--pc-tx); background: var(--pc-bg);
-  user-select: none; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; position: relative; margin: 0;
+  height: 100vh;
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  font-family: 'Noto Serif SC', 'Songti SC', 'SimSun', 'STSong', serif;
+  font-feature-settings: 'vrt2', 'vert';
+  color: var(--pc-tx);
+  background: var(--pc-bg);
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0;
 }
 
 .wr * { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* 宣紙微粒濾鏡（mix-blend-mode: multiply 为墨水晕染效果，有意为之）：
-   对比增强后的纤维絮状颗粒为纸面主纹理 */
-.nz { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply; opacity: 0.32; z-index: 1; }
+/* 纸纹：帘网 + 纤维颗粒（multiply 让墨色压得住纸） */
+.nz {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: 0.3;
+  z-index: 1;
+}
 
-/* ─── 紙質層次（宣紙質感）：横竖交织帘网 + 纖維顆粒 + 紙緣暈染 ─── */
-/* 帘网：横向主帘 + 竖向纬线 + 次层疏密变化 → 隐约网格，非单一方向竖条 */
+/* 帘纹：横主帘 + 竖纬线。竖线压得很淡——它只是纸的肌理，
+   不能和界行（乌丝栏）抢视觉，否则空页上会像多出一层网格。 */
 .wr::before {
   content: '';
-  position: absolute; inset: 0;
-  pointer-events: none; z-index: 2;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
   background:
-    repeating-linear-gradient(90deg, rgba(34, 28, 24, 0.035) 0 1px, transparent 1px 6px),
-    repeating-linear-gradient(0deg,  rgba(34, 28, 24, 0.025) 0 1px, transparent 1px 4px),
-    repeating-linear-gradient(90deg, rgba(34, 28, 24, 0.02)  0 1px, transparent 1px 11px),
-    repeating-linear-gradient(0deg,  rgba(34, 28, 24, 0.015) 0 1px, transparent 1px 9px);
+    repeating-linear-gradient(0deg, rgba(34, 28, 24, 0.028) 0 1px, transparent 1px 5px),
+    repeating-linear-gradient(90deg, rgba(34, 28, 24, 0.012) 0 1px, transparent 1px 9px);
   mix-blend-mode: multiply;
 }
-/* 紙緣暈染：中心稍亮、四邊微暗，模擬宣紙受潮/裝裱後的邊緣層次 */
+
+/* 纸缘晕染：中心亮、四边微暗 */
 .wr::after {
   content: '';
-  position: absolute; inset: 0;
-  pointer-events: none; z-index: 2;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 50%,
-    rgba(34, 28, 24, 0.08) 100%
-  );
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(ellipse at center, transparent 52%, rgba(34, 28, 24, 0.075) 100%);
 }
 
-/* ─── 2. 書本佈局與文武邊欄 ─── */
-#sc, .sw { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-
-/* ─── 展頁切換動畫（右起閱讀：下一页向左移入，上一页向右移入） ─── */
-.page-next-enter-active, .page-next-leave-active,
-.page-prev-enter-active, .page-prev-leave-active {
-  transition: opacity 0.38s ease, transform 0.38s ease;
-}
-.page-next-enter-from { opacity: 0; transform: translateX(-2.5%); }
-.page-next-leave-to   { opacity: 0; transform: translateX(2.5%); }
-.page-prev-enter-from { opacity: 0; transform: translateX(2.5%); }
-.page-prev-leave-to   { opacity: 0; transform: translateX(-2.5%); }
-@media (prefers-reduced-motion: reduce) {
-  .page-next-enter-active, .page-next-leave-active,
-  .page-prev-enter-active, .page-prev-leave-active { transition: none; }
+/* ─── 2. 书页容器 ───────────────────────────────────────────── */
+#sc,
+.sw {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
 
+/* 翻页：右起阅读，下一页自左移入 */
+.page-next-enter-active,
+.page-next-leave-active,
+.page-prev-enter-active,
+.page-prev-leave-active {
+  transition: opacity 0.34s ease, transform 0.34s ease;
+}
+.page-next-enter-from { opacity: 0; transform: translateX(-2%); }
+.page-next-leave-to { opacity: 0; transform: translateX(2%); }
+.page-prev-enter-from { opacity: 0; transform: translateX(2%); }
+.page-prev-leave-to { opacity: 0; transform: translateX(-2%); }
+
+/* 书框：外框（书衣）+ 内框（文边），双线是古籍的基本语言。
+   外框用「粗细双线」模拟书衣包角，内框细线为文边。 */
 .bx {
-  display: flex; position: relative; z-index: 5;
-  /* 背景透明：书页与页面共享 .wr 的纸纹层（帘纹/晕染/噪声） */
-  border: 6px solid var(--pc-tx); /* 武邊 (粗外框) */
-  padding: 4px;
-  border-radius: 1px;
+  position: relative;
+  padding: 7px;
+  border: 2.5px solid var(--pc-tx);
+  background: transparent;
+  /* 底部让出导航栏，书页不再被压住 */
+  margin-bottom: calc(var(--nav-h) + 8px);
+  max-height: calc(100% - var(--nav-h) - 24px);
+  /* 书衣的厚度感：外框外侧一道极淡的投影 */
+  box-shadow: 0 0 0 1px rgba(34, 28, 24, 0.18), 0 10px 30px rgba(34, 28, 24, 0.12);
 }
 
-.bx-in { display: flex; direction: rtl; border: 1.5px solid var(--pc-tx); /* 文邊 (細內框) */ }
+.bx-in {
+  display: flex;
+  direction: rtl;
+  border: 1.2px solid var(--pc-tx);
+  /* 文边内侧再收一道细线（古籍「双边」），与界行呼应 */
+  box-shadow: inset 0 0 0 3px var(--pc-bg), inset 0 0 0 4px rgba(34, 28, 24, 0.35);
+  /* 让子页撑满书框高度 */
+  height: 100%;
+}
 
-/* 天頭地腳比例 (天頭極大，地腳偏小)；背景透明透出纸纹层 */
-.pg { display: flex; flex-direction: column; position: relative; flex-shrink: 0; }
-.pg.r { padding: calc(var(--rh) * 2) calc(var(--cw) * 1.5) calc(var(--rh) * 1.2) calc(var(--cw) * 0.25); }
-.pg.l { padding: calc(var(--rh) * 2) calc(var(--cw) * 0.25) calc(var(--rh) * 1.2) calc(var(--cw) * 1.5); }
+/* ─── 3. 单页：天头 / 地脚 / 订口 / 书口 ─────────────────────── */
+.pg {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  flex-shrink: 0;
+  /* 页高由书框决定，网格才能用 flex:1 撑满版心（否则正文只占上半页） */
+  height: 100%;
+}
 
-/* ─── 3. 版心 (中縫、黑口與象鼻) ─── */
-.sn { direction: ltr; width: var(--sw); border-left: 1px solid var(--pc-tx); border-right: 1px solid var(--pc-tx); display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding: 0; opacity: 1; }
-.shk, .xhk { width: 100%; height: 22px; background: var(--pc-tx); flex-shrink: 0; }
-.sxb { width: 1.2px; flex: 1; background: var(--pc-tx); }
-.sn svg { margin: 6px 0; color: var(--pc-tx); flex-shrink: 0; }
-.snt { flex: none; display: flex; flex-direction: column; align-items: center; gap: calc(var(--fs) * 0.3); writing-mode: vertical-rl; font-weight: 700; letter-spacing: 0.2em; font-size: calc(var(--fs) * 0.65); margin: calc(var(--rh) * 0.4) 0; }
-.sch { flex: none; writing-mode: vertical-rl; font-size: calc(var(--fs) * 0.5); color: var(--pc-mu); margin: calc(var(--rh) * 0.2) 0; letter-spacing: 0.1em; }
-.snm { flex: none; writing-mode: vertical-rl; font-weight: 700; font-size: calc(var(--fs) * 0.6); margin: calc(var(--rh) * 0.4) 0; }
+/* 右页（recto）：订口在左、书口在右 */
+.pg.r {
+  padding: var(--head-h) var(--outer-w) var(--foot-h) var(--inner-w);
+}
+/* 左页（verso）：订口在右、书口在左 */
+.pg.l {
+  padding: var(--head-h) var(--inner-w) var(--foot-h) var(--outer-w);
+}
 
-/* ─── 4. 網格與界行 (烏絲欄) ─── */
-.gd { flex: 1; display: grid; position: relative; grid-template-columns: repeat(var(--cols), var(--cw)); grid-template-rows: repeat(var(--rows), var(--rh)); direction: rtl; align-content: center; justify-content: center; }
-.pbr { position: absolute; inset: 0; display: flex; direction: rtl; pointer-events: none; z-index: 2; }
-.rc { flex: 1; border-right: 1px solid var(--pc-tx); opacity: 0.22; }
+/* ─── 4. 版心（中缝）：黑口 + 象鼻 + 鱼尾 + 书名/卷名/页码 ─────── */
+.sn {
+  direction: ltr;
+  width: var(--sw);
+  border-left: 1px solid var(--pc-tx);
+  border-right: 1px solid var(--pc-tx);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+/* 黑口：上下两道实心墨条 */
+.shk,
+.xhk {
+  width: 100%;
+  height: 18px;
+  background: var(--pc-tx);
+  flex-shrink: 0;
+}
+
+/* 象鼻：黑口下的细竖线 */
+.sxb {
+  width: 1px;
+  flex: 1;
+  background: var(--pc-tx);
+  opacity: 0.85;
+}
+
+.sn svg {
+  margin: 6px 0;
+  color: var(--pc-tx);
+  flex-shrink: 0;
+}
+
+/* 书名（版心上端） */
+.snt {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--fs) * 0.28);
+  writing-mode: vertical-rl;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-size: calc(var(--fs) * 0.62);
+  margin: calc(var(--rh) * 0.5) 0;
+}
+
+/* 卷名（版心中段，淡墨） */
+.sch {
+  flex: none;
+  writing-mode: vertical-rl;
+  font-size: calc(var(--fs) * 0.52);
+  color: var(--pc-mu);
+  margin: calc(var(--rh) * 0.3) 0;
+  letter-spacing: 0.12em;
+}
+
+/* 页码（版心下端） */
+.snm {
+  flex: none;
+  writing-mode: vertical-rl;
+  font-weight: 700;
+  font-size: calc(var(--fs) * 0.58);
+  margin: calc(var(--rh) * 0.5) 0;
+}
+
+/* 鱼尾：版心上下各一枚，古籍最典型的版式记号。
+   用 CSS 画（两枚三角对合），不依赖 SVG，缩放不失真。 */
+.sn::before,
+.sn::after {
+  content: '';
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: calc(var(--sw) * 0.42) solid transparent;
+  border-right: calc(var(--sw) * 0.42) solid transparent;
+  opacity: 0.9;
+}
+.sn::before {
+  border-top: calc(var(--sw) * 0.5) solid var(--pc-tx);
+  margin-top: calc(var(--rh) * 0.2);
+}
+.sn::after {
+  border-bottom: calc(var(--sw) * 0.5) solid var(--pc-tx);
+  margin-bottom: calc(var(--rh) * 0.2);
+}
+
+/* ─── 5. 字格网格与界行（乌丝栏） ───────────────────────────── */
+.gd {
+  flex: 1;
+  display: grid;
+  position: relative;
+  grid-template-columns: repeat(var(--cols), var(--cw));
+  grid-template-rows: repeat(var(--rows), var(--rh));
+  direction: rtl;
+  /* 网格尺寸由字格数决定，取整余量均分到四周（不贴顶也不留单边空白） */
+  align-content: center;
+  justify-content: center;
+  /* 兜底：网格绝不超出页面 */
+  max-height: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* 界行：每列右侧一条细线，末列不画（那是书口） */
+.pbr {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  direction: rtl;
+  pointer-events: none;
+  z-index: 2;
+}
+.rc {
+  flex: 1;
+  border-right: 1px solid var(--pc-tx);
+  opacity: 0.18;
+}
 .rf { border-right: none; }
 
-/* ─── 5. 字格與正文排版 ─── */
-.c { position: relative; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 3; line-height: 1; font-size: var(--fs); writing-mode: vertical-rl; text-orientation: upright; font-weight: 400; }
+/* ─── 6. 字格与正文 ─────────────────────────────────────────── */
+.c {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 3;
+  line-height: 1;
+  font-size: var(--fs);
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  font-weight: 400;
+  /* 可读性：字面在字格里略收，避免笔画贴边；同时给句读留出右上角空间 */
+  padding: 0.04em;
+}
 
-/* 互動效果 */
+/* 可点击的词条标题：整条一起高亮（同一 ii 的所有字共享 .is-hover） */
 .c.clk { pointer-events: auto; cursor: pointer; }
-.c.clk:hover { background: rgba(178, 45, 30, 0.06); z-index: 10; }
+.c.clk.is-hover {
+  background: rgba(178, 45, 30, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(178, 45, 30, 0.25);
+  z-index: 10;
+}
+/* 标题字本身提亮一档，让「整条」的边界更清楚 */
+.c.hw.is-hover > span { color: #8f1f12; }
 
-/* 詞條主標題 (硃砂粗體) */
+/* 词条主标题：朱砂 + 粗体 */
 .c.hw { font-weight: 700; }
 .c.hw > span { color: var(--pc-cr); }
 
-/* 正文雙行小字夾註 (一般標籤/描述用) */
-.c.cm { font-size: calc(var(--fs) * 0.46); color: var(--pc-mu); font-weight: 400; }
+/* 双行小字夹注（古籍「小字双行」）：一格 4 个小字（2 行 × 2 字）。
+   字号约主文 0.5，淡墨；宽度/位置由 cellStyle 按半格半行给出。
+   加一道极淡的底，让夹注与正文在视觉上分层（古籍用墨色深浅区分）。 */
+.c.cm {
+  font-size: calc(var(--fs) * 0.5);
+  color: var(--pc-mu);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.95;
+  background: rgba(122, 110, 97, 0.06);
+}
 
-/* 專名號 / 書名號 (白描線條) */
-.c.vl::after { content: ''; position: absolute; top: 0; bottom: 0; right: 12%; border-right: 1.2px solid var(--pc-tx); opacity: 0.75; z-index: -1; }
-.c.bl::before { content: ''; position: absolute; top: 0; bottom: 0; left: 10%; border-left: 2.5px double var(--pc-tx); opacity: 0.75; z-index: -1; }
+/* 专名号（右侧竖线）/ 书名号（左侧双线） */
+.c.vl::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 12%;
+  border-right: 1.2px solid var(--pc-tx);
+  opacity: 0.7;
+  z-index: -1;
+}
+.c.bl::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 10%;
+  border-left: 2.5px double var(--pc-tx);
+  opacity: 0.7;
+  z-index: -1;
+}
 
-/* 句讀 (硃筆點圈) */
-.pd { position: absolute; right: 6%; bottom: -15%; width: calc(var(--fs) * 0.42); height: calc(var(--fs) * 0.42); display: flex; align-items: center; justify-content: center; z-index: 5; }
-.pd svg { width: 100%; height: 100%; overflow: visible; opacity: 0.95; }
+/* ─── 7. 句读（朱笔圈点）─────────────────────────────────────
+   古籍圈点不是现代标点：**点在两个字之间的夹缝右侧**。
+   依据：「句读的空心点应该位于两个字夹缝的右侧，而不是一个字的正右侧」
+        「语意未完而需要停顿的地方，点在两个字的中间；句终的地方，点在字的旁边」
+   尺寸按字号的 0.34（旧值 0.26 太小、在宣纸底上几乎看不见），
+   并加一圈极淡的朱砂晕，模拟毛笔落纸的洇开。 */
+.pd {
+  position: absolute;
+  bottom: -8%;
+  right: 6%;
+  width: calc(var(--fs) * 0.34);
+  height: calc(var(--fs) * 0.34);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 6;
+  pointer-events: none;
+  /* 朱砂晕：让圈点在纸面上「立」起来 */
+  filter: drop-shadow(0 0 1.5px rgba(178, 45, 30, 0.35));
+}
+.pd svg { width: 100%; height: 100%; overflow: visible; opacity: 1; }
 
-/* ─── 6. 英文與 ID 特殊連讀排布 ─── */
-.c.eng { text-orientation: mixed; font-family: 'Times New Roman', 'Georgia', serif; letter-spacing: 0.05em; justify-content: center; }
-.c.eng .eng-span { font-size: calc(var(--fs) * 0.85); writing-mode: vertical-rl; }
-.c.eng .pd { bottom: -15px; }
-
-/* 詞條單行小注內的英文 (進一步縮小) */
-.c.hw.hp.eng > span { font-size: calc(var(--fs) * 0.5) !important; }
-
-/* 雙行小字內的英文 (垂直居中消滅空隙) */
+/* ─── 8. 西文与数字（clreq §2.1.3）────────────────────────────
+   整词顺时针旋转 90°（vertical-rl 下即随行方向），
+   与汉字间留 1/4 字宽；行首行尾不加。 */
+.c.eng {
+  text-orientation: mixed;
+  font-family: 'Times New Roman', 'Georgia', serif;
+  letter-spacing: 0.02em;
+  justify-content: center;
+}
+.c.eng .eng-span {
+  font-size: calc(var(--fs) * 0.82);
+  writing-mode: vertical-rl;
+}
+/* 双行小字里的西文再缩一档，避免撑破半格 */
 .c.cm.eng { justify-content: center; overflow: visible; }
-.c.cm.eng .eng-span { font-size: calc(var(--fs) * 0.44); padding-top: 2px; }
+.c.cm.eng .eng-span { font-size: calc(var(--fs) * 0.42); }
 
-/* ─── 7. 書名與卷首頁 (極簡純粹線框) ─── */
-.pg-book, .pg-vol { grid-column: 1 / -1; grid-row: 1 / -1; display: flex; flex-direction: row-reverse; align-items: center; justify-content: center; z-index: 10; width: 100%; height: 100%; }
+/* ─── 9. 书名页 / 卷首页 ─────────────────────────────────────── */
+.pg-book,
+.pg-vol {
+  grid-column: 1 / -1;
+  grid-row: 1 / -1;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  width: 100%;
+  height: 100%;
+}
 
+/* 书名页：大字宋体 + 双线框（书衣感） */
 .pg-book .b-title {
-  writing-mode: vertical-rl; font-size: calc(var(--fs) * 2.1); font-weight: 700; letter-spacing: 0.35em; margin: 0;
-  color: var(--pc-tx); background: var(--pc-bg); text-align: center;
-  padding: calc(var(--rh) * 2.5) calc(var(--cw) * 1.5);
+  writing-mode: vertical-rl;
+  font-size: calc(var(--fs) * 2.2);
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  margin: 0;
+  color: var(--pc-tx);
+  background: var(--pc-bg);
+  text-align: center;
+  padding: calc(var(--rh) * 2.4) calc(var(--cw) * 1.4);
   border: 3px solid var(--pc-tx);
   outline: 1px solid var(--pc-tx);
-  outline-offset: -6px;
+  outline-offset: -7px;
 }
 
+/* 卷首页：略小，单线框 */
 .pg-vol .b-title {
-  writing-mode: vertical-rl; font-weight: 700; margin: 0; text-align: center; background: var(--pc-bg);
-  font-size: calc(var(--fs) * 1.55); letter-spacing: 0.25em; color: var(--pc-tx);
+  writing-mode: vertical-rl;
+  font-weight: 700;
+  margin: 0;
+  text-align: center;
+  background: var(--pc-bg);
+  font-size: calc(var(--fs) * 1.6);
+  letter-spacing: 0.24em;
+  color: var(--pc-tx);
   border: 1.5px solid var(--pc-tx);
-  padding: calc(var(--rh) * 1.6) calc(var(--cw) * 0.85);
+  padding: calc(var(--rh) * 1.5) calc(var(--cw) * 0.8);
 }
 
-/* ─── 8. 導航列與互動彈窗 ─── */
-.nv { position: absolute; bottom: 1.5rem; z-index: 50; display: flex; background: var(--pc-bg); border: 2px solid var(--pc-tx); padding: 2px; padding-bottom: env(safe-area-inset-bottom, 0px); }
-.nv-in { display: flex; align-items: center; gap: 1.5rem; border: 1px solid var(--pc-tx); padding: 0.4rem 1.2rem; }
-.nv button { background: none; border: none; color: var(--pc-tx); font-weight: 700; letter-spacing: 0.15em; font-size: 13px; cursor: pointer; font-family: inherit; transition: color 0.15s ease; }
+/* ─── 10. 导航栏 ─────────────────────────────────────────────
+   固定在书页下方预留区内，不再叠在书上、不再越界。 */
+.nv {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-h);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.nv-in {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  background: var(--pc-bg);
+  border: 1.5px solid var(--pc-tx);
+  padding: 0.35rem 1.1rem;
+}
+
+.nv button {
+  background: none;
+  border: none;
+  color: var(--pc-tx);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-size: var(--font-xs);
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s ease;
+}
 .nv button:disabled { opacity: 0.25; cursor: default; }
 .nv button:not(:disabled):hover { color: var(--pc-cr); }
-.bk { color: var(--pc-tx); font-size: 13px; font-weight: 700; letter-spacing: 0.15em; text-decoration: none; transition: color 0.15s; }
-.bk:hover { color: var(--pc-cr); }
-.nd { height: 14px; width: 1px; background: var(--pc-tx); opacity: 0.4; }
-#ni { font-size: 13px; font-weight: 700; color: var(--pc-tx); letter-spacing: 0.15em; font-family: inherit; }
 
-/* ═══════════ 详情弹窗 (终极金石气重构) ═══════════ */
+.bk {
+  color: var(--pc-tx);
+  font-size: var(--font-xs);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.bk:hover { color: var(--pc-cr); }
+
+.nd { height: 13px; width: 1px; background: var(--pc-tx); opacity: 0.35; }
+
+#ni {
+  font-size: var(--font-xs);
+  font-weight: 700;
+  color: var(--pc-tx);
+  letter-spacing: 0.12em;
+  font-family: inherit;
+}
+
+/* ─── 11. 词条详情：简洁古典 ─────────────────────────────────
+   克制：一道细边框、一条分隔线、横排题名、分段正文。
+   不做竖排大字（占屏且难读）、不做书耳（分类名太长会竖成一列）、
+   不做印章堆叠（分类/层级/标签三层装饰互相打架）。 */
 .ov {
-  position: fixed; inset: 0; z-index: 200;
-  background: rgba(12, 10, 8, 0.85); /* 沉墨色遮罩，肃杀幽深 */
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(12, 10, 8, 0.86);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5vh 4vw;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.32s ease;
 }
 .ov.s { opacity: 1; pointer-events: auto; }
-/* P2：触屏设备降级为纯色遮罩（省 GPU 重采样），桌面保留模糊 */
 @media (hover: hover) {
-  .ov { backdrop-filter: blur(4px); }
+  .ov { backdrop-filter: blur(3px); }
 }
 
-/* 弹窗主体：双线白描框 */
+/* 书叶：单线边框 + 内衬一道极淡的细线（古籍「双边」的克制版） */
 .dp {
-  background: var(--pc-bg);
-  width: 90vw; max-width: 560px; max-height: 85vh; overflow-y: auto;
-  padding: 50px 45px 40px;
-  /* 内嵌双线框的终极解法 */
-  border: 1px solid var(--pc-tx);
-  box-shadow: inset 0 0 0 4px var(--pc-bg), inset 0 0 0 5px var(--pc-tx), 0 20px 60px rgba(0,0,0,0.6);
   position: relative;
-  font-feature-settings: normal; /* 强制横排标点，修复乱码 */
+  background: var(--pc-bg);
+  width: min(92vw, 560px);
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 44px 44px 36px;
+  border: 1px solid var(--pc-tx);
+  box-shadow:
+    inset 0 0 0 4px var(--pc-bg),
+    inset 0 0 0 5px rgba(34, 28, 24, 0.35),
+    0 20px 60px rgba(0, 0, 0, 0.5);
+  font-feature-settings: normal;
 }
 
-/* 定制古典卷轴滚动条 */
-.dp::-webkit-scrollbar { width: 6px; }
+.dp::-webkit-scrollbar { width: 5px; }
 .dp::-webkit-scrollbar-track { background: transparent; }
-.dp::-webkit-scrollbar-thumb { background: rgba(44, 38, 34, 0.3); }
+.dp::-webkit-scrollbar-thumb { background: rgba(44, 38, 34, 0.25); }
 .dp::-webkit-scrollbar-thumb:hover { background: var(--pc-tx); }
 
-/* 关闭按钮：古风印章 */
+/* 关闭：细线小方块，不抢视线 */
 .dc {
-  position: absolute; top: 16px; right: 16px;
-  width: 32px; height: 32px;
-  background: var(--pc-bg);
-  border: 1px solid var(--pc-tx);
-  color: var(--pc-tx);
-  font-size: 1.4rem; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  transition: background 0.2s, color 0.2s;
-  line-height: 1;
-}
-.dc:hover { background: var(--pc-tx); color: var(--pc-bg); }
-
-/* 标题：中轴对称 */
-.dp h2 {
-  font-size: 1.85rem; font-weight: 900;
-  color: var(--pc-tx); text-align: center;
-  letter-spacing: 0.15em;
-  margin-bottom: 24px;
-}
-
-/* 【核心修复】分类标签：彻底消灭果冻色！改为朱文印章 */
-.dm {
-  text-align: center; margin-bottom: 32px;
-  position: relative;
-}
-.dm span {
-  color: var(--pc-cr) !important; /* 强制覆盖果冻色为硃砂红 */
-  border: 1px solid var(--pc-cr);
-  padding: 4px 14px;
-  font-size: var(--font-base);
-  font-family: 'Kaiti', '楷体', serif;
-  letter-spacing: 0.2em;
-  display: inline-block;
-}
-/* 印章底部的古典分割线 */
-.dm::after {
-  content: '';
-  position: absolute; bottom: -16px; left: 20%; right: 20%;
-  height: 1px; background: rgba(44, 38, 34, 0.2);
-}
-
-/* 正文：刻本阅读节奏 */
-.dd {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 1px solid rgba(34, 28, 24, 0.3);
+  color: var(--pc-mu);
   font-size: 1.05rem;
-  color: var(--pc-tx);
-  line-height: 2.2;
-  text-align: justify;
-  text-indent: 2.1em; /* 传统首行缩进两格 */
-  white-space: pre-wrap;
-  margin-bottom: 40px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  z-index: 2;
+}
+.dc:hover { background: var(--pc-tx); color: var(--pc-bg); border-color: var(--pc-tx); }
+
+/* 题名区：横排、居中、下方一条细线 */
+.dp-head {
+  text-align: center;
+  margin-bottom: 26px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(34, 28, 24, 0.16);
 }
 
-/* 标签区：笺注 */
-.dtg {
-  text-align: center; font-size: var(--font-sm); color: var(--pc-tx);
-  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px;
+.dp-title {
+  margin: 0 0 10px;
+  font-size: clamp(1.25rem, 3.4vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  color: var(--pc-tx);
 }
-.dtg::before {
-  content: '笺注';
-  background: var(--pc-tx); color: var(--pc-bg);
-  padding: 2px 6px; font-size: var(--font-xs); margin-right: 6px;
+
+.dp-meta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+/* 分类：只留朱砂小字，不加框（框会和标签框打架） */
+.dp-cat {
+  font-size: var(--font-xs);
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  /* 分类名可能很长（「都市传说・超自然事件・超常经历」），允许换行 */
+  line-height: 1.6;
+}
+
+.dp-tier {
+  font-size: var(--font-micro);
+  color: var(--pc-mu);
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+}
+.dp-tier::before {
+  content: '·';
+  margin-right: 8px;
+  opacity: 0.5;
+}
+
+/* 正文：刻本节奏 —— 首行缩进两格、行距 2、两端对齐 */
+.dp-body { margin-bottom: 24px; }
+
+.dp-para {
+  margin: 0 0 0.85em;
+  font-size: 1rem;
+  line-height: 2;
+  color: var(--pc-tx);
+  text-align: justify;
+  text-indent: 2em;
+  line-break: strict;
+  overflow-wrap: break-word;
+}
+.dp-para:last-child { margin-bottom: 0; }
+
+.dp-empty {
+  margin: 0;
+  text-align: center;
+  color: var(--pc-mu);
+  font-size: var(--font-sm);
   letter-spacing: 0.1em;
 }
 
-/* 链接按钮：古典牌记 */
-.dl {
-  display: block; width: fit-content; margin: 35px auto 0;
-  padding: 10px 32px;
-  border: 1px solid var(--pc-tx);
-  color: var(--pc-tx);
-  text-decoration: none; font-size: var(--font-base); font-weight: 700;
-  letter-spacing: 0.15em; transition: background 0.3s, color 0.3s;
-}
-.dl:hover {
-  background: var(--pc-tx); color: var(--pc-bg);
+/* 页脚：标签一行，无标题、无框，只用淡墨小字 */
+.dp-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(34, 28, 24, 0.16);
 }
 
-
-@media(max-width:640px){
-  .bx{padding:3px;border-width:2px}
-  .nv{bottom:1rem}
-  .nv-in{gap:1rem;padding:.4rem 1rem}
-  .nv button,#ni{font-size:12px}
-  .dp{padding:28px 24px}
+.dp-tag {
+  font-size: var(--font-micro);
+  color: var(--pc-mu);
+  letter-spacing: 0.06em;
 }
 
-/* ═══════════ 徹底修復：詞條附註 (單行小注) ═══════════ */
-.c.hw.hp > span {
-  font-size: calc(var(--fs) * 0.95) !important;
-  color: var(--pc-mu) !important;
-  /* 增加 STKaiti 和 Kaiti TC 等蘋果/微軟通用字體 fallback */
-  font-family: 'Kaiti TC', 'Kaiti SC', 'STKaiti', 'KaiTi', '楷体', serif !important;
-  font-weight: 700 !important;
+/* 牌记：外链做成一行细字链接，不做大按钮（避免撑破弹层） */
+.dp-link {
+  display: block;
+  width: fit-content;
+  margin: 22px auto 0;
+  padding: 6px 0;
+  color: var(--pc-cr);
+  text-decoration: none;
+  font-size: var(--font-xs);
+  letter-spacing: 0.12em;
+  border-bottom: 1px solid rgba(178, 45, 30, 0.35);
+  transition: border-color 0.2s, color 0.2s;
+}
+.dp-link:hover { color: var(--pc-tx); border-color: var(--pc-tx); }
+
+/* 窄屏 */
+@media (max-width: 640px) {
+  .dp { padding: 38px 22px 28px; }
+  .dp-title { font-size: 1.15rem; }
+  .dp-para { font-size: 0.94rem; line-height: 1.95; }
+}
+/* ─── 12. 窄屏：单页模式 ─────────────────────────────────────
+   一屏一页，不显示版心与左页；书框收窄，天头地脚按比例缩小。 */
+.sw--single .bx-in { direction: ltr; }
+.sw--single .pg.r {
+  padding: var(--head-h) var(--outer-w) var(--foot-h) var(--inner-w);
+}
+/* 单页模式：书页撑满可用高度，不留大片空白 */
+.sw--single .bx { max-height: calc(100% - var(--nav-h) - 16px); }
+.sw--single .gd { align-content: center; }
+
+@media (max-width: 640px) {
+  .bx { padding: 4px; border-width: 1.5px; }
+  .nv-in { gap: 0.8rem; padding: 0.3rem 0.8rem; }
+  .nv button, #ni, .bk { font-size: var(--font-tiny); }
+  .dp { padding: 26px 22px; }
+  .dp h2 { font-size: 1.4rem; }
+  .dd { font-size: 0.95rem; line-height: 2; }
 }

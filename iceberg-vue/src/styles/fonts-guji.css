@@ -1,0 +1,39 @@
+/* 本文件由 scripts/subset_guji_fonts.py 生成，勿手工编辑；重跑脚本即更新。
+   古籍模式的四款字体（许可文本见 public/fonts/*-LICENSE.txt）。
+   与 fonts.css 分开：subset_fonts.py 重跑时不会覆盖这里。
+   size-adjust 按字面高度补偿，让各字体视觉大小一致（算法见脚本头注释）。*/
+@font-face {
+  font-family: 'Zhuque Fangsong';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  size-adjust: 102%;
+  src: url('/fonts/zhuque-fangsong-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Sotyr Fangsong';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  size-adjust: 89.5%;
+  src: url('/fonts/sotyr-fangsong-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Huiji Zhengkai';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  size-adjust: 110%;
+  src: url('/fonts/huiji-zhengkai-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'HanaMinA';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  size-adjust: 100%;
+  src: url('/fonts/hanamin-a-400.woff2') format('woff2');
+}

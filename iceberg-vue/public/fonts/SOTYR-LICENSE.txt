@@ -1,0 +1,17 @@
+仲春仿宋 Sotyr Fangsong
+=======================
+
+作者：活字攷古（hantype）仿宋体研究小组 · 执刀 hulenkius
+来源：https://github.com/Hulenkius/sotyr
+版本：v0.23-beta
+授权：SIL Open Font License 1.1（全文见同目录 OFL.txt）
+
+对上世纪「聚珍仿宋二号长体」铅活字字形的数字化复刻：字形底本直接从印刷品
+扫描件提取，缺字用 zi2zi-JiT / HanziGen 生成后再人工修绘。
+长体（字面窄而高），老笔形，与朱雀仿宋的民国铅印风格互补。
+
+OpenType：vert / vkrn / ss01 / ss02 / cv01 / cv02，古籍排版推荐
+`vert` + `ss02` + `cv02`（CSS 见 ancient-book-v2.css 的 font-feature-settings）。
+
+本文件为按站内语料子集化后的 woff2，字形未作修改，仅裁剪字符集。
+子集化工具：fonttools (pyftsubset)。

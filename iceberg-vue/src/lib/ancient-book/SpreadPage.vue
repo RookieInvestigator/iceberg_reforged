@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { cellStyle, cellClass, punctKind, titleParts, PC } from './render'
 import type { PlacedCell } from './types'
 
@@ -13,9 +13,23 @@ const props = defineProps<{
 const emit = defineEmits<{ 'open-item': [ii: number] }>()
 
 const isBookTitle = computed(() => props.cells[0]?.c === '⚑')
+// 卷首页（⚐）同样独占一展，走整页大字分支
 const isVolTitle = computed(() => props.cells[0]?.c === '⚐')
 const isTitlePage = computed(() => isBookTitle.value || isVolTitle.value)
 const titlePartsArr = computed(() => (isTitlePage.value ? titleParts(props.cells) : []))
+
+/**
+ * 词条标题的「整条」高亮：同一词条（ii 相同）的所有 hw 单元格共享 hover 状态。
+ * 旧实现每个字各自 :hover，鼠标移上去只有一个字变色。
+ */
+const hoveredItem = ref<number | null>(null)
+function onCellEnter(c: PlacedCell) {
+  if (c.hw && !c.cm && c.ii >= 0) hoveredItem.value = c.ii
+}
+function onCellLeave() { hoveredItem.value = null }
+function isHovered(c: PlacedCell) {
+  return c.hw && !c.cm && c.ii >= 0 && hoveredItem.value === c.ii
+}
 
 function onCellClick(c: PlacedCell) {
   if (c.hw && !c.cm && c.ii >= 0) emit('open-item', c.ii)
@@ -23,9 +37,10 @@ function onCellClick(c: PlacedCell) {
 </script>
 
 <template>
-  <div class="pg" :class="side === 'r' ? 'r' : 'l'">
+  <div class="pg" :class="side === 'r' ? 'r' : 'l'" :data-vol="volName || ''">
     <div class="gd">
-      <div class="pbr">
+      <!-- 界行（乌丝栏）只画在正文页：书名页/卷首页是整版大字，空页也不铺网格 -->
+      <div v-if="!isTitlePage && cells.length" class="pbr">
         <span v-for="j in cols" :key="j" class="rc" :class="{ rf: j === 1 }"></span>
       </div>
 
@@ -41,10 +56,12 @@ function onCellClick(c: PlacedCell) {
         <div
           v-for="(c, k) in cells"
           :key="k"
-          :class="cellClass(c)"
+          :class="[cellClass(c), { 'is-hover': isHovered(c) }]"
           :style="cellStyle(c, cols, 0)"
           :data-ii="c.ii"
           @click="onCellClick(c)"
+          @mouseenter="onCellEnter(c)"
+          @mouseleave="onCellLeave"
         >
           <span :class="{ 'eng-span': c.isEng }">{{ c.c }}</span>
           <i v-if="punctKind(c.pn)" class="pd">

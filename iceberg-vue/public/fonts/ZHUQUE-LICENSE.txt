@@ -1,0 +1,16 @@
+朱雀仿宋 Zhuque Fangsong
+========================
+
+作者：璇玑造字（TrionesType）· 余俊益、韩泳思、殷叶航、李剑桥
+来源：https://github.com/TrionesType/zhuque
+版本：v0.212（technical preview）
+授权：SIL Open Font License 1.1（全文见同目录 OFL.txt）
+
+开源仿宋体，字形取法民国铅印仿宋，直排特性（vert / vrt2）完整。
+luatex-cn 的 Linux 字体方案同样以它作仿宋首选。
+
+本文件为按站内语料子集化后的 woff2，字形未作修改，仅裁剪字符集。
+子集化工具：fonttools (pyftsubset)。
+
+SIL OFL 1.1 要求：衍生字体不得使用保留字体名。本字体未声明保留字体名，
+子集保留原名仅用于 CSS font-family 标识，未作为独立字体发布。

@@ -1,0 +1,16 @@
+汇迹正楷 Huiji Zhengkai（CooperZhengKai）
+=========================================
+
+作者：特里王（Terry Wang）、綿雲飴里（MYIL）、indestructible type*
+来源：https://github.com/Lovely1020/HJZK-HuiJi-V2
+上游：https://www.maoken.com/freefonts/24749.html
+版本：2.0
+授权：SIL Open Font License 1.1（全文见同目录 OFL.txt）
+
+以汇文正楷为汉字基础、Cooper* 为西文基础撮合而成的正楷，西文与汉字同调。
+
+本文件为按站内语料子集化后的 woff2，字形未作修改，仅裁剪字符集。
+子集化工具：fonttools (pyftsubset)。
+
+SIL OFL 1.1 要求：衍生字体不得使用保留字体名。本字体未声明保留字体名，
+子集保留原名仅用于 CSS font-family 标识，未作为独立字体发布。

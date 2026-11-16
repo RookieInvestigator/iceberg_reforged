@@ -13,11 +13,11 @@ subset_fonts.py — 按站内语料子集化 Noto 字体，自托管替代 Googl
 
     <目录> 须含 7 个源 OTF（SIL OFL 1.1，见 https://github.com/notofonts/noto-cjk）：
         Sans/SubsetOTF/SC/NotoSansSC-{Regular,Medium,Bold,Black}.otf
-        Serif/SubsetOTF/TC/NotoSerifTC-{Regular,Bold,Black}.otf
+        Serif/SubsetOTF/SC/NotoSerifSC-{Regular,Bold,Black}.otf
 
 输出（iceberg-vue/ 下）:
     public/fonts/noto-sans-sc-{400,500,700,900}.woff2
-    public/fonts/noto-serif-tc-{400,700,900}.woff2
+    public/fonts/noto-serif-sc-{400,700,900}.woff2
     public/fonts/OFL.txt            # 需与 woff2 一起分发（OFL 第 2 条）
     public/fonts/corpus.sha256      # 语料指纹：--check 模式与 CI 用它判定子集是否过期
     src/styles/fonts.css            # 7 条 @font-face（font-display: swap，无 unicode-range：
@@ -52,14 +52,17 @@ PUB_FONTS = ROOT / "iceberg-vue" / "public" / "fonts"
 FONTS_CSS = ROOT / "iceberg-vue" / "src" / "styles" / "fonts.css"
 
 # (css 家族名, 字重, 源 OTF 文件名)
+# 正文与古籍都用**简体**宋体：站内语料是简体，用 Noto Serif TC 排简体会让大量字形
+# 回退到系统字体（同一行里两种宋体混排）。繁体字形由 Noto Serif SC 自带的
+# 兼容字形覆盖，不需要再单独挂 TC。
 FONTS = [
     ("Noto Sans SC", 400, "NotoSansSC-Regular.otf"),
     ("Noto Sans SC", 500, "NotoSansSC-Medium.otf"),
     ("Noto Sans SC", 700, "NotoSansSC-Bold.otf"),
     ("Noto Sans SC", 900, "NotoSansSC-Black.otf"),
-    ("Noto Serif TC", 400, "NotoSerifTC-Regular.otf"),
-    ("Noto Serif TC", 700, "NotoSerifTC-Bold.otf"),
-    ("Noto Serif TC", 900, "NotoSerifTC-Black.otf"),
+    ("Noto Serif SC", 400, "NotoSerifSC-Regular.otf"),
+    ("Noto Serif SC", 700, "NotoSerifSC-Bold.otf"),
+    ("Noto Serif SC", 900, "NotoSerifSC-Black.otf"),
 ]
 
 OFL_URL = "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/OFL.txt"
@@ -117,7 +120,7 @@ def unicodes_arg(text: str) -> str:
 
 
 def slug(family: str, weight: int) -> str:
-    base = "noto-sans-sc" if "Sans" in family else "noto-serif-tc"
+    base = "noto-sans-sc" if "Sans" in family else "noto-serif-sc"
     return f"{base}-{weight}.woff2"
 
 

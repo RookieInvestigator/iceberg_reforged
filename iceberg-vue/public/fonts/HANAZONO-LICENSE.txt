@@ -1,0 +1,12 @@
+花园明朝 HanaMinA（花園明朝）
+============================
+
+来源：https://osdn.net/projects/hanazono-font/
+生成：GlyphWiki（http://glyphwiki.org/）
+授权：Hanazono 自由授权（可自由使用、修改、再分发，含商用）
+
+覆盖 Ext-A/B 与大量生僻字的明朝体，作为**兜底字体**挂在所有字栈末尾：
+主字体缺字时逐字回退到这里，避免出现豆腐块。
+
+本文件为按站内语料子集化后的 woff2，字形未作修改，仅裁剪字符集。
+子集化工具：fonttools (pyftsubset)。

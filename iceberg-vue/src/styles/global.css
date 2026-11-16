@@ -1,4 +1,6 @@
 @import "./fonts.css";
+/* 古籍四款字体不在这里引：fonts-guji.css 由古籍模式自己的路由 chunk 带入，
+   只有进 /ancient-book 才下载（见 views/AncientBookV2View.vue）。 */
 @import "tailwindcss";
 /* 主题文件仅在此加载一次：base.css 内含 @import dark.css，避免重复加载 */
 @import "./themes/base.css";
@@ -6,6 +8,7 @@
 @import "./bg.css";
 @import "./modal.css";
 @import "./v2.css";
+@import "./clreq.css";
 
 /* 全局键盘焦点环（:focus-visible 统一出口；局部样式仍可覆盖颜色/偏移） */
 :focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
