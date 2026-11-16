@@ -91,8 +91,7 @@
 }
 
 /* ─── 2. 书页容器 ───────────────────────────────────────────── */
-#sc,
-.sw {
+#sc {
   width: 100%;
   height: 100%;
   display: flex;
@@ -118,7 +117,7 @@
 .page-prev-leave-to { opacity: 0; transform: translateX(-2.5%) scale(0.998); }
 
 /* 触摸设备：翻页手势由 JS 处理，禁掉浏览器的横向回退手势误触发 */
-.sw { touch-action: pan-y; }
+.wr { touch-action: pan-y; }
 
 /* 书框：古籍「四周双边」——粗外框 + 细内框。
    用 outline + outline-offset 画内框，不额外加 DOM、也不占布局尺寸。
@@ -594,7 +593,8 @@
   height: var(--nav-h);
   z-index: 50;
   display: grid;
-  grid-template-columns: repeat(2, 34px) 88px repeat(3, 34px);
+  /* 三 | 页码 | 三：左右等宽，页码恒在正中（早先 2 左 4 右，页码偏左） */
+  grid-template-columns: repeat(3, 34px) 88px repeat(3, 34px);
   align-items: center;
   justify-content: center;
   column-gap: 0.6rem;
@@ -623,8 +623,14 @@
 .nv-lnk:disabled { opacity: 0.18; cursor: default; }
 .nv-lnk:not(:disabled):hover { color: var(--pc-cr); }
 
-/* 页码列宽固定，数字等宽；超长（三〇〇・三〇一）也不撑开外层 */
+/* 页码列宽固定，数字等宽；超长（三〇〇・三〇一）也不撑开外层。
+   它同时是「跳转叶码」的入口，所以按按钮处理（清掉按钮默认外观）。 */
 .nv-num {
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
   font-size: var(--font-micro);
   color: var(--pc-mu);
   letter-spacing: 0.08em;
@@ -633,7 +639,9 @@
   white-space: nowrap;
   overflow: hidden;
   user-select: none;
+  transition: color 0.15s;
 }
+.nv-num:hover { color: var(--pc-cr); }
 
 /* ─── 10b. 目录 ───────────────────────────────────────────────
    从左侧滑出的卷次表。样式与设置面板同一套（纸色、无边框、细分割线），
@@ -864,9 +872,9 @@
 .dp-link:hover { color: var(--pc-tx); border-color: var(--pc-tx); }
 
 /* ─── 12. 窄屏：单页模式 ───────────────────────────────────── */
-.sw--single .bx-in { direction: ltr; }
-.sw--single .bx { max-height: calc(100% - var(--nav-h) - 20px); }
-.sw--single .gd { align-content: center; }
+.wr--single .bx-in { direction: ltr; }
+.wr--single .bx { max-height: calc(100% - var(--nav-h) - 20px); }
+.wr--single .gd { align-content: center; }
 
 @media (max-width: 640px) {
   /* 注意：**不要再给 .bx 加 padding** —— 版面宽度是 JS 按 FRAME 常量算好的，
@@ -1073,3 +1081,130 @@
   transition: color 0.18s;
 }
 .st-reset:hover { color: var(--pc-cr); }
+
+
+/* ─── 13. 搜索跳转 ─────────────────────────────────────────────
+   浮层挂在 .wr（vertical-rl）里，必须显式横排；**光改 writing-mode 不够** ——
+   .wr 上挂着 font-feature-settings: 'vrt2','vert'，不关掉的话引号、顿号这类标点
+   仍会被换成竖排字形（看着就是「转了 90°」）。 */
+.srb-ov {
+  position: fixed;
+  inset: 0;
+  z-index: 320;
+  writing-mode: horizontal-tb;
+  direction: ltr;
+  font-feature-settings: normal;
+  background: rgba(12, 10, 8, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.srb-ov.s { opacity: 1; pointer-events: auto; }
+
+.srb {
+  width: min(92vw, 420px);
+  max-height: min(70vh, 540px);
+  background: var(--pc-bg);
+  border: 1px solid rgba(34, 28, 24, 0.35);
+  outline: 1px solid rgba(34, 28, 24, 0.12);
+  outline-offset: 3px;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 16px 16px;
+  transform: translateY(6px);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.srb-ov.s .srb { transform: none; }
+
+.srb-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(34, 28, 24, 0.2);
+  padding-bottom: 8px;
+  color: var(--pc-mu);
+}
+.srb-in {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  outline: none;
+  font-family: inherit;
+  font-size: var(--font-base, 15px);
+  color: var(--pc-tx);
+  letter-spacing: 0.04em;
+}
+.srb-in::placeholder { color: var(--pc-mu); opacity: 0.6; }
+
+.srb-list {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  min-height: 0;
+}
+.srb-it {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  border: none;
+  background: none;
+  padding: 7px 2px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--pc-tx);
+  border-bottom: 1px dotted rgba(34, 28, 24, 0.12);
+  transition: color 0.15s, background 0.15s;
+}
+.srb-it:hover { color: var(--pc-cr); background: rgba(34, 28, 24, 0.04); }
+.srb-t { flex: 1; min-width: 0; font-size: var(--font-base, 15px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srb-m { font-size: var(--font-micro); color: var(--pc-mu); flex-shrink: 0; }
+.srb-p { font-size: var(--font-micro); color: var(--pc-cr); flex-shrink: 0; font-variant-numeric: tabular-nums; }
+.srb-empty { margin: 10px 0 0; font-size: var(--font-micro); color: var(--pc-mu); text-align: center; }
+
+/* ─── 14. 叶码滑条（底部上浮） ─────────────────────────────── */
+.pgs {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--nav-h) + 8px);
+  transform: translateX(-50%);
+  width: min(420px, 78vw);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--pc-bg);
+  border: 1px solid rgba(34, 28, 24, 0.3);
+  outline: 1px solid rgba(34, 28, 24, 0.12);
+  outline-offset: 3px;
+  z-index: 60;
+  writing-mode: horizontal-tb;
+  direction: ltr;
+  font-feature-settings: normal;
+}
+.pgs-num,
+.pgs-total {
+  font-size: var(--font-micro);
+  color: var(--pc-mu);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pgs-num { color: var(--pc-cr); min-width: 3.4em; text-align: right; }
+.pgs-total { min-width: 3.4em; }
+.pgs-range {
+  flex: 1;
+  min-width: 0;
+  accent-color: var(--pc-cr);
+  cursor: pointer;
+}
+
+.pgs-enter-active,
+.pgs-leave-active { transition: opacity 0.18s, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1); }
+.pgs-enter-from,
+.pgs-leave-to { opacity: 0; transform: translate(-50%, 8px); }

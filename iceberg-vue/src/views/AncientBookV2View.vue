@@ -13,7 +13,8 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useStore } from '@nanostores/vue'
 import { useDebounceFn, useEventListener, useResizeObserver } from '@vueuse/core'
-import { ArrowLeft, ChevronLeft, ChevronRight, List as ListIcon, Settings } from '@lucide/vue'
+import { lockOverlay } from '../lib/overlayLock'
+import { ArrowLeft, ChevronLeft, ChevronRight, CornerDownLeft, List as ListIcon, Search, Settings } from '@lucide/vue'
 import raw from '../data/iceberg.json'
 import metaJson from '../data/meta.json'
 import { parseText, toChineseNum, numToZh, pageNumbers, layoutMarginal } from '../lib/ancient-book-v2/engine'
@@ -114,21 +115,21 @@ function marksFor(it: ItemExt, tierMark?: string): string[] | undefined {
  * 卷次同样按本表的**声明顺序**（`VOL_ORDER`）编号，不跟着数据顺序走。
  */
 const VOL_TITLES: Record<string, string> = {
-  '都市传说・超自然事件・超常经历': '廣知',
-  '鬼宅・异常地点': '凶宅',
-  '真实犯罪・事故': '凶志',
-  '未确认生物': '物異',
-  '民俗・信仰・方术': '禮殊',
-  '边缘科学・伪科学': '廣格物',
-  '网络怪谈・奇闻': '齊諧',
-  '骗局・营销・谣言': '局詐',
-  '神话・志怪・传奇': '諾皋記',
-  '预言・谶纬': '讖緯',
-  '历史疑案・假说': '史微',
-  '心理・社会现象': '鏡聽',
-  '神秘内容・物件・现象': '器奇',
-  '阴谋论・边缘理论': '陰符',
-  '艺术・创作物': '藝文',
+  '都市传说・超自然事件・超常经历': '廣知一',
+  '鬼宅・异常地点': '境異二',
+  '真实犯罪・事故': '凶志三',
+  '未确认生物': '物異四',
+  '民俗・信仰・方术': '詭習五',
+  '边缘科学・伪科学': '數術略六',
+  '网络怪谈・奇闻': '齊諧七',
+  '骗局・营销・谣言': '局詐八',
+  '神话・志怪・传奇': '諾皋記九',
+  '预言・谶纬': '讖緯十',
+  '历史疑案・假说': '史闕文十一',
+  '心理・社会现象': '鏡聽詞十二',
+  '神秘内容・物件・现象': '器奇十三',
+  '阴谋论・边缘理论': '陰符十四',
+  '艺术・创作物': '藝文十五',
 }
 /** 卷次的固定顺序（= 上表的声明顺序） */
 const VOL_ORDER = Object.keys(VOL_TITLES)
@@ -202,7 +203,7 @@ function generateData(mode: 'category' | 'tier') {
       const items = (byCat[cat] || []).sort((a, b) => tierOrder.indexOf(a.tier) - tierOrder.indexOf(b.tier))
       if (items.length === 0) continue
       const volNum = volNumber(cat)
-      pushAll('⚐【' + volName(cat) + toChineseNum(volNum) + '】', -1)
+      pushAll('⚐【' + volName(cat) + '】', -1)
       pushAll('\f', -1)
       const color = (raw.categoryColors as Record<string, string>)[cat] || '#FFFFFF'
       // 同卷内按层级升序：第一条「换了层」的词条就是进入下一层者，给它一条「X層」眉批
@@ -299,6 +300,24 @@ const overlayOpen = ref(false)
 const overlayItem = ref<EntryMeta | null>(null)
 const settingsOpen = ref(false)
 const tocOpen = ref(false)
+const searchOpen = ref(false)
+const searchQ = ref('')
+const jumpOpen = ref(false)
+/** 跳页目标叶码：滑条与输入框共用同一个**数字**真值，显示时才转汉字 */
+const jumpLeaf = ref(1)
+/** 词条序号 → 展序号（排版后由 spreads 反查，搜索跳转用） */
+const entryPages = ref<Map<number, number>>(new Map())
+/** 任意浮层打开时锁掉背景（搜索 / 跳转 / 目录 / 设置 / 词条详情共用一套） */
+const anyOverlay = computed(() => overlayOpen.value || settingsOpen.value || tocOpen.value || searchOpen.value || jumpOpen.value)
+/** 浮层期间的滚动锁：用项目自己的 overlayLock（token 计数 + 滚动条宽度补偿） */
+let unlockOverlay: (() => void) | null = null
+watch(anyOverlay, (v) => {
+  if (v && !unlockOverlay) unlockOverlay = lockOverlay()
+  else if (!v && unlockOverlay) { unlockOverlay(); unlockOverlay = null }
+})
+/** 上一次关闭浮层的时间：关闭动作用的是同一次点击，不能让涟漪再翻一页 */
+let lastOverlayCloseAt = 0
+watch(anyOverlay, (v, prev) => { if (prev && !v) lastOverlayCloseAt = Date.now() })
 
 /** 排版偏好（持久化，设置页可改）。必须用 useStore，否则 Vue 追踪不到变化 */
 const prefs = useStore(typographyPrefs)
@@ -413,6 +432,16 @@ function relayout(keepCur = true) {
   single.value = st.single
   cur.value = keepCur ? Math.min(st.max, Math.round(ratio * st.max)) : 0
   updateVolNames()
+  // 词条 → 展：扫一遍版面，标题格（hw）所在的那一展就是它的位置
+  const map = new Map<number, number>()
+  st.spreads.forEach((spread, si) => {
+    for (const page of spread) {
+      for (const cell of page) {
+        if (cell.hw && cell.ii >= 0 && !map.has(cell.ii)) map.set(cell.ii, si)
+      }
+    }
+  })
+  entryPages.value = map
 }
 
 const pageDir = ref<'next' | 'prev'>('next')
@@ -445,14 +474,80 @@ function gotoVol(si: number) {
   show(si)
 }
 
+// ── 搜索跳转 ──
+/** 搜索结果：按标题子串匹配，最多两打，先显示靠前的（同「深度」顺序） */
+const searchHits = computed(() => {
+  const q = searchQ.value.trim().toLowerCase()
+  if (!q) return []
+  const out: { ii: number; title: string; cat: string; si: number | null }[] = []
+  for (let ii = 0; ii < activeMeta.length; ii++) {
+    const m = activeMeta[ii]!
+    if (!m.title.toLowerCase().includes(q) && !(m.cat || '').toLowerCase().includes(q)) continue
+    out.push({ ii, title: m.title, cat: m.cat, si: entryPages.value.get(ii) ?? null })
+    if (out.length >= 24) break
+  }
+  return out
+})
+
+function openSearch() {
+  searchQ.value = ''
+  searchOpen.value = true
+}
+
+/** 跳到词条所在的那一展；顺带关掉搜索 */
+function jumpToEntry(ii: number) {
+  const si = entryPages.value.get(ii)
+  searchOpen.value = false
+  if (si === undefined) return
+  pageDir.value = si >= cur.value ? 'next' : 'prev'
+  show(si)
+}
+
+// ── 页码跳转 ──
+/** 叶码夹在 1..总叶数 */
+function clampLeaf(n: number): number {
+  return Math.min(Math.max(1, Math.trunc(n)), Math.max(1, totalLeaves.value))
+}
+
+/** 总叶数（一页一个号；双页模式是展数 × 2） */
+const totalLeaves = computed(() => (max.value + 1) * (single.value ? 1 : 2))
+
+/** 当前所在叶码（单页一展一叶；双页两叶一展，右页在先） */
+function leafOfCur(): number {
+  return single.value ? cur.value + 1 : cur.value * 2 + 1
+}
+
+function openJump() {
+  jumpLeaf.value = leafOfCur()
+  jumpOpen.value = true
+}
+
+/** 叶码滑条：拖动即时翻页。没有输入框、也没有跳转按钮 —— 松手不再做别的 */
+function onSliderInput(e: Event) {
+  const n = Number((e.target as HTMLInputElement).value)
+  if (!Number.isFinite(n)) return
+  const leaf = clampLeaf(n)
+  jumpLeaf.value = leaf
+  const si = single.value ? leaf - 1 : Math.floor((leaf - 1) / 2)
+  pageDir.value = si >= cur.value ? 'next' : 'prev'
+  show(si)
+}
+
 // ── 触摸翻页 ──
 // 判定交给 `resolveSwipe`（冰山图词条左右滑动的同一份实现，已有单测）：
 // 最小位移、轴比、快速轻扫、边缘阻尼都不必在这里重写一遍。
 let touchStart: { x: number; y: number; at: number } | null = null
+/** 上一次识别到滑动的时间：用来吃掉浏览器补发的 click */
+let lastSwipeAt = 0
+
+/** 浮层选择器：手指从这些区域起手时不参与左右滑动（拖滑条、点浮层都不该翻页） */
+const OVERLAY_SEL = '.pgj-ov, .srb-ov, .st-ov, .toc-ov, .ov, .nv, .fbar'
 
 function onTouchStart(e: TouchEvent) {
   const t = e.touches[0]
-  if (!prefs.value.swipeTurn || !t || overlayOpen.value || settingsOpen.value || tocOpen.value) {
+  const fromOverlay = e.target instanceof Element && !!e.target.closest(OVERLAY_SEL)
+  if (!prefs.value.swipeTurn || !t || fromOverlay
+    || overlayOpen.value || settingsOpen.value || tocOpen.value || searchOpen.value || jumpOpen.value) {
     touchStart = null
     return
   }
@@ -470,8 +565,12 @@ function onTouchEnd(e: TouchEvent) {
     width: window.innerWidth,
     durationMs: Date.now() - s.at,
   })
-  if (dir === 'next') next()
-  else if (dir === 'prev') prev()
+  lastSwipeAt = Date.now()
+  // 右綴じ：手指往右划 = 翻开下一展，往左划 = 回看上一展。
+  // resolveSwipe 是按横排列表给的语义（左滑=下一条），这里必须翻过来 ——
+  // 与点按三分之一的方向（点左侧 = 下一展）才对得上。
+  if (dir === 'prev') next()
+  else if (dir === 'next') prev()
 }
 
 /**
@@ -481,8 +580,12 @@ function onTouchEnd(e: TouchEvent) {
  * 点在词条标题上时让给词条：`closest('.clk')` 命中的一律不翻页。
  */
 function onTapZone(e: MouseEvent) {
+  // 叶码滑条打开时：点书页只负责收起滑条，不翻页
+  if (jumpOpen.value) { jumpOpen.value = false; return }
   if (!prefs.value.tapTurn || !single.value) return
-  if (overlayOpen.value || settingsOpen.value || tocOpen.value) return
+  if (overlayOpen.value || settingsOpen.value || tocOpen.value || searchOpen.value) return
+  // 刚识别到一次滑动：浏览器随后补发的 click 不该再翻一页
+  if (Date.now() - lastSwipeAt < 400) return
   const target = e.target as HTMLElement | null
   if (target?.closest?.('.clk')) return
   const el = e.currentTarget as HTMLElement | null
@@ -541,14 +644,9 @@ onMounted(() => {
   }
   useEventListener(document, 'keydown', onKey)
 
-  // 手机：左右滑动翻页（判定逻辑复用冰山图的 resolveSwipe，方向语义一致：
-  // 向左滑 = 下一展，向右滑 = 上一展 —— 与底部「‹」键指向同一边）
-  const sw = document.querySelector<HTMLElement>('.sw')
-  if (sw) {
-    sw.addEventListener('touchstart', onTouchStart, { passive: true })
-    sw.addEventListener('touchend', onTouchEnd, { passive: true })
-    sw.addEventListener('click', onTapZone)
-  }
+  // 触摸事件绑在模板根节点上（见 template 的 @touchstart / @touchend / @click）。
+  // 不再 querySelector + 手动解绑：v2 的根节点类名是 .wr，早先按 .sw 去找永远拿到 null，
+  // 手机上的左右滑动与点按翻页因此从未生效。
 
   // 排版偏好变化 → 重排。
   // **font 必须在内**：字体栈写在 cssVars 的 --font-stack 里，
@@ -568,19 +666,21 @@ onMounted(() => {
   )
 })
 
-onUnmounted(() => {
-  const sw = document.querySelector<HTMLElement>('.sw')
-  if (sw) {
-    sw.removeEventListener('touchstart', onTouchStart)
-    sw.removeEventListener('touchend', onTouchEnd)
-    sw.removeEventListener('click', onTapZone)
-  }
-})
+onUnmounted(() => {})
 </script>
 
 <template>
   <div id="root">
-    <div ref="wrRef" class="wr" :style="cssVars">
+    <!-- 根节点同时挂 .sw：CSS 的触摸手势禁则（touch-action）与窄屏单页规则都写在 .sw 上；
+         触摸翻页直接绑在这里，不再 querySelector 后手动解绑。 -->
+    <div
+      ref="wrRef"
+      class="wr"
+      :class="{ 'wr--single': single }"
+      :style="cssVars"
+      @touchstart.passive="onTouchStart"
+      @touchend.passive="onTouchEnd"
+    >
       <!-- 纸张噪声 -->
       <svg class="nz">
         <filter id="pf-v2">
@@ -593,7 +693,7 @@ onUnmounted(() => {
       </svg>
 
       <!-- 当前展页 -->
-      <div id="sc" class="sc">
+      <div id="sc" class="sc" @click="onTapZone">
         <Transition :name="'page-' + pageDir" mode="out-in">
           <SpreadView
             v-if="spreads[cur]"
@@ -627,13 +727,18 @@ onUnmounted(() => {
            右起阅读：ChevronLeft 是下一页（往左翻），ChevronRight 是上一页。
            列宽在 CSS 里写死（grid），页码变长也不会把按钮挤得左右乱跑。 -->
       <nav class="nv">
+        <!-- 三 | 页码 | 三：左右各三个按钮，页码恒在正中；
+             页码是「跳转叶码」的入口，点它打开输入框。 -->
         <a :href="baseUrl" class="nv-lnk" :aria-label="t('back')">
           <ArrowLeft :size="18" :stroke-width="1.75" />
         </a>
+        <button class="nv-lnk" aria-label="搜索词条" @click="openSearch">
+          <Search :size="18" :stroke-width="1.75" />
+        </button>
         <button class="nv-lnk" :disabled="cur >= max" :aria-label="t('ancientNextPage')" @click="next">
           <ChevronLeft :size="18" :stroke-width="1.75" />
         </button>
-        <span class="nv-num">{{ navPage }}</span>
+        <button class="nv-num" aria-label="跳转叶码" title="跳转叶码" @click="openJump">{{ navPage }}</button>
         <button class="nv-lnk" :disabled="cur <= 0" :aria-label="t('ancientPrevPage')" @click="prev">
           <ChevronRight :size="18" :stroke-width="1.75" />
         </button>
@@ -646,7 +751,7 @@ onUnmounted(() => {
       </nav>
 
       <!-- 目录：按卷次列出，点一下跳到该卷的卷首页 -->
-      <div class="toc-ov" :class="{ s: tocOpen }" @click.self="tocOpen = false">
+      <div class="toc-ov" :class="{ s: tocOpen }" @click.self.stop="tocOpen = false">
         <aside class="toc" role="dialog" aria-modal="true" aria-label="目录">
           <button class="st-x" @click="tocOpen = false" aria-label="关闭">&times;</button>
           <h2 class="toc-hd">目錄</h2>
@@ -661,11 +766,56 @@ onUnmounted(() => {
         </aside>
       </div>
 
+      <!-- 搜索跳转：按标题 / 分类找词条，点一下翻到它所在的那一展 -->
+      <div class="srb-ov" :class="{ s: searchOpen }" @click.self.stop="searchOpen = false">
+        <div class="srb" role="dialog" aria-modal="true" aria-label="搜索词条">
+          <div class="srb-row">
+            <Search :size="15" :stroke-width="2" />
+            <input
+              v-model="searchQ"
+              class="srb-in"
+              type="search"
+              placeholder="搜索词条名或分类"
+              @keydown.enter="searchHits[0] && jumpToEntry(searchHits[0].ii)"
+              @keydown.esc="searchOpen = false"
+            />
+            <button class="st-x" aria-label="关闭" @click="searchOpen = false">&times;</button>
+          </div>
+          <ul class="srb-list">
+            <li v-for="hit in searchHits" :key="hit.ii">
+              <button class="srb-it" :disabled="hit.si === null" @click="jumpToEntry(hit.ii)">
+                <span class="srb-t">{{ hit.title }}</span>
+                <span class="srb-m">{{ hit.cat }}</span>
+                <span v-if="hit.si !== null" class="srb-p">{{ toChineseNum(pageNumbers(hit.si, single)[0]!) }}</span>
+              </button>
+            </li>
+          </ul>
+          <p v-if="searchQ && !searchHits.length" class="srb-empty">沒有找到詞條</p>
+        </div>
+      </div>
+
+      <!-- 叶码滑条：点底部页码从下方上浮，拖动即翻页；点书页或再点页码收起 -->
+      <Transition name="pgs">
+        <div v-if="jumpOpen" class="pgs" role="group" aria-label="叶码">
+          <span class="pgs-num">{{ toChineseNum(jumpLeaf) }}</span>
+          <input
+            class="pgs-range"
+            type="range"
+            min="1"
+            :max="totalLeaves || 1"
+            :value="jumpLeaf"
+            aria-label="拖动选择叶码"
+            @input="onSliderInput"
+          />
+          <span class="pgs-total">{{ toChineseNum(totalLeaves) }}</span>
+        </div>
+      </Transition>
+
       <!-- 排版设置 -->
       <SettingsPanel :open="settingsOpen" @close="settingsOpen = false" />
 
       <!-- 词条详情 -->
-      <div class="ov" :class="{ s: overlayOpen }" @click.self="overlayOpen = false">
+      <div class="ov" :class="{ s: overlayOpen }" @click.self.stop="overlayOpen = false">
         <article class="dp" role="dialog" aria-modal="true" :aria-label="overlayItem?.title">
           <button class="dc" @click="overlayOpen = false" :aria-label="t('close')">&times;</button>
 

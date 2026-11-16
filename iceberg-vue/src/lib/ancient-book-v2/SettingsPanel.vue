@@ -85,7 +85,7 @@ function setBool(key: 'punct' | 'rules' | 'rulesFull' | 'swipeTurn' | 'tapTurn',
 </script>
 
 <template>
-  <div class="st-ov" :class="{ s: props.open }" @click.self="emit('close')">
+  <div class="st-ov" :class="{ s: props.open }" @click.self.stop="emit('close')">
     <aside class="st" role="dialog" aria-modal="true" aria-label="排版设置">
       <button class="st-x" @click="emit('close')" aria-label="关闭">&times;</button>
 
