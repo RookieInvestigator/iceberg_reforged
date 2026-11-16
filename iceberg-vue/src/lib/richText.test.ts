@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  groupUnbreakable,
   hrefKind,
   normalizeDesc,
   parseRichBlocks,
@@ -113,5 +114,30 @@ describe('normalizeDesc 换行规整', () => {
     const out = normalizeDesc('前言\n\n> 引文一\n> 引文二')
     expect(out).toBe('前言\n\n> 引文一\n> 引文二')
     expect(parseRichBlocks(out)[1]).toEqual({ type: 'quote', text: '引文一\n引文二' })
+  })
+})
+
+// clreq §6.1.2 符号分离禁则
+describe('groupUnbreakable 不可断行组', () => {
+  it('省略号 / 破折号作为整体，不得从中间拆行', () => {
+    const parts = groupUnbreakable('他说……然后——停住')
+    expect(parts.filter((p) => p.nobreak).map((p) => p.text)).toEqual(['……', '——'])
+    expect(parts.map((p) => p.text).join('')).toBe('他说……然后——停住')
+  })
+
+  it('数字串与 % ℃ 等单位符号不被拆开', () => {
+    expect(groupUnbreakable('温度 38℃ 增长 50%')
+      .filter((p) => p.nobreak).map((p) => p.text)).toEqual(['38℃', '50%'])
+    expect(groupUnbreakable('1999年').find((p) => p.nobreak)?.text).toBe('1999')
+  })
+
+  it('普通中文文本不被切碎、原样可还原', () => {
+    const src = '这是一段普通的中文正文，没有数字。'
+    expect(groupUnbreakable(src).map((p) => p.text).join('')).toBe(src)
+    expect(groupUnbreakable(src).every((p) => !p.nobreak)).toBe(true)
+  })
+
+  it('空串返回空数组', () => {
+    expect(groupUnbreakable('')).toEqual([])
   })
 })

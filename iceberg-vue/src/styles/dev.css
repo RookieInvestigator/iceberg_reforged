@@ -84,7 +84,7 @@
 .dev-head-row .dev-head { flex: 1 1 22rem; margin-bottom: 0; }
 .dev-head-actions { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 
-:root { --dev-surface: rgba(255, 255, 255, 0.035); --dev-pane: rgba(0, 0, 0, 0.22); }
+:root { --dev-surface: var(--white-035); --dev-pane: rgba(0, 0, 0, 0.22); }
 
 /* 表面 */
 .dev-card {

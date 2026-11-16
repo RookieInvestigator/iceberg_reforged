@@ -1,0 +1,42 @@
+/* 中文正文排版基线（对照 W3C《中文排版需求》clreq）
+ * 渐进增强：所有属性在不支持的浏览器里都只是「不生效」，不改变现有表现。
+ * 只挂在「长文中文正文」载体上，不作用于导航/标签/数字表格等 UI chrome。
+ *
+ * 依据：
+ *  - §6.1.1 行首行尾禁则 → line-break: strict
+ *  - §6.3.3 汉字与西文/数字间 ≤1/4em 空隙 → text-autospace
+ *  - §6.3.2 连续标点挤压 → text-spacing-trim（@supports 包裹）
+ *  - §7.1.2 孤字不成行 → text-wrap: pretty
+ */
+.clreq-text {
+  /* 内容语言固定为简体中文：不随界面 lang（en/ja）切换，
+     否则浏览器会按西文规则给中文正文断行（i18nStore 会改 documentElement.lang）。 */
+  line-break: strict;
+  overflow-wrap: break-word;
+}
+
+/* 汉字 ↔ 西文字母/数字自动间距（Baseline 2025-11；Firefox/Safari 暂缺，无副作用）。
+   用 `normal` = ideograph-alpha + ideograph-numeric 的等价简写：显式写两个关键字时
+   部分实现不接受组合值（实测计算值回落为 no-autospace），`normal` 才是稳定写法。 */
+@supports (text-autospace: normal) {
+  .clreq-text { text-autospace: normal; }
+}
+
+/* 连续标点 / 行首行尾标点挤压（Chrome/Edge 123+、Opera、Samsung Internet）。
+   两个候选值按浏览器支持顺序兜底，后声明的覆盖前一个。 */
+@supports (text-spacing-trim: space-first) {
+  .clreq-text { text-spacing-trim: space-first; }
+}
+@supports (text-spacing-trim: trim-start) {
+  .clreq-text { text-spacing-trim: trim-start; }
+}
+
+/* 段落末行避免只剩一个汉字（Chrome 117+） */
+@supports (text-wrap: pretty) {
+  .clreq-text p,
+  .clreq-text blockquote { text-wrap: pretty; }
+}
+
+/* §6.1.2 符号分离禁则：省略号 / 破折号 / 数字+单位 不得断行。
+   由 RichInline 把这类片段包进 .clreq-nobreak（见 richText.ts 的 groupUnbreakable）。 */
+.clreq-nobreak { white-space: nowrap; }

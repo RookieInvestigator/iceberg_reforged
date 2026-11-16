@@ -15,8 +15,8 @@ const blocks = computed<RichBlock[]>(() =>
 </script>
 
 <template>
-  <span v-if="inline" class="rt rt--inline"><RichInline :text="text" /></span>
-  <div v-else class="rt">
+  <span v-if="inline" class="rt rt--inline clreq-text" lang="zh-CN"><RichInline :text="text" /></span>
+  <div v-else class="rt clreq-text" lang="zh-CN">
     <template v-for="(block, bi) in blocks" :key="bi">
       <blockquote v-if="block.type === 'quote'" class="rt-quote">
         <RichInline :text="block.text" />

@@ -6,6 +6,7 @@
  * 避免挂在随文档高度拉伸的容器里导致 WebGL canvas 尺寸超限（冰山图页面很长）。
  */
 import { computed, onActivated, onMounted, onUnmounted, ref } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import LiquidGradient from './LiquidGradient.vue'
 
 // 滚动沉海：色板采样向深色端平移（darkShift），黑色占比随滚动增大
@@ -76,16 +77,14 @@ function rerollSeed() {
 
 onMounted(() => {
   onScroll()
-  window.addEventListener('scroll', onScroll, { passive: true })
-  document.addEventListener('pointerover', onWallPointer, { passive: true })
+  useEventListener(window, 'scroll', onScroll, { passive: true })
+  useEventListener(document, 'pointerover', onWallPointer, { passive: true })
 })
 onActivated(() => {
   onScroll()
   rerollSeed()
 })
 onUnmounted(() => {
-  window.removeEventListener('scroll', onScroll)
-  document.removeEventListener('pointerover', onWallPointer)
   if (scrollTick) cancelAnimationFrame(scrollTick)
   if (scrollStopTimer) window.clearTimeout(scrollStopTimer)
   if (hoverStopTimer) window.clearTimeout(hoverStopTimer)

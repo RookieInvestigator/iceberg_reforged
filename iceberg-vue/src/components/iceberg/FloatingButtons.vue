@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed } from 'vue';
+import { useEventListener } from '@vueuse/core';
 import { useStore } from '@nanostores/vue';
 import { Filter, Shuffle, Settings, ArrowUp } from '@lucide/vue';
 import { showRandomBtn, immersiveMode } from '../../lib/settingsStore';
@@ -33,16 +34,10 @@ function onResize() { winWidth.value = window.innerWidth; }
 function scrollTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
 function scrollBottom() { window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }); }
 
-onMounted(() => {
-  window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', onResize, { passive: true });
-  window.addEventListener('orientationchange', onResize);
-});
-onUnmounted(() => {
-  window.removeEventListener('scroll', onScroll);
-  window.removeEventListener('resize', onResize);
-  window.removeEventListener('orientationchange', onResize);
-});
+// useEventListener 在组件卸载时自动解绑，不用再写一遍 removeEventListener
+useEventListener(window, 'scroll', onScroll, { passive: true });
+useEventListener(window, 'resize', onResize, { passive: true });
+useEventListener(window, 'orientationchange', onResize);
 </script>
 
 <template>

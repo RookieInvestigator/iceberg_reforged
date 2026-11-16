@@ -19,6 +19,7 @@ import IcebergParticles from '../components/home/IcebergParticles.vue'
 import AboutModal from '../components/modals/AboutModal.vue'
 import CopyrightModal from '../components/modals/CopyrightModal.vue'
 import LinksModal from '../components/modals/LinksModal.vue'
+import { prefersReducedMotion } from '../lib/motion'
 
 const UserModal = defineAsyncComponent(() => import('../components/modals/UserModal.vue'))
 
@@ -93,7 +94,7 @@ function initCursorRing() {
   const el = ringEl.value
   if (!el || ringActive) return
   if (!window.matchMedia('(pointer: fine)').matches) return
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  if (prefersReducedMotion()) return
   ringActive = true
   let x = window.innerWidth / 2, y = window.innerHeight / 2, tx = x, ty = y
   function step() {

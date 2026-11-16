@@ -261,7 +261,7 @@ function setCell(row: Record<string, string>, col: string, val: string) {
   overflow: auto;
   border: 1px solid var(--white-06);
   border-radius: 12px;
-  background: var(--dev-surface, rgba(255, 255, 255, 0.035));
+  background: var(--dev-surface, var(--white-035));
 }
 .grid { width: 100%; border-collapse: separate; border-spacing: 0; }
 .grid th {

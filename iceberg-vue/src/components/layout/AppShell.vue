@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { useResizeObserver } from '@vueuse/core'
 import router from '../../router'
 import BulletinBanner from './BulletinBanner.vue'
 import BulletinModal from '../modals/BulletinModal.vue'
@@ -48,7 +49,7 @@ const showBulletin = ref(false)
 // 条幅高度 → CSS 变量 --bulletin-offset（供 bg.css 的静态背景层向上顶出，消除顶端硬边）。
 // 不写死 58px：移动端断点、env(safe-area-inset-top) 都会改变高度，实测最稳。
 const bannerEl = ref<HTMLElement | null>(null)
-let bannerRo: ResizeObserver | null = null
+// banner 高度随断点/安全区变化：useResizeObserver 跟随组件生命周期，不用手动 disconnect
 
 function syncBulletinOffset() {
   const root = document.documentElement
@@ -158,10 +159,7 @@ onMounted(() => {
   window.addEventListener('pageshow', onPageshow)
 
   syncBulletinOffset()
-  if (typeof ResizeObserver !== 'undefined') {
-    bannerRo = new ResizeObserver(syncBulletinOffset)
-    if (bannerEl.value) bannerRo.observe(bannerEl.value)
-  }
+  useResizeObserver(bannerEl, syncBulletinOffset)
 })
 
 onUnmounted(() => {
@@ -171,8 +169,6 @@ onUnmounted(() => {
   window.clearTimeout(shieldShowTimer)
   window.clearTimeout(shieldHideTimer)
   window.clearTimeout(bulletinTimer)
-  bannerRo?.disconnect()
-  bannerRo = null
   document.documentElement.style.removeProperty('--bulletin-offset')
 })
 </script>

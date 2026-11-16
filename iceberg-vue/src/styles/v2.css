@@ -61,8 +61,8 @@
   --color-text-primary: #0a0c10;
   /* 气泡 tooltip 在浅底上翻成深泡：白底白泡等于隐形（见 .tip-bubble） */
   --tip-bg: #17191e;
-  --tip-fg: rgba(255, 255, 255, 0.92);
-  --tip-border: rgba(255, 255, 255, 0.16);
+  --tip-fg: var(--white-92);
+  --tip-border: var(--white-16);
   --tip-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   /* 浅色阅读表面内的原生控件（下拉弹层/滚动条）也要跟着翻亮，
      否则全局 color-scheme: dark 会让这里的选择器弹层变黑，与纸面白底割裂 */

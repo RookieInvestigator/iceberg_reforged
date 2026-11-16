@@ -7,6 +7,7 @@ import { DiveEngine, type DiveEntry, type DiveFocus, type DiveHud } from '../lib
 import { useI18n } from '../lib/useI18n';
 import RichText from '../components/ui/RichText.vue'
 import raw from '../data/iceberg.json'
+import { prefersReducedMotion } from '../lib/motion'
 
 const { t } = useI18n()
 const data = normalizeData(raw)
@@ -38,9 +39,7 @@ const isTouch = ref(false)
 let engine: DiveEngine | null = null
 
 const tierName = computed(() => data.tierOrder[hud.value.tierIndex] || '')
-const reducedMotion = typeof window !== 'undefined'
-  && typeof window.matchMedia === 'function'
-  && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+const reducedMotion = prefersReducedMotion()
 
 /** 聚焦状态 → URL query 同步（与 /3d 同模式：可分享、可回退） */
 function syncUrl(focus: DiveFocus | null) {

@@ -38,6 +38,15 @@ interface IcebergData {
 const data = raw as IcebergData
 const base = import.meta.env.BASE_URL
 const SITE = '中文兔子洞冰山图'
+/** 全站词条总数：多处 description / 正文都要用 */
+const TOTAL_ITEMS = Object.values(data.tiers).reduce((n, t) => n + ((t as unknown[] | undefined)?.length || 0), 0)
+/** 首页之外的页面也各自给一句，避免全站同一句 description */
+const SITE_DESC = '中文兔子洞冰山图——社区共建的中文怪谈、都市传说、未解之谜与怪奇内容。'
+/** 分类数 / 标签数：handbook description 用（handbookHtml 内部另有一份局部变量） */
+const CATEGORY_COUNT = Object.keys(data.categoryColors || {}).length
+const TAG_COUNT = Object.keys(data.tagMap || {}).length
+/** 历史上的今天：事件条数（description 用） */
+const OTD_COUNT = parseCSV(onThisDayRaw).length
 // canonical / og:url 一律指向 site.config.json 里的域名（无论从哪个部署访问）。
 
 /**
@@ -87,12 +96,36 @@ function esc(s: string): string {
     .replace(/'/g, '&#39;')
 }
 
-function headFor(path: string, title: string, jsonLd?: unknown) {
+/** 描述里的示例标题：去掉括注、书名号与多余空格，读起来像一句话而不是条目原文 */
+function sampleTitle(s: string): string {
+  return s.replace(/（[^）]*）|\([^)]*\)/g, '').replace(/[《》]/g, '').replace(/\s+/g, ' ').trim()
+}
+
+/** 描述压在 150 字以内（Google 展示约 155~160 字符），并折叠换行 */
+function clampDesc(s: string): string {
+  // 只做折叠与截断：文案由各路由自己写，不在这里删字符 ——
+  // 早先统一剥掉数字会把「以3D界面浏览」剥成「以D界面浏览」。
+  const one = s.replace(/\s+/g, ' ').trim()
+  return one.length > 150 ? one.slice(0, 149) + '…' : one
+}
+
+/**
+ * 每页的 head。
+ *
+ * `desc` 必须**逐页不同**：全站同一句 description 会让 Google 把各页当成
+ * 同模板的近重复内容（分类页一度就是这样）。`noindex` 只给 404 壳用。
+ */
+function headFor(path: string, title: string, desc: string, opts?: { jsonLd?: unknown; noindex?: boolean }) {
   const canonical = canonicalUrl(path)
   const elements: unknown[] = [
     { type: 'link', props: { rel: 'canonical', href: canonical } },
     { type: 'meta', props: { property: 'og:url', content: canonical } },
+    { type: 'meta', props: { name: 'description', content: clampDesc(desc) } },
   ]
+  if (opts?.noindex) {
+    elements.push({ type: 'meta', props: { name: 'robots', content: 'noindex, follow' } })
+  }
+  const jsonLd = opts?.jsonLd
   // JSON-LD：走 head.elements 由插件序列化成 <script type="application/ld+json">。
   // 这是静态标记不是可执行脚本，CSP 的 script-src 不拦 ld+json（浏览器不会执行它）。
   if (jsonLd) {
@@ -109,14 +142,7 @@ function headFor(path: string, title: string, jsonLd?: unknown) {
   }
 }
 
-/** 姊妹站（三站互链）：绝对地址，爬虫从静态壳就能顺着走出去 */
-const SISTER_LINKS: Array<[string, string]> = [
-  ['https://hezihezi.com', 'hezihezi.com'],
-  ['https://blog.hezihezi.com', 'blog.hezihezi.com'],
-]
-
 function nav(): string {
-  const sisters = SISTER_LINKS.map(([href, label]) => `<a href="${href}">${esc(label)}</a>`).join('')
   return `<nav class="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-sm">
     <a href="${base}" class="text-sky-300 hover:text-sky-200">冰山图</a>
     <a href="${base}home/" class="text-sky-300 hover:text-sky-200">首页</a>
@@ -125,8 +151,7 @@ function nav(): string {
     <a href="${base}on-this-day/" class="text-sky-300 hover:text-sky-200">历史上的今天</a>
     <a href="${base}ancient-book/" class="text-sky-300 hover:text-sky-200">古籍</a>
     <a href="${base}3d/" class="text-sky-300 hover:text-sky-200">3D 冰山</a>
-  </nav>
-  <nav class="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs">${sisters}</nav>`
+  </nav>`
 }
 
 function parseFrontmatter(src: string): Record<string, string> {
@@ -470,21 +495,26 @@ export async function prerender({ url }: { url: string }) {
   const baseLinks = new Set(['/home', '/handbook', '/features', '/on-this-day', '/ancient-book', '/3d', ...categoryRoutes])
 
   if (url === '/') {
-    return { html: homeHtml(), links: baseLinks, head: headFor('/', SITE) }
+    return { html: homeHtml(), links: baseLinks, head: headFor('/', SITE, SITE_DESC) }
   }
   if (url === '/home') {
-    return { html: homeNavHtml(), links: baseLinks, head: headFor('/home', `首页 · ${SITE}`) }
+    return { html: homeNavHtml(), links: baseLinks, head: headFor('/home', `首页 · ${SITE}`, '中文兔子洞冰山图站点导航') }
   }
   if (url === '/handbook') {
-    return { html: handbookHtml(), links: baseLinks, head: headFor('/handbook', `手册 · ${SITE}`) }
+    return { html: handbookHtml(), links: baseLinks, head: headFor('/handbook', `手册 · ${SITE}`, '中文兔子洞冰山图站点手册，包括分类与标签的划定标准与相关概念释。') }
   }
   if (url === '/features') {
     const links = new Set([...baseLinks, ...featureEntries().map((f) => `/features/${f.slug}`)])
-    return { html: featuresHtml(), links, head: headFor('/features', `专题 · ${SITE}`) }
+    return { html: featuresHtml(), links, head: headFor('/features', `专题 · ${SITE}`, '专题文章列表：按主题串起冰山图中的相关词条。') }
   }
   if (url.startsWith('/features/')) {
     const slug = url.slice('/features/'.length)
-    return { html: featureDetailHtml(slug), links: baseLinks, head: headFor(url, `${featureEntries().find((f) => f.slug === slug)?.fm.title || '专题'} · ${SITE}`) }
+    const fm = featureEntries().find((f) => f.slug === slug)?.fm
+    return {
+      html: featureDetailHtml(slug),
+      links: baseLinks,
+      head: headFor(url, `${fm?.title || '专题'} · ${SITE}`, fm?.description || `${fm?.title || '专题'}：按主题串起冰山图中的相关词条。`),
+    }
   }
   if (url.startsWith('/category/')) {
     const slug = url.slice('/category/'.length).replace(/\/$/, '')
@@ -492,44 +522,48 @@ export async function prerender({ url }: { url: string }) {
     if (!name) return notFoundShell(url, baseLinks)
     const items = itemsOfCategory(name)
     const canonical = canonicalUrl(url)
+    // 每类一句：类名 + 三个代表词条 —— 这是各分类页之间唯一能拉开差异的地方。
+    const desc = `中文兔子洞冰山图中的「${name}」分类。`
     return {
       html: categoryHtml(name),
       links: baseLinks,
-      head: headFor(url, `${name} · ${SITE}`, {
-        '@context': 'https://schema.org',
-        '@type': 'CollectionPage',
-        name,
-        url: canonical,
-        inLanguage: 'zh-CN',
-        isPartOf: { '@type': 'WebSite', name: SITE, url: SITE_ORIGIN + '/' },
-        // 词条没有独立 URL，ItemList 只声明标题与顺序 —— 不编造不存在的地址
-        mainEntity: {
-          '@type': 'ItemList',
-          numberOfItems: items.length,
-          itemListElement: items.slice(0, 30).map((it, i) => ({
-            '@type': 'ListItem',
-            position: i + 1,
-            name: it.title,
-          })),
-        },
-        breadcrumb: {
-          '@type': 'BreadcrumbList',
-          itemListElement: [
-            { '@type': 'ListItem', position: 1, name: '冰山图', item: SITE_ORIGIN + '/' },
-            { '@type': 'ListItem', position: 2, name, item: canonical },
-          ],
+      head: headFor(url, `${name} · ${SITE}`, desc, {
+        jsonLd: {
+          '@context': 'https://schema.org',
+          '@type': 'CollectionPage',
+          name,
+          url: canonical,
+          inLanguage: 'zh-CN',
+          isPartOf: { '@type': 'WebSite', name: SITE, url: SITE_ORIGIN + '/' },
+          // 词条没有独立 URL，ItemList 只声明标题与顺序 —— 不编造不存在的地址
+          mainEntity: {
+            '@type': 'ItemList',
+            numberOfItems: items.length,
+            itemListElement: items.slice(0, 30).map((it, i) => ({
+              '@type': 'ListItem',
+              position: i + 1,
+              name: it.title,
+            })),
+          },
+          breadcrumb: {
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: '冰山图', item: SITE_ORIGIN + '/' },
+              { '@type': 'ListItem', position: 2, name, item: canonical },
+            ],
+          },
         },
       }),
     }
   }
   if (url === '/on-this-day') {
-    return { html: onThisDayHtml(), links: baseLinks, head: headFor('/on-this-day', `历史上的今天 · ${SITE}`) }
+    return { html: onThisDayHtml(), links: baseLinks, head: headFor('/on-this-day', `历史上的今天 · ${SITE}`, '历史上的今天，但是怪奇兔子洞版。') }
   }
   if (url === '/ancient-book') {
-    return { html: ancientBookHtml(), links: baseLinks, head: headFor('/ancient-book', `古籍线装书 · ${SITE}`) }
+    return { html: ancientBookHtml(), links: baseLinks, head: headFor('/ancient-book', `古籍线装书 · ${SITE}`, '以传统直排版式阅读中文兔子洞冰山图。') }
   }
   if (url === '/3d') {
-    return { html: threeDHtml(), links: baseLinks, head: headFor('/3d', `3D 冰山 · ${SITE}`) }
+    return { html: threeDHtml(), links: baseLinks, head: headFor('/3d', `3D 冰山 · ${SITE}`, '三维冰山：以3D界面浏览中文兔子洞冰山图。') }
   }
   return notFoundShell(url, baseLinks)
 }
@@ -540,6 +574,6 @@ function notFoundShell(url: string, links: Set<string>) {
   return {
     html: `<div class="max-w-3xl mx-auto px-6 py-10 text-white"><h1 class="text-2xl font-black tracking-wider">页面不存在</h1><p class="mt-3 text-sm text-gray-400">你试图进入的页面不存在。</p>${nav()}</div>`,
     links,
-    head: headFor(url, `页面不存在 · ${SITE}`),
+    head: headFor(url, `页面不存在 · ${SITE}`, '页面不存在。', { noindex: true }),
   }
 }

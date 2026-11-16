@@ -171,7 +171,7 @@ watch(() => props.itemId, (id) => { if (supabaseReady) load() })
       <div class="flex items-center justify-between mt-1">
         <span class="text-tiny text-white-55">{{ u.displayName }}</span>
         <button @click="doPost" :disabled="posting || !text.trim()"
-          class="text-xs px-2.5 py-0.5 rounded-[3px] bg-white-06 border border-white-10 text-white-60 cursor-pointer enabled:hover:bg-white-12 enabled:hover:text-white-90 disabled:opacity-30 disabled:cursor-default max-sm:min-h-10 max-sm:px-4 max-sm:py-2">
+          class="text-xs px-2.5 py-0.5 rounded-xs bg-white-06 border border-white-10 text-white-60 cursor-pointer enabled:hover:bg-white-12 enabled:hover:text-white-90 disabled:opacity-30 disabled:cursor-default max-sm:min-h-10 max-sm:px-4 max-sm:py-2">
           {{ posting ? t('posting') : t('sendPost') }}
         </button>
       </div>
@@ -181,7 +181,7 @@ watch(() => props.itemId, (id) => { if (supabaseReady) load() })
     <!-- 列表 -->
     <div v-if="loadError" class="cmt-error flex items-center justify-between gap-2 text-xs text-white-50 py-2">
       <span>{{ t('commentsLoadFailed') }}</span>
-      <button @click="load" class="cmt-retry text-tiny px-2.5 py-0.5 rounded-[3px] bg-white-06 border border-white-10 text-white-60 cursor-pointer hover:bg-white-12 hover:text-white-90 max-sm:min-h-10 max-sm:px-2.5 max-sm:py-2">{{ t('retry') }}</button>
+      <button @click="load" class="cmt-retry text-tiny px-2.5 py-0.5 rounded-xs bg-white-06 border border-white-10 text-white-60 cursor-pointer hover:bg-white-12 hover:text-white-90 max-sm:min-h-10 max-sm:px-2.5 max-sm:py-2">{{ t('retry') }}</button>
     </div>
     <div v-else-if="loading" class="cmt-loading text-xs text-white-45 py-2">{{ t('loadingComments') }}</div>
     <div v-else-if="comments.length === 0" class="cmt-empty text-xs text-white-45 py-2">{{ t('noCommentsYet') }}</div>
@@ -203,11 +203,11 @@ watch(() => props.itemId, (id) => { if (supabaseReady) load() })
       </div>
       <!-- P1-13: 加载更多（失败时原地变错误态，可直接重试） -->
       <button v-if="hasMore && !loadMoreError" @click="loadMore" :disabled="loadingMore"
-        class="cmt-loadmore block w-full mt-1.5 py-1 text-tiny text-center text-white-60 bg-transparent border border-white-06 rounded-[3px] cursor-pointer enabled:hover:border-white-15 disabled:opacity-40 disabled:cursor-default max-sm:min-h-10 max-sm:py-2">
+        class="cmt-loadmore block w-full mt-1.5 py-1 text-tiny text-center text-white-60 bg-transparent border border-white-06 rounded-xs cursor-pointer enabled:hover:border-white-15 disabled:opacity-40 disabled:cursor-default max-sm:min-h-10 max-sm:py-2">
         {{ loadingMore ? t('loadingComments') : t('loadMore') }}
       </button>
       <button v-else-if="loadMoreError" @click="loadMore"
-        class="cmt-loadmore cmt-loadmore--error block w-full mt-1.5 py-1 text-tiny text-center text-white-55 bg-transparent border border-white-16 rounded-[3px] cursor-pointer max-sm:min-h-10 max-sm:py-2">
+        class="cmt-loadmore cmt-loadmore--error block w-full mt-1.5 py-1 text-tiny text-center text-white-55 bg-transparent border border-white-16 rounded-xs cursor-pointer max-sm:min-h-10 max-sm:py-2">
         {{ t('commentsLoadFailed') }} · {{ t('retry') }}
       </button>
     </div>

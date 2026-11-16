@@ -129,12 +129,6 @@ const noDesc = computed(() => t('noDescShort'))
         <TriangleAlert :size="12" :stroke-width="2.2" aria-hidden="true" />
         <span>{{ t('markWarn') }}</span>
       </footer>
-
-      <!-- 姊妹站：与页脚 V2Colophon 同一组地址（这里是纯外链版，静态壳里也有） -->
-      <nav class="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-xs" :aria-label="t('navHome')">
-        <a href="https://hezihezi.com" target="_blank" rel="noopener noreferrer" class="text-white-30 transition-colors hover:text-white-70">hezihezi.com</a>
-        <a href="https://blog.hezihezi.com" target="_blank" rel="noopener noreferrer" class="text-white-30 transition-colors hover:text-white-70">blog.hezihezi.com</a>
-      </nav>
     </div>
   </div>
 </template>

@@ -102,6 +102,13 @@ export const showNewMark = storedAtom('iceberg-show-new-mark', true);
 export const scatterMode = storedAtom('iceberg-scatter-mode', false);
 /** v2 实验：详情弹窗表面 —— 'dark' 黑底（默认，零回归）/ 'light' 浅色阅读表面（S13） */
 export const v2DetailSurface = storedAtom('iceberg-v2-detail-surface', 'dark');
+/**
+ * 实验：引号风格（clreq §2.1.2 / GB/T 15834 的地区差异）。
+ * - 'corner'（默认，现状）：直角引号「」『』—— 港台式，与本站暗色极简风格一致
+ * - 'curly'：弯引号 “”‘’—— 大陆 GB/T 15834—2011 横排写法
+ * 只影响渲染层文本（title / desc / introText），不改动源数据与语料指纹。
+ */
+export const quoteStyle = storedAtom('iceberg-quote-style', 'corner');
 /** 默认搜索引擎：词条弹窗标题旁的外搜按钮用它拼 URL（百度默认，Google/必应可选） */
 export const searchEngine = storedAtom<SearchEngine>('iceberg-search-engine', 'baidu');
 

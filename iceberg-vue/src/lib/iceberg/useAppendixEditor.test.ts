@@ -119,8 +119,23 @@ describe('useAppendixEditor 保存载荷', () => {
 })
 
 describe('整表模式（不按词条组织，直接铺开一张副表）', () => {
+  /**
+   * 这组用例**不依赖某张副表初始就有数据行**：副表内容由作者维护，
+   * 任何一张都可能被清空（例如 reading.csv 只留表头）。
+   * 所以统一「先自己加一行、填好 id」再测行为。
+   */
+  function seedRow(ed: ReturnType<typeof useAppendixEditor>, key: 'reading' | 'extra', itemId = 'be29bf68') {
+    const def = APPENDIX_TABLES.find((t) => t.key === key)!
+    ed.addTableRow(def)
+    const rows = ed.tableRows(key)
+    const row = rows[rows.length - 1]!
+    ed.setTableRowCell(def, row, 'item_id', itemId)
+    return { def, row }
+  }
+
   it('tableRows 铺开全部行，且每行都带 id', () => {
     const ed = useAppendixEditor()
+    seedRow(ed, 'reading')
     const rows = ed.tableRows('reading')
     expect(rows.length).toBeGreaterThan(0)
     expect(rows.every((r) => (r.item_id || '').trim())).toBe(true)
@@ -148,11 +163,11 @@ describe('整表模式（不按词条组织，直接铺开一张副表）', () =
   it('改 id 列会「换桶」：保存后行落在新 id 下，旧 id 不留残影', async () => {
     const bodies = stubSave()
     const ed = useAppendixEditor()
-    const def = APPENDIX_TABLES.find((t) => t.key === 'reading')!
-    const row = ed.tableRows('reading')[0]
-    const oldId = (row.item_id || '').trim()
-    const title = row.title
-    expect(oldId).toBeTruthy()
+    const { def, row } = seedRow(ed, 'reading', 'be29bf68')
+    ed.setTableRowCell(def, row, 'title', '示例书目')
+    const oldId = 'be29bf68'
+    const title = '示例书目'
+    await ed.saveAll()
 
     ed.setTableRowCell(def, row, 'item_id', 'ffffffff')
     await ed.saveAll()
@@ -166,12 +181,14 @@ describe('整表模式（不按词条组织，直接铺开一张副表）', () =
   it('removeTableRow 删行后保存，该行不再出现', async () => {
     const bodies = stubSave()
     const ed = useAppendixEditor()
-    const def = APPENDIX_TABLES.find((t) => t.key === 'reading')!
+    const { def, row } = seedRow(ed, 'reading', 'be29bf68')
+    ed.setTableRowCell(def, row, 'title', '独有标题不会被别处提到')
+    await ed.saveAll()
     const before = ed.tableRows('reading').length
-    const target = ed.tableRows('reading')[0]
-    ed.removeTableRow(def, target)
+    expect(before).toBeGreaterThan(0)
+    ed.removeTableRow(def, row)
     expect(ed.tableRows('reading').length).toBe(before - 1)
     await ed.saveAll()
-    expect(bodies['reading.csv']).not.toContain(target.title)
+    expect(bodies['reading.csv']).not.toContain('独有标题不会被别处提到')
   })
 })

@@ -18,7 +18,11 @@
   --color-fav: #f59e0b;
   --color-new: #feca57;
   --color-danger: #f87171;
+  --color-danger-soft: #fca5a5;
+  --color-danger-wash: rgba(248, 113, 113, 0.12);
   --color-success: #4ade80;
+  --color-success-soft: #86efac;
+  --color-success-wash: rgba(74, 222, 128, 0.12);
 
   --color-surface: #050505;
   --color-surface-border: #333333;
@@ -65,6 +69,13 @@
   --focus-ring: var(--white-70);
 
   /* ── 过渡曲线（覆盖 Tailwind 默认 ease-* 值） ── */
+  /* ── 圆角刻度：只允许这 5 档，禁止裸写 rounded-[3px] 这类任意值 ── */
+  --radius-xs: 4px;    /* 小标签 / chip */
+  --radius-sm: 6px;    /* 按钮 / 输入框 */
+  --radius-md: 10px;   /* 浮层 / 下拉 */
+  --radius-lg: 12px;   /* 卡片 / 面板 */
+  --radius-xl: 16px;   /* 大容器 / Hero */
+
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-emphatic: cubic-bezier(0.16, 1, 0.3, 1);
@@ -122,10 +133,15 @@
   --white-88: rgba(255, 255, 255, 0.88);
   --white-90: rgba(255, 255, 255, 0.90);
   --white-92: rgba(255, 255, 255, 0.92);
+  --white-95: rgba(255, 255, 255, 0.95);
 }
 
 /* ── 暴露为 Tailwind 工具类（inline：工具类直接引用 :root 的 var()，不重复发射变量） ── */
 @theme inline {
+  /* 只暴露 xs：Tailwind 默认的 sm/md/lg/xl 已被全站 31 处使用，
+     覆盖它们会改变现有视觉。其余刻度仍可用 var(--radius-*) 在 CSS 里引用。 */
+  --radius-xs: var(--radius-xs);
+
   /* 语义色 → bg-accent / text-accent / border-accent / … */
   --color-accent: var(--color-accent);
   --color-accent-bright: var(--color-accent-bright);
@@ -133,7 +149,11 @@
   --color-fav: var(--color-fav);
   --color-new: var(--color-new);
   --color-danger: var(--color-danger);
+  --color-danger-soft: var(--color-danger-soft);
+  --color-danger-wash: var(--color-danger-wash);
   --color-success: var(--color-success);
+  --color-success-soft: var(--color-success-soft);
+  --color-success-wash: var(--color-success-wash);
   --color-surface: var(--color-surface);
   --color-surface-border: var(--color-surface-border);
   --color-text-primary: var(--color-text-primary);
@@ -197,6 +217,7 @@
   --color-white-88: var(--white-88);
   --color-white-90: var(--white-90);
   --color-white-92: var(--white-92);
+  --color-white-95: var(--white-95);
 
   /* 字号 → text-micro / text-tiny / text-xs / text-sm / text-base */
   --text-micro: var(--font-micro);

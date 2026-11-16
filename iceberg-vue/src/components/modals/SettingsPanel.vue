@@ -3,7 +3,7 @@ import { computed, ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useStore } from '@nanostores/vue';
 import BaseModal from './BaseModal.vue';
-import { fontSize, floatMode, filterMode, showRandomBtn, bgMode, sortMode, detailMode, showReadMark, showNewMark, showTrail, immersiveMode, scatterMode, v2DetailSurface, searchEngine, applySimpleMode, applyStandardMode, flushPersistedWrites, cancelPersistedWrites } from '../../lib/settingsStore';
+import { fontSize, floatMode, filterMode, showRandomBtn, bgMode, sortMode, detailMode, showReadMark, showNewMark, showTrail, immersiveMode, scatterMode, v2DetailSurface, quoteStyle, searchEngine, applySimpleMode, applyStandardMode, flushPersistedWrites, cancelPersistedWrites } from '../../lib/settingsStore';
 import { lang as langAtom } from '../../lib/i18nStore';
 import { useI18n } from '../../lib/useI18n';
 
@@ -27,6 +27,7 @@ const srt = useStore(sortMode);
 const sct = useStore(scatterMode);
 const imv = useStore(immersiveMode);
 const v2ds = useStore(v2DetailSurface);
+const qs = useStore(quoteStyle);
 const se = useStore(searchEngine);
 
 const fsOpts = ['xs', 'sm', 'md', 'lg', 'xl'];
@@ -75,138 +76,136 @@ function clearData() {
     <div class="space-y-4">
 
       <div class="flex gap-2">
-        <button @click="applySimpleMode()" class="flex-1 py-2 rounded-md text-xs font-medium border border-white/10 text-white/60 hover:text-white hover:bg-white/5 transition-colors">{{ t('simpleMode') }}</button>
-        <button @click="applyStandardMode()" class="flex-1 py-2 rounded-md text-xs font-medium border border-white/10 text-white/60 hover:text-white hover:bg-white/5 transition-colors">{{ t('standardMode') }}</button>
+        <button @click="applySimpleMode()" class="flex-1 py-2 rounded-md text-xs font-medium border border-white-10 text-white-60 hover:text-white hover:bg-white-05 transition-colors">{{ t('simpleMode') }}</button>
+        <button @click="applyStandardMode()" class="flex-1 py-2 rounded-md text-xs font-medium border border-white-10 text-white-60 hover:text-white hover:bg-white-05 transition-colors">{{ t('standardMode') }}</button>
       </div>
 
       <div>
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('fontSize') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('fontSize') }}</div>
         <div class="flex gap-1">
-          <button v-for="o in fsOpts" :key="o" @click="fontSize.set(o)"
-            :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', fs === o ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button v-for="o in fsOpts" :key="o" @click="fontSize.set(o)" class="opt-btn" :class="{ 'is-on': fs === o }">
             {{ t('font' + o.charAt(0).toUpperCase() + o.slice(1)) }}
           </button>
         </div>
       </div>
 
       <div>
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('sortMode') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('sortMode') }}</div>
         <div class="flex gap-1">
-          <button v-for="o in sortOpts" :key="o" @click="sortMode.set(o)"
-            :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', srt === o ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button v-for="o in sortOpts" :key="o" @click="sortMode.set(o)" class="opt-btn" :class="{ 'is-on': srt === o }">
             {{ t('sort' + o.charAt(0).toUpperCase() + o.slice(1).replace(/-./g, x => x[1].toUpperCase())) }}
           </button>
         </div>
       </div>
 
       <div>
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('searchEngine') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('searchEngine') }}</div>
         <div class="flex gap-1">
-          <button @click="searchEngine.set('baidu')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', se === 'baidu' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">百度</button>
-          <button @click="searchEngine.set('google')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', se === 'google' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">Google</button>
-          <button @click="searchEngine.set('bing')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', se === 'bing' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">Bing</button>
+          <button @click="searchEngine.set('baidu')" class="opt-btn" :class="{ 'is-on': se === 'baidu' }">百度</button>
+          <button @click="searchEngine.set('google')" class="opt-btn" :class="{ 'is-on': se === 'google' }">Google</button>
+          <button @click="searchEngine.set('bing')" class="opt-btn" :class="{ 'is-on': se === 'bing' }">Bing</button>
         </div>
       </div>
 
       <div>
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('bgMode') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('bgMode') }}</div>
         <div class="flex gap-1 mb-1">
-          <button @click="bgMode.set('black')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', dbg === 'black' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">{{ t('bgBlack') }}</button>
-          <button @click="bgMode.set('static')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', dbg === 'static' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">{{ t('bgStatic') }}</button>
-          <button @click="bgMode.set('liquid')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', dbg === 'liquid' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">{{ t('bgLiquid') }}</button>
+          <button @click="bgMode.set('black')" class="opt-btn" :class="{ 'is-on': dbg === 'black' }">{{ t('bgBlack') }}</button>
+          <button @click="bgMode.set('static')" class="opt-btn" :class="{ 'is-on': dbg === 'static' }">{{ t('bgStatic') }}</button>
+          <button @click="bgMode.set('liquid')" class="opt-btn" :class="{ 'is-on': dbg === 'liquid' }">{{ t('bgLiquid') }}</button>
         </div>
         <p v-if="dbg === 'liquid'" class="setting-hint">{{ t('bgLiquidHint') }}</p>
         <p v-if="dbg === 'static' || dbg === 'liquid'" class="setting-hint setting-warn">{{ t('bgHeavyHint') }}</p>
       </div>
 
       <div>
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('detailMode') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('detailMode') }}</div>
         <div class="flex gap-1">
-          <button @click="detailMode.set('tooltip')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', dm === 'tooltip' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">{{ t('detailTooltip') }}</button>
-          <button @click="detailMode.set('modal')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', dm === 'modal' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">{{ t('detailModal') }}</button>
+          <button @click="detailMode.set('tooltip')" class="opt-btn" :class="{ 'is-on': dm === 'tooltip' }">{{ t('detailTooltip') }}</button>
+          <button @click="detailMode.set('modal')" class="opt-btn" :class="{ 'is-on': dm === 'modal' }">{{ t('detailModal') }}</button>
           </div>
           <p v-if="isMobile" class="setting-hint">{{ t('mobileOnlyHint') }}</p>
       </div>
 
       <div>
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('filterMode') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('filterMode') }}</div>
         <div class="flex gap-1">
-          <button v-for="o in filterOpts" :key="o" @click="filterMode.set(o)"
-            :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', flm === o ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button v-for="o in filterOpts" :key="o" @click="filterMode.set(o)" class="opt-btn" :class="{ 'is-on': flm === o }">
             {{ o === 'dim' ? t('filterDim') : t('filterHide') }}
           </button>
         </div>
       </div>
 
       <div>
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('experimental') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('experimental') }}</div>
         <div class="space-y-1.5">
-          <button @click="showRandomBtn.set(!sr)"
-            :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', sr ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button @click="showRandomBtn.set(!sr)" class="opt-toggle" :class="{ 'is-on': sr }">
             {{ t('randomBtn') }}
-            <span :class="sr ? 'text-white' : 'text-white/55'">{{ sr ? '●' : '○' }}</span>
+            <span class="opt-toggle-mark">{{ sr ? '●' : '○' }}</span>
           </button>
-          <button @click="immersiveMode.set(!imv)"
-            :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', imv ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button @click="immersiveMode.set(!imv)" class="opt-toggle" :class="{ 'is-on': imv }">
             {{ t('immersiveMode') }}
-            <span :class="imv ? 'text-white' : 'text-white/55'">{{ imv ? '●' : '○' }}</span>
+            <span class="opt-toggle-mark">{{ imv ? '●' : '○' }}</span>
           </button>
-          <button @click="floatMode.set(fm === 'none' ? 'static' : 'none')"
-            :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', fm !== 'none' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button @click="floatMode.set(fm === 'none' ? 'static' : 'none')" class="opt-toggle" :class="{ 'is-on': fm !== 'none' }">
             {{ t('floatMode') }}
-            <span :class="fm !== 'none' ? 'text-white' : 'text-white/55'">{{ fm !== 'none' ? '●' : '○' }}</span>
+            <span class="opt-toggle-mark">{{ fm !== 'none' ? '●' : '○' }}</span>
           </button>
-          <button @click="showNewMark.set(!snw)"
-            :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', snw ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button @click="showNewMark.set(!snw)" class="opt-toggle" :class="{ 'is-on': snw }">
             {{ t('highlightNew') }}
-            <span :class="snw ? 'text-white' : 'text-white/55'">{{ snw ? '●' : '○' }}</span>
+            <span class="opt-toggle-mark">{{ snw ? '●' : '○' }}</span>
           </button>
-          <button @click="showReadMark.set(!srd)"
-            :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', srd ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button @click="showReadMark.set(!srd)" class="opt-toggle" :class="{ 'is-on': srd }">
             {{ t('dimRead') }}
-            <span :class="srd ? 'text-white' : 'text-white/55'">{{ srd ? '●' : '○' }}</span>
+            <span class="opt-toggle-mark">{{ srd ? '●' : '○' }}</span>
           </button>
-          <button @click="showTrail.set(!strl)"
-            :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', strl ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button @click="showTrail.set(!strl)" class="opt-toggle" :class="{ 'is-on': strl }">
             {{ t('showTrail') }}
-            <span :class="strl ? 'text-white' : 'text-white/55'">{{ strl ? '●' : '○' }}</span>
+            <span class="opt-toggle-mark">{{ strl ? '●' : '○' }}</span>
           </button>
-          <button @click="scatterMode.set(!sct)"
-            :class="['w-full py-1.5 px-3 rounded-md text-xs font-medium transition-colors text-left flex items-center justify-between', sct ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button @click="scatterMode.set(!sct)" class="opt-toggle" :class="{ 'is-on': sct }">
             {{ t('scatterMode') }}
-            <span :class="sct ? 'text-white' : 'text-white/55'">{{ sct ? '●' : '○' }}</span>
+            <span class="opt-toggle-mark">{{ sct ? '●' : '○' }}</span>
           </button>
         </div>
       </div>
 
       <div v-if="isV2">
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('v2DetailSurface') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('v2DetailSurface') }}</div>
         <div class="flex gap-1">
-          <button @click="v2DetailSurface.set('dark')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', v2ds === 'dark' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">{{ t('v2SurfaceDark') }}</button>
-          <button @click="v2DetailSurface.set('light')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', v2ds === 'light' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">{{ t('v2SurfaceLight') }}</button>
+          <button @click="v2DetailSurface.set('dark')" class="opt-btn" :class="{ 'is-on': v2ds === 'dark' }">{{ t('v2SurfaceDark') }}</button>
+          <button @click="v2DetailSurface.set('light')" class="opt-btn" :class="{ 'is-on': v2ds === 'light' }">{{ t('v2SurfaceLight') }}</button>
         </div>
       </div>
 
       <div>
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('lang') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('quoteStyle') }}</div>
         <div class="flex gap-1">
-          <button @click="langAtom.set('zh')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', lang === 'zh' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">中文</button>
-          <button @click="langAtom.set('en')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', lang === 'en' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">EN</button>
-          <button @click="langAtom.set('ja')" :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', lang === 'ja' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">日本語</button>
+          <button @click="quoteStyle.set('corner')" class="opt-btn" :class="{ 'is-on': qs === 'corner' }">{{ t('quoteCorner') }}</button>
+          <button @click="quoteStyle.set('curly')" class="opt-btn" :class="{ 'is-on': qs === 'curly' }">{{ t('quoteCurly') }}</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('lang') }}</div>
+        <div class="flex gap-1">
+          <button @click="langAtom.set('zh')" class="opt-btn" :class="{ 'is-on': lang === 'zh' }">中文</button>
+          <button @click="langAtom.set('en')" class="opt-btn" :class="{ 'is-on': lang === 'en' }">EN</button>
+          <button @click="langAtom.set('ja')" class="opt-btn" :class="{ 'is-on': lang === 'ja' }">日本語</button>
         </div>
       </div>
 
       <!-- 数据管理 -->
       <div>
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('data') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('data') }}</div>
         <div class="flex gap-1">
-          <button @click="exportData" class="flex-1 py-1.5 rounded-md text-xs font-medium text-white/60 hover:text-white/90 hover:bg-white/5 transition-colors">{{ t('dataExport') }}</button>
-          <button @click="showImport = !showImport" class="flex-1 py-1.5 rounded-md text-xs font-medium text-white/60 hover:text-white/90 hover:bg-white/5 transition-colors">{{ t('dataImport') }}</button>
-          <button @click="clearData" class="flex-1 py-1.5 rounded-md text-xs font-medium text-red-400/80 hover:text-red-400 hover:bg-red-400/5 transition-colors">{{ t('dataClear') }}</button>
+          <button @click="exportData" class="flex-1 py-1.5 rounded-md text-xs font-medium text-white-60 hover:text-white-90 hover:bg-white-05 transition-colors">{{ t('dataExport') }}</button>
+          <button @click="showImport = !showImport" class="flex-1 py-1.5 rounded-md text-xs font-medium text-white-60 hover:text-white-90 hover:bg-white-05 transition-colors">{{ t('dataImport') }}</button>
+          <button @click="clearData" class="flex-1 py-1.5 rounded-md text-xs font-medium text-danger-soft hover:text-danger hover:bg-danger-wash transition-colors">{{ t('dataClear') }}</button>
         </div>
         <div v-if="showImport" class="mt-2">
-          <textarea v-model="importText" :placeholder="t('pasteJsonHint')" class="w-full h-16 text-xs max-sm:text-base rounded-md p-2 bg-white/5 border border-white/10 text-white/70 resize-none"></textarea>
-          <button @click="doImport" class="mt-1.5 w-full py-1 rounded-md text-xs font-medium bg-white/10 text-white hover:bg-white/20 transition-colors">{{ t('confirmImport') }}</button>
+          <textarea v-model="importText" :placeholder="t('pasteJsonHint')" class="w-full h-16 text-xs max-sm:text-base rounded-md p-2 bg-white-05 border border-white-10 text-white-70 resize-none"></textarea>
+          <button @click="doImport" class="mt-1.5 w-full py-1 rounded-md text-xs font-medium bg-white-10 text-white hover:bg-white-20 transition-colors">{{ t('confirmImport') }}</button>
         </div>
       </div>
 

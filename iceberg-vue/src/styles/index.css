@@ -24,6 +24,49 @@
 }
 
 @layer components {
+  /* ===== 单选按钮组（设置面板 / 导出弹窗共用）=====
+     同一个「N 选一」控件的选中/未选中两态只在这里定义一次。
+     未选中：次要文字色 + 悬停提亮；选中：反白实底（与开关控件的浅底区分，见 .opt-toggle）。 */
+  .opt-btn {
+    flex: 1 1 0;
+    /* 内容宽度不同（百度 / Google / Bing）时仍严格等分：flex 项的 min-width 默认是 auto */
+    min-width: 0;
+    padding: 0.375rem 0;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--white-60);
+    font-size: var(--font-xs);
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+  }
+  .opt-btn:hover { color: var(--white-90); background: var(--white-05); }
+  .opt-btn.is-on { background: #fff; color: #000; }
+  .opt-btn.is-on:hover { background: #fff; color: #000; }
+
+  /* 开关型（实验功能那种整行 ● / ○）：选中是浅底而非反白 */
+  .opt-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 0.375rem 0.75rem;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--white-60);
+    font-size: var(--font-xs);
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+  }
+  .opt-toggle:hover { color: var(--white-90); background: var(--white-05); }
+  .opt-toggle.is-on { background: var(--white-10); color: #fff; }
+  .opt-toggle-mark { color: var(--white-55); }
+  .opt-toggle.is-on .opt-toggle-mark { color: #fff; }
+
   /* ===== Font size via CSS variable ===== */
   #items-container { font-size: var(--item-font-size, 1rem); }
   /* ===== 跨页大标题（Features / Handbook 共用；改字号只改这一处）===== */

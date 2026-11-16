@@ -130,7 +130,8 @@ onMounted(() => {
         class="no-scrollbar z-20 flex w-full shrink-0 flex-col overflow-y-auto border-b border-white-06 max-h-[45dvh] lg:max-h-none lg:h-full lg:w-[400px] lg:border-b-0 lg:border-r xl:w-[420px]"
       >
         <div class="flex items-center justify-between px-6 pt-5 sm:px-8">
-          <span class="text-xs font-bold uppercase tracking-[0.2em] text-white-45">{{ t('onThisDay') }}</span>
+          <!-- 页面自身的 h1：站名在 V2Header 里已经不是 h1 了，每页要各自有一个 -->
+          <h1 class="m-0 text-xs font-bold uppercase tracking-[0.2em] text-white-45">{{ t('onThisDay') }}</h1>
           <router-link to="/home" class="inline-flex items-center gap-1 text-xs text-white-45 transition-colors duration-200 hover:text-white-85">
             <span aria-hidden="true">←</span><span>{{ t('backToHome') }}</span>
           </router-link>

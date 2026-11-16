@@ -1,3 +1,4 @@
+import { prefersReducedMotion } from './motion'
 /**
  * ShaderCanvas —— WebGL2 全屏着色器画布（Mssh meshh 官方 ShaderCanvas 的 Vue/TS 移植）。
  *
@@ -262,8 +263,7 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
   const values: Record<string, unknown> = { ...uniforms }
   let uniformsDirty = true
   let sizeDirty = true
-  const reducedMotion =
-    typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const reducedMotion = prefersReducedMotion()
 
   const resize = () => {
     // backing store = CSS 尺寸 × min(DPR,2) × resolutionScale；CSS 布局尺寸不受影响

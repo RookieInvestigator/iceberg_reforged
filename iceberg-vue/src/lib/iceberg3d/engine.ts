@@ -12,11 +12,10 @@ import { createGemMaterial, createIceMaterial } from './materials'
 import { pickInstance, getInstanceWorldPos, type RingData, type PickHit } from './picking'
 import { reportError } from '../report'
 import { CameraFlight, type FocusState } from './cameraFlight'
+import { prefersReducedMotion } from '../motion'
 
 export type { FocusState } from './cameraFlight'
 
-const prefersReducedMotion = () =>
-  typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export interface EngineOptions {
   container: HTMLElement

@@ -2,7 +2,7 @@
 // RichInline：富文本的「行内段」渲染 —— 标记样式 + 链接（外链 / 站内 / 锚点）。
 // 被 RichText 的段落、引用块与 tooltip 内联模式共用，保证四处视觉一致。
 import { RouterLink } from 'vue-router'
-import { hrefKind, segmentDesc } from '../../lib/richText'
+import { hrefKind, segmentDesc, groupUnbreakable } from '../../lib/richText'
 
 defineProps<{ text: string }>()
 </script>
@@ -16,20 +16,20 @@ defineProps<{ text: string }>()
       rel="noopener noreferrer"
       class="rt-link"
       :class="{ 'rt-em': seg.em, 'rt-i': seg.italic, 'rt-b': seg.bold }"
-    >{{ seg.text }}</a>
+    ><template v-for="(part, pi) in groupUnbreakable(seg.text)" :key="pi"><span v-if="part.nobreak" class="clreq-nobreak">{{ part.text }}</span><template v-else>{{ part.text }}</template></template></a>
     <a
       v-else-if="seg.href && hrefKind(seg.href) === 'hash'"
       :href="seg.href"
       class="rt-link"
       :class="{ 'rt-em': seg.em, 'rt-i': seg.italic, 'rt-b': seg.bold }"
-    >{{ seg.text }}</a>
+    ><template v-for="(part, pi) in groupUnbreakable(seg.text)" :key="pi"><span v-if="part.nobreak" class="clreq-nobreak">{{ part.text }}</span><template v-else>{{ part.text }}</template></template></a>
     <RouterLink
       v-else-if="seg.href"
       :to="seg.href"
       class="rt-link"
       :class="{ 'rt-em': seg.em, 'rt-i': seg.italic, 'rt-b': seg.bold }"
-    >{{ seg.text }}</RouterLink>
-    <span v-else :class="{ 'rt-em': seg.em, 'rt-i': seg.italic, 'rt-b': seg.bold }">{{ seg.text }}</span>
+    ><template v-for="(part, pi) in groupUnbreakable(seg.text)" :key="pi"><span v-if="part.nobreak" class="clreq-nobreak">{{ part.text }}</span><template v-else>{{ part.text }}</template></template></RouterLink>
+    <span v-else :class="{ 'rt-em': seg.em, 'rt-i': seg.italic, 'rt-b': seg.bold }"><template v-for="(part, pi) in groupUnbreakable(seg.text)" :key="pi"><span v-if="part.nobreak" class="clreq-nobreak">{{ part.text }}</span><template v-else>{{ part.text }}</template></template></span>
   </template>
 </template>
 

@@ -108,10 +108,10 @@ const badges = computed<Badge[]>(() => {
   padding: 1px 0.375rem;
   border-radius: 8px;
   border: 1px solid var(--white-15);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--white-03);
   color: var(--white-50);
 }
-.meta-chip--category { color: var(--cat); border-color: var(--cat); background: rgba(255, 255, 255, 0.03); }
+.meta-chip--category { color: var(--cat); border-color: var(--cat); background: var(--white-03); }
 .meta-chip--tag { color: var(--white-55); }
 a.meta-chip:hover { filter: brightness(1.35); }
 /* 气泡样式在 components/ui/TipBubble.vue + styles/v2.css 的 .tip-anchor / .tip-bubble */

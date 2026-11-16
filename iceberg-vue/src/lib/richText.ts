@@ -88,6 +88,39 @@ export function stripMdEm(text: string): string {
     .replace(/\*/g, '')
 }
 
+/**
+ * 按 clreq §6.1.2「符号分离禁则」把一段纯文本切成「可断行 / 不可断行」片段。
+ * 不可断行组：
+ *  - 省略号 `……`、破折号 `——`（或单个 `—`）：占 2em，不得从中间拆到两行；
+ *  - 阿拉伯数字及其前后缀单位符号：`% ‰ ℃ ℉ °` 与其前面的数字、
+ *    `+ - ±` 与其后面的数字、货币符号与数字之间不得断行（§6.1.2.2）；
+ *    数字串本身也作为一体（§6.1.2.2），避免 `1999` 在窄栏里被拆开。
+ *
+ * 供渲染层把每组包进 `.clreq-nobreak { white-space: nowrap }`。
+ * 纯函数、无 DOM 依赖，便于单测；未命中的文本原样返回为普通片段。
+ */
+export interface NoBreakPart {
+  text: string
+  /** true = 该片段不得断行 */
+  nobreak: boolean
+}
+
+const NOBREAK_RE = /(?:…+|——|—|[+±-]?\d+(?:\.\d+)?(?:[%‰℃℉°])?)/g
+
+export function groupUnbreakable(text: string): NoBreakPart[] {
+  const parts: NoBreakPart[] = []
+  let last = 0
+  let m: RegExpExecArray | null
+  NOBREAK_RE.lastIndex = 0
+  while ((m = NOBREAK_RE.exec(text)) !== null) {
+    if (m.index > last) parts.push({ text: text.slice(last, m.index), nobreak: false })
+    parts.push({ text: m[0], nobreak: true })
+    last = m.index + m[0].length
+  }
+  if (last < text.length) parts.push({ text: text.slice(last), nobreak: false })
+  return parts
+}
+
 /** 纯文本降级（含引用标记）：连 `> ` 行首标记一起去掉，供无法渲染富文本的场景使用。 */
 export function toPlainText(text: string): string {
   return stripMdEm(text)

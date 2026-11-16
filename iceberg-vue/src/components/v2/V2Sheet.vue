@@ -16,6 +16,7 @@ import { useSwipeNav } from '../../lib/iceberg/v2/useSwipeNav';
 import { ChevronLeft, ChevronRight } from '@lucide/vue';
 import { ENTRY_IA_KEY } from '../../lib/iceberg/v2/keys';
 import type { EntryView } from '../../lib/iceberg/entryView';
+import { useResizeObserver } from '@vueuse/core';
 
 const props = defineProps({ item: Object as PropType<EntryView | null> });
 const emit = defineEmits<{ close: []; navigate: [{ id: string; from?: string }] }>();
@@ -65,7 +66,7 @@ watch(open, () => {
 const bodyEl = ref<HTMLElement | null>(null);
 const canScroll = ref(false);
 const atBottom = ref(false);
-let bodyObserver: ResizeObserver | null = null;
+// 内容高度变化（换词条/字体加载）要重算「能否滚动」；useResizeObserver 跟着 bodyEl 走
 
 function refreshOverflow() {
   const el = bodyEl.value;
@@ -86,10 +87,8 @@ function onBodyScroll() {
 watch([open, () => props.item?.id, () => ia.commentsOpen], ([isOpen, id], prev) => {
   const switched = !!prev && id !== prev[1];
   nextTick(() => {
-    if (open.value && bodyEl.value && bodyObserver) {
+    if (open.value && bodyEl.value) {
       if (switched && bodyEl.value) bodyEl.value.scrollTop = 0;
-      bodyObserver.disconnect();
-      bodyObserver.observe(bodyEl.value);
       atBottom.value = false;
       refreshOverflow();
     } else {
@@ -99,13 +98,9 @@ watch([open, () => props.item?.id, () => ia.commentsOpen], ([isOpen, id], prev) 
   });
 }, { immediate: true });
 
-onMounted(() => {
-  bodyObserver = new ResizeObserver(refreshOverflow);
-});
-onUnmounted(() => {
-  bodyObserver?.disconnect();
-  bodyObserver = null;
-});
+// 正文区尺寸变化（换词条 / 字体加载 / 评论展开）→ 重算能否滚动。
+// useResizeObserver 会跟着 bodyEl 这个 ref 走，目标变了自动重新观察。
+useResizeObserver(bodyEl, refreshOverflow);
 
 // ===== 左右滑动切换相邻词条（与桌面键盘 ←/→ 语义一致） =====
 // 手势实现全在 useSwipeNav：passive 监听 + rAF 写 transform，不经过 Vue 响应式；

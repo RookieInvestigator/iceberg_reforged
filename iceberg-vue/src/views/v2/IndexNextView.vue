@@ -25,7 +25,7 @@ import { useIcebergDataSource } from '../../lib/iceberg/useIcebergDataSource'
 import { loadBulletins } from '../../lib/bulletins'
 
 // 数据源（normalize + 副表 + 全套 provide，见 useIcebergDataSource；facetCounts 为 v2 专有，留在此处）
-const { data, allItems, allItemsRaw } = useIcebergDataSource()
+const { data, dataRef, allItems, allItemsRaw } = useIcebergDataSource()
 
 // v2 筛选面计数：分类 / 标签词条数（数据静态，单遍产出，顶栏展示用）
 const facetCounts: FacetCounts = (() => {
@@ -168,7 +168,7 @@ onUnmounted(() => {
 
       <!-- F5：跳过词条墙（键盘用户免 1400+ 次 Tab） -->
       <a href="#v2-colophon" class="v2-skip">{{ t('skipWall') }}</a>
-      <V2Wall v-if="!scatter" :data="data" ref="wallRef" />
+      <V2Wall v-if="!scatter" :data="dataRef" ref="wallRef" />
       <ScatterField v-else :items="allItemsRaw" />
 
       <V2Interactivity ref="interactivityRef" />

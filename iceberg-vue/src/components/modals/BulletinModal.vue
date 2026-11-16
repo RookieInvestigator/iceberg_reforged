@@ -30,18 +30,18 @@ onUnmounted(() => {
 
 <template>
   <BaseModal :title="t('bulletinTitle')" size="md" @close="$emit('close')">
-    <div v-if="bulletins.length === 0" class="text-sm text-white/55 text-center py-4">{{ t('noBulletins') }}</div>
+    <div v-if="bulletins.length === 0" class="text-sm text-white-55 text-center py-4">{{ t('noBulletins') }}</div>
     <div v-else class="space-y-1">
-      <div v-for="(b, i) in bulletins" :key="i" :class="i > 0 ? 'border-t border-white/10' : ''">
+      <div v-for="(b, i) in bulletins" :key="i" :class="i > 0 ? 'border-t border-white-10' : ''">
         <button class="w-full text-left py-3 flex items-center justify-between gap-2 cursor-pointer select-none hover:bg-white/[0.02] transition-colors" @click="toggle(i)">
-          <span class="text-sm font-bold text-white/80 truncate">{{ b.title }}</span>
+          <span class="text-sm font-bold text-white-80 truncate">{{ b.title }}</span>
           <ChevronDown :size="14" :stroke-width="2"
-            class="shrink-0 text-white/60 transition-transform duration-300"
+            class="shrink-0 text-white-60 transition-transform duration-300"
             :style="{ transform: expanded[i] ? 'rotate(180deg)' : 'rotate(0deg)' }" />
         </button>
         <div v-if="expanded[i]" class="pb-4">
-          <p v-if="b.date || b.author" class="text-[length:var(--font-micro)] text-white/45 mb-2">{{ b.date }} · {{ b.author }}</p>
-          <p class="text-sm text-white/55 leading-relaxed whitespace-pre-line">{{ b.content }}</p>
+          <p v-if="b.date || b.author" class="text-[length:var(--font-micro)] text-white-45 mb-2">{{ b.date }} · {{ b.author }}</p>
+          <p class="text-sm text-white-55 leading-relaxed whitespace-pre-line">{{ b.content }}</p>
         </div>
       </div>
     </div>

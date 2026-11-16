@@ -28,6 +28,7 @@ import {
 import V2EntryCard from '../components/v2/V2EntryCard.vue'
 import V2Sheet from '../components/v2/V2Sheet.vue'
 import DevShell from '../components/dev/DevShell.vue'
+import { prefersReducedMotion } from '../lib/motion'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -126,8 +127,7 @@ function scheduleBuild() {
 function runLayout() {
   const engine = layout.value
   if (!engine) return
-  const reduced = typeof window.matchMedia === 'function'
-    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const reduced = prefersReducedMotion()
   const perFrame = reduced ? 24 : 2
   const tick = () => {
     const e = layout.value
@@ -192,7 +192,7 @@ function draw() {
 
   // 边：先画，压在节点下面
   ctx.lineWidth = 1
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)'
+  ctx.strokeStyle = 'var(--white-08)'
   ctx.beginPath()
   for (const edge of g.edges) {
     const a = g.nodes[edge.a]!
@@ -265,7 +265,7 @@ function draw() {
       }
       if (clash) continue
       boxes.push(box)
-      ctx.fillStyle = isMatch ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.42)'
+      ctx.fillStyle = isMatch ? 'var(--white-95)' : 'var(--white-42)'
       ctx.fillText(node.title, sx, sy)
     }
   }
@@ -279,7 +279,7 @@ function draw() {
     const y = hoverPos.value.y - 14
     ctx.fillStyle = 'rgba(12,12,14,0.9)'
     ctx.fillRect(x - 6, y - 10, tw + 12, 20)
-    ctx.fillStyle = 'rgba(255,255,255,0.92)'
+    ctx.fillStyle = 'var(--white-92)'
     ctx.textBaseline = 'middle'
     ctx.fillText(text, x, y)
   }

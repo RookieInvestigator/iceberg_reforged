@@ -19,8 +19,11 @@ const router = createRouter({
     { path: '/minimal',      redirect: '/' },
     { path: '/v2',           redirect: '/' },
     { path: '/on-this-day',  component: () => import('../views/OnThisDayView.vue') },
-    { path: '/ancient-book', component: () => import('../views/AncientBookView.vue') },
-    // 沉浸式全屏画面：AppShell 据此隐藏公告条与自动弹窗（3D 冰山）
+    // 沉浸式全屏画面：AppShell 据此隐藏公告条与自动弹窗（3D 冰山 / 古籍）
+    // 古籍 v2：夹注分栏 / 句读三档 / 版心可配（算法见 lib/ancient-book-v2/NOTICE.md）
+    { path: '/ancient-book', component: () => import('../views/AncientBookV2View.vue'), meta: { immersive: true } },
+    // v1 保留一版便于对照，确认 v2 稳定后删除
+    { path: '/ancient-book-v1', component: () => import('../views/AncientBookView.vue'), meta: { immersive: true } },
     { path: '/3d',           component: () => import('../views/Iceberg3DView.vue'), meta: { immersive: true } },
     { path: '/:pathMatch(.*)*', component: () => import('../views/NotFoundView.vue') },
   ],

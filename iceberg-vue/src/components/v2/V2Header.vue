@@ -2,7 +2,8 @@
 // V2Header（/v2 专用）：替代 Header 的大品牌块。
 // 极简 masthead：微型英文眉题 + 收敛的中文标题 + 单行元信息 + 文本导航。
 // 逻辑与 Header 一致（用户弹窗懒加载、Supabase 缺席隐藏入口、authStore 空闲预取）。
-import { inject, ref, onMounted, defineAsyncComponent } from 'vue';
+import { inject, ref, onMounted, computed, defineAsyncComponent } from 'vue';
+import { useRoute } from 'vue-router';
 import { useStore } from '@nanostores/vue';
 import { useI18n } from '../../lib/useI18n';
 import { user as userAtom, isSupabaseReady } from '../../lib/userState';
@@ -18,6 +19,10 @@ defineProps({
 });
 
 const { t } = useI18n();
+// 站名只在首页当 h1：其余页面各有自己的 h1（分类名 / 手册 / 词条…），
+// 全站都挂 h1 会让 Google 认为 21 个页面的标题一样。
+const route = useRoute();
+const isHome = computed(() => route.path === '/');
 const openOnThisDay = inject(OPEN_ON_THIS_DAY_KEY, null);
 const u = useStore(userAtom);
 const showUser = ref(false);
@@ -35,7 +40,7 @@ onMounted(() => {
 <template>
   <div class="v2mast" style="padding: 0 var(--header-padding-x)">
     <p class="v2mast-kicker">Chinese Oddities Iceberg · Reforged</p>
-    <h1 class="v2mast-title">{{ t('siteTitle') }}</h1>
+    <component :is="isHome ? 'h1' : 'div'" class="v2mast-title">{{ t('siteTitle') }}</component>
     <p class="v2mast-meta">{{ buildDate }} <span aria-hidden="true">·</span> {{ entryCount }} {{ t('entries') }}</p>
     <nav class="v2mast-nav">
       <button v-if="openOnThisDay" @click="openOnThisDay()">{{ t('onThisDay') }}</button>

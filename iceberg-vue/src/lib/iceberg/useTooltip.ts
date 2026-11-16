@@ -1,4 +1,5 @@
 import { reactive, ref, nextTick, onScopeDispose, type Ref } from 'vue'
+import { useEventListener } from '@vueuse/core'
 import type { RenderItem } from '../injectionKeys'
 
 interface TooltipOptions {
@@ -178,8 +179,9 @@ export function useTooltip(opts: TooltipOptions) {
     clearTimeout(scrollTimer);
     scrollTimer = window.setTimeout(() => { scrollBusy = false; }, 300);
   }
-  window.addEventListener('scroll', onWindowScroll, { passive: true });
-  window.addEventListener('resize', onWindowResize);
+  // useEventListener 跟着当前 effect scope 销毁（本 composable 由组件 setup 调用）
+  useEventListener(window, 'scroll', onWindowScroll, { passive: true });
+  useEventListener(window, 'resize', onWindowResize);
 
   function onMouseOver(e: MouseEvent) {
     if (scrollBusy || dm.value === 'modal' || window.innerWidth < 1024) return;
@@ -207,8 +209,6 @@ export function useTooltip(opts: TooltipOptions) {
   function resetCurrentItem() { currentItemEl = null; }
 
   onScopeDispose(() => {
-    window.removeEventListener('scroll', onWindowScroll)
-    window.removeEventListener('resize', onWindowResize)
     window.clearTimeout(hoverTimer.value)
     window.clearTimeout(scrollTimer)
   })

@@ -2,10 +2,9 @@ import * as THREE from 'three'
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { isTweening, killTweensOf, to } from './tween'
 import type { IcebergItem } from '../data'
+import { prefersReducedMotion } from '../motion'
 
 /** reduced-motion：镜头飞行动画改为瞬移（style 审计动效覆盖） */
-const prefersReducedMotion = () =>
-  typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /** 桌面端右侧面板让位：把目标推离画面中心，最多 76px */
 const DESKTOP_OFFSET_RATIO = 0.07

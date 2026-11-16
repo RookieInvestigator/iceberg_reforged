@@ -139,6 +139,8 @@ onUnmounted(() => {
 
 <template>
   <div class="iceberg-3d-page">
+    <!-- 页面标题：沉浸式画布没有可见标题，给一个只读屏软件/搜索引擎可见的 h1 -->
+    <h1 class="sr-only">{{ t('nav3d') }}</h1>
     <!-- Loading / WebGL unavailable states -->
     <div v-if="isLoading" class="scene-loading">
       <div class="scene-loading-spinner"></div>

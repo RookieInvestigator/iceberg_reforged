@@ -295,7 +295,7 @@ function toggleSpecial(key: string) {
   max-width: 36rem; margin: 0 auto;
   border: 1px solid var(--white-08); border-radius: 0.75rem;
   padding: 0 0.8rem; height: 2.5rem; color: var(--white-45);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--white-03);
   transition: border-color 0.2s;
 }
 .v2nav-search:focus-within { border-color: var(--white-20); }

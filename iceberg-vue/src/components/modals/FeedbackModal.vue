@@ -94,7 +94,7 @@ async function submit() {
     <template v-if="!u">
       <p class="text-sm text-white-55 leading-relaxed text-center py-2">{{ t('feedbackLogin') }}</p>
       <button @click="showLogin = true"
-        class="mt-3 w-full py-2 rounded-md text-xs font-medium bg-white text-black hover:bg-white/85 transition-colors cursor-pointer">
+        class="mt-3 w-full py-2 rounded-md text-xs font-medium bg-white text-black hover:bg-white-85 transition-colors cursor-pointer">
         {{ t('login') }}
       </button>
       <UserModal v-if="showLogin" @close="showLogin = false" />
@@ -104,7 +104,7 @@ async function submit() {
     <template v-else-if="sent">
       <p class="text-sm text-white-85 text-center py-4">{{ t('feedbackSent') }}</p>
       <button @click="emit('close')"
-        class="w-full py-2 rounded-md text-xs font-medium bg-white/10 text-white hover:bg-white/20 transition-colors cursor-pointer">
+        class="w-full py-2 rounded-md text-xs font-medium bg-white-10 text-white hover:bg-white-20 transition-colors cursor-pointer">
         {{ t('close') }}
       </button>
     </template>
@@ -139,7 +139,7 @@ async function submit() {
               :class="['inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition-colors cursor-pointer',
                 fTags.includes(name)
                   ? 'bg-white text-black border-transparent'
-                  : 'bg-transparent text-white/60 border-white/10 hover:text-white/90 hover:bg-white/5']">
+                  : 'bg-transparent text-white-60 border-white-10 hover:text-white-90 hover:bg-white-05']">
               <span>{{ emoji }}</span><span>{{ name }}</span>
             </button>
           </div>
@@ -151,7 +151,7 @@ async function submit() {
         <p v-if="changedCount === 0" class="text-xs text-white-30">{{ t('feedbackNoteOnly') }}</p>
         <p v-if="errorMsg" class="text-xs text-danger" role="alert">{{ errorMsg }}</p>
         <button @click="submit" :disabled="sending"
-          class="w-full py-2 rounded-md text-xs font-medium bg-white text-black hover:bg-white/85 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+          class="w-full py-2 rounded-md text-xs font-medium bg-white text-black hover:bg-white-85 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
           {{ sending ? t('feedbackSending') : t('feedbackSubmit') }}
         </button>
       </div>

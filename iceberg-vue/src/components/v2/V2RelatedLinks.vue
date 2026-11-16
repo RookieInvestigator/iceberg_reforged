@@ -64,7 +64,7 @@ const groups = computed(() => [
   color: var(--white-60); cursor: pointer;
   transition: color 0.15s, background-color 0.15s, border-color 0.15s;
 }
-.v2rel__chip:hover { color: var(--white-90); background: rgba(255, 255, 255, 0.05); }
+.v2rel__chip:hover { color: var(--white-90); background: var(--white-05); }
 /* 桌面弹窗：单行流式小 chips */
 .v2rel--card .v2rel__chip { min-height: 24px; padding: 2px 8px; font-size: var(--font-xs); }
 /* 移动抽屉：44px 触控块 */

@@ -49,19 +49,89 @@ export interface IcebergMeta {
 
 // 中文排版规范化（合并正则减少扫描遍数）
 const DASH_RE = /[‐‑‒–—―]|--+/g;
-const ELLIPSIS_RE = /\.{3,}|…\.{0,}/g;
+// 省略号：clreq §5.4.1 规定中文省略号为「六个点 / 两个汉字宽」，即两个 U+2026（……）。
+// 原式 /\.{3,}|…\.{0,}/g 中 `\.{0,}` 可匹配空串，会把已成型的 `……` 逐字替换成
+// `…………`（十二点）——实测 `他说……然后` → `他说…………然后`。改为把任意个连续 `…`
+// 或 3 个以上 ASCII 点统一收敛为一次 `……`。
+const ELLIPSIS_RE = /\.{3,}|…+/g;
 const SIMPLE_MAP: Record<string, string> = { '·': '·', '・': '·', '~': '～', '˜': '～' };
 const SIMPLE_RE = /[·・~˜]/g;
 // 合并：中文后跟英文标点 → 中文标点
 const CN_PUNCT: Record<string, string> = { ',': '，', '.': '。', '!': '！', '?': '？', ';': '；', ':': '：' };
 const CN_PUNCT_RE = /(\p{Script=Han})([,\.!\?;:])/gu;
 
-function replaceQuotes(s: string): string {
-  if (!s) return s;
+/**
+ * 引号风格（clreq §2.1.2 的地区差异；实验开关，见 settingsStore.quoteStyle）：
+ * - `corner`：直角引号「」『』（港台横排惯例，本站原有视觉）
+ * - `curly`：弯引号 “”‘’（大陆 GB/T 15834—2011 横排写法）
+ * 只影响渲染文本，不动源数据。
+ */
+export type QuoteStyle = 'corner' | 'curly'
 
-  // 引号 → 直角引号「」『』（匹配 ASCII 直引号 + Unicode 弯引号）
-  s = s.replace(/["“”]([^"“”]*)["“”]/g, '「$1」');
-  s = s.replace(/['‘’]([^'‘’]*)['‘’]/g, '『$1』');
+const QUOTE_PAIRS: Record<QuoteStyle, { double: [string, string]; single: [string, string] }> = {
+  corner: { double: ['「', '」'], single: ['『', '』'] },
+  curly: { double: ['“', '”'], single: ['‘', '’'] },
+}
+
+/**
+ * 引号统一：把 ASCII 直引号 / 弯引号 / 直角引号统一收成目标风格。
+ *
+ * 为什么用状态机而不是正则：数据里的引号**不成对**（奇数个、嵌套、被反斜杠转义），
+ * 正则 `["“”]([^"“”]*)["“”]` 要求成对且内容不含引号，遇到
+ * `如\"马车故事\"` 或 `“说给树洞”…“另一处` 就会漏配/错配，
+ * 结果正文里残留半角引号（实测 292 条词条受影响）。
+ *
+ * 关键：ASCII `"` 与 `'` **既是开也是关**，必须按「切换」处理；
+ * 弯引号 `“”` 与直角引号 `「」` 有方向，按方向处理。
+ */
+function unifyQuotes(
+  s: string,
+  open: string,
+  close: string,
+  ambiguous: string,
+  openers: string,
+  closers: string,
+): string {
+  let out = ''
+  let inside = false
+  for (const ch of s) {
+    if (ambiguous.includes(ch)) {
+      // ASCII 直引号：切换开/关
+      out += inside ? close : open
+      inside = !inside
+      continue
+    }
+    if (openers.includes(ch)) {
+      // 已在引号内又遇到开引号 → 前一个引号落单，先补关引号再开新的
+      if (inside) out += close
+      out += open
+      inside = true
+      continue
+    }
+    if (closers.includes(ch)) {
+      // 不在引号内却遇到关引号 → 落单，按开引号处理
+      out += inside ? close : open
+      inside = !inside
+      continue
+    }
+    out += ch
+  }
+  // 结尾仍在引号内：补一个关引号，避免整段被吞
+  if (inside) out += close
+  return out
+}
+
+function replaceQuotes(s: string, style: QuoteStyle = 'corner'): string {
+  if (!s) return s;
+  const pair = QUOTE_PAIRS[style]
+
+  // 先去掉 JSON 转义残留的反斜杠（`\"` → `"`），否则引号识别不到
+  s = s.replace(/\\(["'“”‘’「」『』])/g, '$1')
+
+  // 双引号：ASCII " 切换；弯 “” / 直角 「」 按方向
+  s = unifyQuotes(s, pair.double[0], pair.double[1], '"', '“「', '”」')
+  // 单引号：ASCII ' 切换；弯 ‘’ / 直角 『』 按方向
+  s = unifyQuotes(s, pair.single[0], pair.single[1], "'", '‘『', '’』')
 
   // 书名号
   s = s.replace(/<<\s*(.+?)\s*>>/g, '《$1》');
@@ -85,9 +155,11 @@ function replaceQuotes(s: string): string {
   // 中文间多余空格去除
   s = s.replace(/(\p{Script=Han})\s+(\p{Script=Han})/gu, '$1$2');
 
-  // 间隔号 · 前后加空格（放最后，避免被中文去空格步骤删除）
-  s = s.replace(/(\S)·(\S)/g, '$1 · $2');
-
+  // clreq §6.3.1「密排」：汉字与标点外框彼此紧贴，字间不留空白。
+  // 旧实现在这里给间隔号两侧插入了西文空格（`鲁迅·朝花夕拾` → `鲁迅 · 朝花夕拾`），
+  // 与密排原则相悖，且会与 text-autospace 的自动间距叠加成双倍空隙，故撤销。
+  // 同时把上游数据里已有的 ` · ` 空格收掉（SIMPLE_MAP 已把间隔号统一为 U+00B7）。
+  s = s.replace(/\s*·\s*/g, '·');
   return s;
 }
 
@@ -122,10 +194,12 @@ export function formatUnixDate(sec: number | undefined | null, locale?: string):
 }
 
 // 归一化：解析颜色、emoji 标签
-// perf：同一静态 JSON 在多个路由入口（IndexView/3D/副表等）重复 normalize —— 模块级 WeakMap 缓存
-const normalizeCache = new WeakMap<object, IcebergData>()
-export function normalizeData(raw: any): IcebergData {
-  const hit = normalizeCache.get(raw)
+// perf：同一静态 JSON 在多个路由入口（IndexView/3D/副表等）重复 normalize —— 模块级 WeakMap 缓存。
+// 缓存按 (raw, 引号风格) 分键：切换引号风格要拿到新对象，否则主站会继续显示旧风格。
+const normalizeCache = new WeakMap<object, Map<QuoteStyle, IcebergData>>()
+export function normalizeData(raw: any, quoteStyle: QuoteStyle = 'corner'): IcebergData {
+  const byStyle = normalizeCache.get(raw)
+  const hit = byStyle?.get(quoteStyle)
   if (hit) return hit
   const { categoryColors, tagMap, tiers, introText, defaultColor } = raw;
 
@@ -143,8 +217,8 @@ export function normalizeData(raw: any): IcebergData {
 
       return {
         ...item,
-        title: replaceQuotes(item.title),
-        desc: item.desc ? replaceQuotes(item.desc) : item.desc,
+        title: replaceQuotes(item.title, quoteStyle),
+        desc: item.desc ? replaceQuotes(item.desc, quoteStyle) : item.desc,
         link: item.link && isSafeHttpUrl(item.link) ? item.link : '', // F34：渲染端再次校验
         categoryColor,
         emojis,
@@ -154,10 +228,11 @@ export function normalizeData(raw: any): IcebergData {
 
   const result: IcebergData = {
     ...raw,
-    introText: introText ? replaceQuotes(introText) : introText,
+    introText: introText ? replaceQuotes(introText, quoteStyle) : introText,
     tierOrder: (raw.tierOrder || []).map(tierNameZh),
     tiers: normalizedTiers,
   };
-  normalizeCache.set(raw, result)
+  if (!byStyle) normalizeCache.set(raw, new Map([[quoteStyle, result]]))
+  else byStyle.set(quoteStyle, result)
   return result;
 }

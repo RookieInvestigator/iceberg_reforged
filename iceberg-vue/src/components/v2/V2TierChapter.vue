@@ -54,7 +54,7 @@ function itemClass(item: RenderItem, dimmed: boolean): Record<string, boolean> {
           :key="item.id"
           :ref="(el) => registerItem(item.id, el as unknown as HTMLElement | null)"
           v-show="!filterVisible || filterVisible.has(item.id)"
-          v-memo="[item.id, floatStatic, showNew, dimSet?.has(item.id), filterVisible ? filterVisible.has(item.id) : true]"
+          v-memo="[item.id, item.title, floatStatic, showNew, dimSet?.has(item.id), filterVisible ? filterVisible.has(item.id) : true]"
           tabindex="0"
           role="button"
           class="iceberg-item inline-flex items-center font-bold cursor-crosshair py-0.5 px-1.5 max-sm:text-[1.05rem]"

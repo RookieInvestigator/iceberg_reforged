@@ -101,14 +101,14 @@ function collectInput(): LayoutBuildOptions | null {
       headerPx: V2_EXPORT_METRICS.headerPx,
       headerMarginBottom: V2_EXPORT_METRICS.headerMarginBottom,
         bg: cssVar('--color-surface', '#050505'),
-      headerColor: cssVar('--white-40', 'rgba(255,255,255,0.4)'),
-      titleColor: cssVar('--white-90', 'rgba(255,255,255,0.9)'),
-      introColor: cssVar('--white-40', 'rgba(255,255,255,0.4)'),
-      tagColor: cssVar('--color-text-primary', 'rgba(255,255,255,0.92)'),
+      headerColor: cssVar('--white-40', 'var(--white-40)'),
+      titleColor: cssVar('--white-90', 'var(--white-09)'),
+      introColor: cssVar('--white-40', 'var(--white-40)'),
+      tagColor: cssVar('--color-text-primary', 'var(--white-92)'),
       shadowColor: cssVar('--shadow-color', 'rgba(0,0,0,0.6)'),
-      dividerColor: cssVar('--white-10', 'rgba(255,255,255,0.1)'),
-      legendColor: cssVar('--white-85', 'rgba(255,255,255,0.85)'),
-      tagPillBg: cssVar('--white-06', 'rgba(255,255,255,0.06)'),
+      dividerColor: cssVar('--white-10', 'var(--white-10)'),
+      legendColor: cssVar('--white-85', 'var(--white-85)'),
+      tagPillBg: cssVar('--white-06', 'var(--white-06)'),
       emojiRatio: V2_EXPORT_METRICS.emojiRatio,
       float: useStore(floatMode).value !== 'none',
     },
@@ -231,58 +231,51 @@ function go(): void {
   <BaseModal :title="t('exportTitle')" size="md" @close="$emit('close')">
     <div class="space-y-4">
       <div>
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('exportFormat') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('exportFormat') }}</div>
         <div class="flex gap-1">
-          <button v-for="f in (['png', 'svg', 'yaml', 'html'] as const)" :key="f" @click="format = f"
-            :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors uppercase', format === f ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button v-for="f in (['png', 'svg', 'yaml', 'html'] as const)" :key="f" @click="format = f" class="opt-btn" :class="{ 'is-on': format === f }">
             {{ f }}
           </button>
         </div>
       </div>
 
       <div v-if="format === 'png' || format === 'svg'">
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('exportWidth') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('exportWidth') }}</div>
         <div class="flex gap-1">
-          <button v-for="w in WIDTHS" :key="w" @click="widthPx = w"
-            :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', widthPx === w ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button v-for="w in WIDTHS" :key="w" @click="widthPx = w" class="opt-btn" :class="{ 'is-on': widthPx === w }">
             {{ w }}px
           </button>
         </div>
       </div>
 
       <div v-if="format === 'png'">
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('exportDpr') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('exportDpr') }}</div>
         <div class="flex gap-1">
-          <button v-for="d in DPRS" :key="d" @click="dpr = d"
-            :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', dpr === d ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button v-for="d in DPRS" :key="d" @click="dpr = d" class="opt-btn" :class="{ 'is-on': dpr === d }">
             {{ d }}x
           </button>
         </div>
       </div>
 
       <div v-if="format === 'png'">
-        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white/50 uppercase tracking-[0.2em]">{{ t('exportSlice') }}</div>
+        <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('exportSlice') }}</div>
         <div class="flex gap-1">
-          <button @click="sliceMode = 'full'"
-            :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', sliceMode === 'full' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button @click="sliceMode = 'full'" class="opt-btn" :class="{ 'is-on': sliceMode === 'full' }">
             {{ t('exportSliceFull') }}</button>
-          <button @click="sliceMode = 'tier'"
-            :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', sliceMode === 'tier' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button @click="sliceMode = 'tier'" class="opt-btn" :class="{ 'is-on': sliceMode === 'tier' }">
             {{ t('exportSliceTier') }}</button>
-          <button @click="sliceMode = 'even'"
-            :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', sliceMode === 'even' ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button @click="sliceMode = 'even'" class="opt-btn" :class="{ 'is-on': sliceMode === 'even' }">
             {{ t('exportSliceEven') }}</button>
         </div>
         <div v-if="sliceMode === 'even'" class="flex gap-1 mt-1.5">
-          <button v-for="n in COUNTS" :key="n" @click="sliceCount = n"
-            :class="['flex-1 py-1.5 rounded-md text-xs font-medium transition-colors', sliceCount === n ? 'bg-white text-black' : 'text-white/60 hover:text-white/90 hover:bg-white/5']">
+          <button v-for="n in COUNTS" :key="n" @click="sliceCount = n" class="opt-btn" :class="{ 'is-on': sliceCount === n }">
             {{ n }}{{ t('exportSliceCount') }}</button>
         </div>
       </div>
 
       <div class="pt-8">
         <button @click="go" :disabled="working"
-          class="w-full py-2 rounded-md text-xs font-medium bg-white text-black hover:bg-white/85 transition-colors disabled:opacity-50">
+          class="w-full py-2 rounded-md text-xs font-medium bg-white text-black hover:bg-white-85 transition-colors disabled:opacity-50">
           {{ working ? t('exporting') : t('exportTitle') }} · {{ exportCountText }}
         </button>
       </div>

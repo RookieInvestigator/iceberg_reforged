@@ -10,6 +10,7 @@
 // - 容器用 touch-action: pan-y：横向手势交给我们，纵向滚动归浏览器，
 //   同时挡掉 Chrome 的「横滑前进/后退」导航手势（那条会冒出箭头的系统 UI）。
 import { onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
+import { prefersReducedMotion } from '../../motion'
 
 /** 触发切换所需的最小横向位移（px） */
 const MIN_DX = 56
@@ -62,8 +63,6 @@ export interface UseSwipeNavOptions {
   nextHint?: Ref<HTMLElement | null>
 }
 
-const prefersReducedMotion = () =>
-  typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /**
  * 左右滑动切换词条。把返回的 `swipeEl` 绑到容器上即可，挂载/卸载由内部负责。

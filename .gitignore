@@ -51,6 +51,7 @@ font/
 # ── 工具 / Agent 产物 ───────────────────────────
 .dsh-vision-router/
 .shots/
+shots/
 .workbuddy*/
 .agents/
 .claude/
@@ -63,3 +64,6 @@ wasm---wasm/
 
 # ── 系统 ────────────────────────────────────────
 .DS_Store
+
+# 古籍排版研究用的第三方仓库克隆（临时，不入库）
+.tmp-guji-research/

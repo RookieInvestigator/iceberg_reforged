@@ -1,4 +1,5 @@
-import { onMounted, onUnmounted, ref, type Ref } from 'vue'
+import { onMounted, ref, watch, type Ref } from 'vue'
+import { useEventListener, useMediaQuery } from '@vueuse/core'
 import { isInNavHotZone, navShouldShowOnPointer, navShouldShowOnScroll } from '../../navVisibility'
 
 // 导航显隐 + 滚动帧状态机：滚动方向感知 / 顶部热区 / 变形吸顶 / 面板开关 /
@@ -126,17 +127,18 @@ export function useV2NavVisibility(opts: { tierOrder: string[]; suggestOpen: Ref
     closedFromOutside = closed
   }
 
+  // useEventListener 在组件卸载时自动解绑（含 passive 选项），不必再写一遍 remove
+  useEventListener(window, 'scroll', onScroll, { passive: true })
+  useEventListener(window, 'mousemove', onMouseMove, { passive: true })
+  useEventListener(document, 'mousedown', onDocDown)
+
+  // 粗指针（触屏）：`useMediaQuery` 是响应式的 —— 插拔鼠标/平板切桌面模式时会自己更新，
+  // 早先只在挂载时读一次 matchMedia。
+  const hoverNone = useMediaQuery('(hover: none)')
+  watch(hoverNone, (v) => { coarse.value = v }, { immediate: true })
+
   onMounted(() => {
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('mousemove', onMouseMove, { passive: true })
-    document.addEventListener('mousedown', onDocDown)
-    if (typeof window.matchMedia === 'function') coarse.value = window.matchMedia('(hover: none)').matches
     onScroll()
-  })
-  onUnmounted(() => {
-    window.removeEventListener('scroll', onScroll)
-    window.removeEventListener('mousemove', onMouseMove)
-    document.removeEventListener('mousedown', onDocDown)
   })
 
   return {
