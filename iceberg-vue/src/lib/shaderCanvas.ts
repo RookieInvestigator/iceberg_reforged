@@ -372,6 +372,26 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
   }
   frame = requestAnimationFrame(render)
 
+  // ── 页面不可见就停画：标签页切走/最小化时没有像素被看见，
+  //    继续跑全屏 fragment shader 纯属白烧 GPU 与电。
+  //    回来时按真实时间继续（u_time 基于 performance.now，动画进度不会跳）。──
+  const pauseLoop = () => {
+    if (paused || disposed) return
+    paused = true
+    cancelAnimationFrame(frame)
+  }
+  const resumeLoop = () => {
+    if (!paused || disposed) return
+    paused = false
+    lastDraw = -Infinity
+    frame = requestAnimationFrame(render)
+  }
+  const onVisibilityChange = () => {
+    if (document.hidden) pauseLoop()
+    else resumeLoop()
+  }
+  document.addEventListener('visibilitychange', onVisibilityChange)
+
   // ── 上下文丢失：停止循环，让浏览器尝试恢复（不自动重建） ──
   const onContextLost = (e: Event) => {
     e.preventDefault()
@@ -392,22 +412,15 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
     setHeightmap(heightmap) {
       heightmapRef = heightmap
     },
-    pause() {
-      if (paused || disposed) return
-      paused = true
-      cancelAnimationFrame(frame)
-    },
-    resume() {
-      if (!paused || disposed) return
-      paused = false
-      frame = requestAnimationFrame(render)
-    },
+    pause() { pauseLoop() },
+    resume() { resumeLoop() },
     dispose() {
       if (disposed) return
       disposed = true
       paused = true
       cancelAnimationFrame(frame)
       observer.disconnect()
+      document.removeEventListener('visibilitychange', onVisibilityChange)
       canvas.removeEventListener('webglcontextlost', onContextLost)
       gl.deleteBuffer(buffer)
       if (heightmapTexture) gl.deleteTexture(heightmapTexture)

@@ -117,8 +117,8 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
           type="button"
           class="trail-ring"
           @click="emit('navigate', { id: ring.id, from: item.id })"
-        >{{ ring.title }}</button>
-        <span v-else class="trail-cur" aria-current="true">{{ ring.title }}</span>
+        ><MirrorText :text="ring.title" /></button>
+        <span v-else class="trail-cur" aria-current="true"><MirrorText :text="ring.title" /></span>
       </template>
     </nav>
 

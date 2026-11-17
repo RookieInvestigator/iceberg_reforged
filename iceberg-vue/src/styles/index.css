@@ -138,8 +138,9 @@
   .iceberg-item::before {
     content: ""; position: absolute; inset: 0;
     background: var(--item-color);
-    transform: scaleX(0); transform-origin: left; z-index: -1;
-    transition: transform 0.25s var(--ease-out);
+    /* 浮现：不做左右擦入，直接淡入 —— 一排词条里横向扫过时更安静 */
+    opacity: 0; z-index: -1;
+    transition: opacity 0.18s var(--ease-out);
   }
   /* ===== 桌面端 hover —— 两模式语义分离 =====
      tooltip 模式：hover 有 marker 背景承担对比度 → 黑字**无需描边/阴影**
@@ -155,7 +156,7 @@
     html:not([data-detail="modal"]) .iceberg-item:hover .item-title::after,
     html:not([data-detail="modal"]) .iceberg-item.tooltip-active .item-title::after { display: none; } /* 镜像外描边让位 */
     html:not([data-detail="modal"]) .iceberg-item:hover::before,
-    html:not([data-detail="modal"]) .iceberg-item.tooltip-active::before { transform: scaleX(1); }
+    html:not([data-detail="modal"]) .iceberg-item.tooltip-active::before { opacity: 1; }
     html:not([data-detail="modal"]) .iceberg-item:hover .item-title,
     html:not([data-detail="modal"]) .iceberg-item.tooltip-active .item-title,
     html:not([data-detail="modal"]) .iceberg-item:hover .item-tag,

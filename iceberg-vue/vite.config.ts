@@ -517,6 +517,8 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     include: ['src/**/*.test.ts'],
+    // 与 main.ts 对齐：把全局注册的组件（MirrorText）也带进单测环境
+    setupFiles: ['src/test-setup.ts'],
   },
   build: {
     modulePreload: { polyfill: false },

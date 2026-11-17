@@ -20,7 +20,7 @@ interface TooltipOptions {
 export function useTooltip(opts: TooltipOptions) {
   const { t, dm, findItem } = opts
 
-  const tip = reactive({ show: false, anchor: null as HTMLElement | null, floating: false, desc: '', noDesc: false, category: '', color: '', tags: '' });
+  const tip = reactive({ show: false, anchor: null as HTMLElement | null, floating: false, desc: '', noDesc: false, category: '', color: '', tags: '', link: '' });
   const tipRef = ref<any>(null);
   const hoverTimer = ref(0);
   let currentItemEl: HTMLElement | null = null;
@@ -113,6 +113,8 @@ export function useTooltip(opts: TooltipOptions) {
       category: item.category,
       color: item.categoryColor,
       tags: (item.tags || []).join(' | '),
+      // 有没有外链：tooltip 右上角给一个标记（不直接把 URL 印出来）
+      link: item.link || '',
     });
 
     nextTick().then(() => {

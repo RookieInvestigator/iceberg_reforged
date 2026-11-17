@@ -9,6 +9,20 @@ import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, watc
 import { createShaderCanvas, prepareFragmentShader, type ShaderCanvas } from '../../lib/shaderCanvas'
 import { fragmentShader, fragmentHeader, buildUniforms } from '../../lib/liquidGradient'
 
+/**
+ * backing store 缩放。默认 0.35（1440×900 视口 → 504×315 的片元量，约为原来的 1/2）。
+ * 低频渐变放大回视口尺寸后与 0.5 的差异：平均 0.37/255、仅在色带边缘可见。
+ * `?bgRes=0.5` 可临时调回，用来在本机比对。
+ */
+function bgResolutionScale(): number {
+  try {
+    const v = Number(new URLSearchParams(window.location.search).get('bgRes'))
+    return Number.isFinite(v) && v >= 0.15 && v <= 1 ? v : 0.35
+  } catch {
+    return 0.35
+  }
+}
+
 const props = withDefaults(
   defineProps<{
     colorA?: string
@@ -96,7 +110,7 @@ onMounted(() => {
       fragmentShader: prepareFragmentShader(fragmentShader, fragmentHeader),
       uniforms: buildUniforms(props),
       // 性能：backing store 半分辨率（低频渐变视觉无损，片元数 1/4）+ fps 封顶（慢速流动无感）
-      resolutionScale: 0.5,
+      resolutionScale: bgResolutionScale(),
       fps: props.fps,
     })
   } catch {

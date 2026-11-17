@@ -201,7 +201,7 @@ onUnmounted(() => {
             <button class="close-btn" @click="engine?.focusById(null)" :aria-label="t('close')">&times;</button>
           </div>
 
-          <h2 class="panel-title">{{ selectedEntry.item.title }}</h2>
+          <h2 class="panel-title"><MirrorText :text="selectedEntry.item.title" /></h2>
 
           <div class="panel-tags" v-if="selectedEntry.item.tags?.length">
             <span v-for="t in selectedEntry.item.tags" :key="t">#{{ t }}</span>

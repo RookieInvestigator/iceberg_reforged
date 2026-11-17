@@ -33,7 +33,7 @@ const groups = computed(() => [
       <ul class="v2rel__list">
         <li v-for="r in g.items" :key="r.id">
           <button type="button" class="v2rel__chip" @click="emit('navigate', { id: r.id, from: props.from })">
-            {{ r.title }}
+            <MirrorText :text="r.title" />
           </button>
         </li>
       </ul>

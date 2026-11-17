@@ -63,7 +63,11 @@ function itemClass(item: RenderItem, dimmed: boolean): Record<string, boolean> {
           :data-category="item.category"
           :style="itemStyle(item)"
         >
-          <span class="item-title transition-colors duration-200" :data-text="item.title" :style="item.gradStops ? { '--grad-stops': item.gradStops } : undefined">{{ item.title }}</span>
+          <span
+            class="item-title transition-colors duration-200"
+            :data-text="item.title"
+            :style="item.gradStops ? { '--grad-stops': item.gradStops } : undefined"
+          ><MirrorText :text="item.title" /></span>
           <span v-for="(e, ei) in item.emojis" :key="ei" class="item-tag text-[0.625em] ml-[0.3em] relative -top-[0.08em] inline-flex items-center justify-center transition-colors duration-200">{{ e }}</span>
         </span>
       </div>
@@ -89,6 +93,12 @@ function itemClass(item: RenderItem, dimmed: boolean): Record<string, boolean> {
 .tier-next .iceberg-item { line-height: 1.4; }
 .tier-next .iceberg-item::before { border-radius: inherit; }
 .tier-next .iceberg-item.recently-updated { border-radius: 999px; }
+/* 镜像词条：整串左右翻转，像看印版反字。inline 元素上 transform 不生效，必须 inline-block；
+   只翻标题 —— 后面的 emoji 徽章仍正立。 */
+.tier-next .item-title--mirror {
+  display: inline-block;
+  transform: scaleX(-1);
+}
 @media (max-width: 640px) {
   .tier-next { padding-top: 2rem; padding-bottom: 2rem; }
 }

@@ -2,6 +2,7 @@
  * wallHtml —— 词条墙导出单文件 HTML（静态 + 筛选条/tooltip 小脚本，无构建依赖）。
  * 同一份 WallExportLayout：芯片按布局矩形绝对定位，胶囊/字距/图例与生产 v2 对齐。
  */
+import { splitMirror } from '../iceberg/mirror'
 import { COVER, FOOTER, LEGEND } from './wallExport';
 import type { ExportStyle, WallExportLayout } from './wallExport';
 import { esc } from './wallSvg';
@@ -20,6 +21,18 @@ export interface HtmlExportOptions {
   tags: Record<string, string[]>
 }
 
+/**
+ * 词条标题 → HTML。与站内 <MirrorText> 同一套规则（都走 splitMirror）：
+ * 镜像段逐字加 class="mir"，导出页的 CSS 里给它 scaleX(-1)。
+ */
+function mirrorHtml(text: string): string {
+  return splitMirror(text)
+    .map((seg) => (seg.mirror
+      ? [...seg.text].map((ch) => `<span class="mir">${esc(ch)}</span>`).join('')
+      : esc(seg.text)))
+    .join('')
+}
+
 export function renderWallHtml(
   layout: WallExportLayout,
   style: ExportStyle,
@@ -33,6 +46,7 @@ export function renderWallHtml(
     `.cov span{display:inline-block}`,
     `.chip{position:absolute;border-radius:999px;font-weight:700;white-space:nowrap;box-sizing:border-box;cursor:default}`,
     `.tag{font-size:.625em;margin-left:.3em;position:relative;top:-.08em}`,
+  `.mir{display:inline-block;transform:scaleX(-1)}`,
     `.tier{position:absolute;text-align:center;font-weight:400}`,
     `.tier span{display:inline-block}`,
     `.leg{position:absolute;left:0;right:0;text-align:center}`,
@@ -57,6 +71,8 @@ export function renderWallHtml(
       id: c.id,
       tier: c.tier,
       title: c.title,
+      // 标题的 HTML 版本（含镜像 span），tooltip 与筛选都按它渲染
+      th: mirrorHtml(c.title),
       cat: opts.cats[c.id] || '',
       tags: opts.tags[c.id] || [],
       desc: opts.descs[c.id] || '',
@@ -132,7 +148,7 @@ export function renderWallHtml(
       `<span class="chip" data-id="${esc(c.id)}" style="left:${r(c.x)}px;top:${r(c.y)}px;width:${r(c.w)}px;height:${r(c.h)}px;` +
       `line-height:${r(c.h)}px;font-size:${style.fontPx}px;text-align:center;` +
       `color:${esc(c.color)};text-shadow:2px 2px 3px ${esc(style.shadowColor)};${op}">` +
-      `${esc(c.title)}` +
+      `${mirrorHtml(c.title)}` +
       c.emojis.map((e) => `<span class="tag" style="color:${esc(style.tagColor)}">${esc(e)}</span>`).join('') +
       `</span>`,
     );
@@ -198,7 +214,7 @@ export function renderWallHtml(
     `var tip=document.getElementById('tip'),pinned=null;`,
     `function xesc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}`,
     `function showTip(el,x,y){var e=byId[el.dataset.id];if(!e||(!e.desc&&!e.link))return;` +
-    `tip.innerHTML='<b>'+xesc(e.title)+'</b>'+` +
+    `tip.innerHTML='<b>'+(e.th||xesc(e.title))+'</b>'+` +
     `(e.desc?'<div>'+xesc(e.desc)+'</div>':'')+` +
     `(e.link?'<div><a href="'+e.link.replace(/"/g,'&quot;')+'">link</a></div>':'');` +
     `tip.style.display='block';` +

@@ -42,7 +42,7 @@ const ordered = ref<any[]>([])
       :data-category="item.category"
       :style="`font-size: 1.15em; color: ${item.categoryColor}; --item-color: ${item.categoryColor}`"
     >
-      <span class="item-title transition-colors duration-200" :data-text="item.title" :style="item.gradStops ? { '--grad-stops': item.gradStops } : undefined">{{ item.title }}</span>
+      <span class="item-title transition-colors duration-200" :data-text="item.title" :style="item.gradStops ? { '--grad-stops': item.gradStops } : undefined"><MirrorText :text="item.title" /></span>
       <span
         v-for="(e, ei) in item.emojis"
         :key="ei"

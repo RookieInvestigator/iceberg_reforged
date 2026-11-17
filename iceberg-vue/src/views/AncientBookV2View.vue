@@ -18,6 +18,7 @@ import { ArrowLeft, ChevronLeft, ChevronRight, CornerDownLeft, List as ListIcon,
 import raw from '../data/iceberg.json'
 import metaJson from '../data/meta.json'
 import { parseText, toChineseNum, numToZh, pageNumbers, layoutMarginal } from '../lib/ancient-book-v2/engine'
+import { MIRROR_PHRASE } from '../lib/iceberg/mirror'
 import { calcLayout, defaultLayoutConfig, FONT_FACES, FONT_LABELS, FALLBACK_FACE, FALLBACK_LABEL } from '../lib/ancient-book-v2/layout'
 import type { FontFamily } from '../lib/ancient-book-v2/types'
 // 四款古籍字体只在这一页引入：走本路由 chunk，别处不会下载这 4 个字库（≈5MB）
@@ -356,6 +357,7 @@ const overlayParas = computed(() => {
 function updateModeData() {
   const data = currentMode.value === 'category' ? catData : tierData
   tokens = parseText(data.code, data.charItem)
+  markMirrorChars(tokens)
   activeMeta = data.meta
   activeMarks = data.marks
 }
@@ -414,6 +416,26 @@ function attachMarks(spreadsArr: PlacedCell[][][], rowsPerHalf: number) {
         c.mp = out
       }
     }
+  }
+}
+
+/**
+ * 给「廻戮戈」三个字打镜像标记（逐字翻转，字序不变）。
+ * tokens 是逐字排的，标题也是逐字推进来的，所以连续三字能对上；
+ * 只在**词条标题**范围内找 —— 正文里偶发这三个字不该跟着翻。
+ */
+function markMirrorChars(list: Token[]) {
+  for (let i = 0; i + MIRROR_PHRASE.length <= list.length; i++) {
+    const head = list[i]!
+    if (!head.hw || head.cm) continue
+    let ok = true
+    for (let k = 0; k < MIRROR_PHRASE.length; k++) {
+      const tk = list[i + k]
+      if (!tk || tk.c !== MIRROR_PHRASE[k] || !tk.hw || tk.cm) { ok = false; break }
+    }
+    if (!ok) continue
+    for (let k = 0; k < MIRROR_PHRASE.length; k++) list[i + k]!.mr = true
+    i += MIRROR_PHRASE.length - 1
   }
 }
 
@@ -784,7 +806,7 @@ onUnmounted(() => {})
           <ul class="srb-list">
             <li v-for="hit in searchHits" :key="hit.ii">
               <button class="srb-it" :disabled="hit.si === null" @click="jumpToEntry(hit.ii)">
-                <span class="srb-t">{{ hit.title }}</span>
+                <span class="srb-t"><MirrorText :text="hit.title" /></span>
                 <span class="srb-m">{{ hit.cat }}</span>
                 <span v-if="hit.si !== null" class="srb-p">{{ toChineseNum(pageNumbers(hit.si, single)[0]!) }}</span>
               </button>
@@ -820,7 +842,7 @@ onUnmounted(() => {})
           <button class="dc" @click="overlayOpen = false" :aria-label="t('close')">&times;</button>
 
           <header class="dp-head">
-            <h2 class="dp-title">{{ overlayItem?.title }}</h2>
+            <h2 class="dp-title"><MirrorText :text="overlayItem?.title || ''" /></h2>
             <p class="dp-meta">
               <span v-if="overlayItem?.cat && overlayItem.cat !== overlayItem.title" class="dp-cat" :style="{ color: safeColor }">{{ overlayItem?.cat }}</span>
               <span v-if="overlayItem?.tier" class="dp-tier">{{ tierLabel }}</span>

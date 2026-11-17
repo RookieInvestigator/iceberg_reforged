@@ -75,7 +75,7 @@ const onCellClick = (c: PlacedCell) => {
           @mouseenter="onCellEnter(c)"
           @mouseleave="onCellLeave"
         >
-          <span :class="{ 'eng-span': c.isEng }">{{ c.c }}</span>
+          <span :class="{ 'eng-span': c.isEng, mir: c.mr }">{{ c.c }}</span>
 
           <!-- 句读：只有显示 / 不显示两种。位置由 judouStyle() 注入（字格下缘偏右），
                不写死在 CSS 里 —— 否则 top/right 缺失会让标记落在字格左上角。 -->

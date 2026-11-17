@@ -140,7 +140,7 @@ onUnmounted(() => {
           
           <div class="modal-header">
             <!-- 增加 truncate 防止标题过长挤压右侧按钮 -->
-            <h2 :id="titleId" class="pr-4" :class="[titleClass, titleClick ? 'cursor-pointer hover:opacity-70' : '']" @click="titleClick">{{ title }}</h2>
+            <h2 :id="titleId" class="pr-4" :class="[titleClass, titleClick ? 'cursor-pointer hover:opacity-70' : '']" @click="titleClick"><MirrorText :text="title" /></h2>
             
             <!-- 动作按钮区（插槽 + 关闭按钮） -->
             <div class="flex items-center gap-3 shrink-0">

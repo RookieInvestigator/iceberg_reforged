@@ -406,7 +406,7 @@ onUnmounted(() => {
           <button class="dc" @click="overlayOpen = false" :aria-label="t('close')">&times;</button>
 
           <header class="dp-head">
-            <h2 class="dp-title">{{ overlayItem?.title }}</h2>
+            <h2 class="dp-title"><MirrorText :text="overlayItem?.title || ''" /></h2>
             <p class="dp-meta">
               <span v-if="overlayItem?.cat && overlayItem.cat !== overlayItem.title" class="dp-cat" :style="{ color: safeColor }">{{ overlayItem?.cat }}</span>
               <span v-if="overlayItem?.tier" class="dp-tier">{{ tierLabel }}</span>

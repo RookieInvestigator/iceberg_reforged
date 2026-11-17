@@ -166,7 +166,7 @@ function toggleSpecial(key: string) {
             <button v-for="(row, i) in suggestRows" :key="row.id" type="button" role="option" :id="'v2nav-opt-' + i" :aria-selected="i === suggestIdx"
               class="v2nav-sugrow" :class="{ on: i === suggestIdx }"
               @click="chooseSuggest(row)" @mousemove="suggestIdx = i">
-              <span class="v2nav-sugtitle">{{ row.title }}</span>
+              <span class="v2nav-sugtitle"><MirrorText :text="row.title" /></span>
               <span class="v2nav-sugcat">{{ row.category }}</span>
               <span v-if="row.snippet" class="v2nav-sugsnip">{{ row.snippet }}</span>
             </button>

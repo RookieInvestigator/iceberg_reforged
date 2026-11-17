@@ -1208,3 +1208,10 @@
 .pgs-leave-active { transition: opacity 0.18s, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1); }
 .pgs-enter-from,
 .pgs-leave-to { opacity: 0; transform: translate(-50%, 8px); }
+
+/* ─── 15. 镜像字（「廻戮戈」） ────────────────────────────────
+   逐字左右翻转：inline 元素上 transform 不生效，必须 inline-block。 */
+.c > span.mir {
+  display: inline-block;
+  transform: scaleX(-1);
+}

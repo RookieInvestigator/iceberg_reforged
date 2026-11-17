@@ -107,7 +107,7 @@ const noDesc = computed(() => t('noDescShort'))
         <article v-for="item in items" :key="item.id" class="py-6 first:pt-0">
           <h2 class="flex items-baseline gap-2 text-base font-bold leading-[1.4] text-white-92">
             <router-link :to="{ path: '/', hash: entryHash(item.id) }" class="transition-colors hover:text-accent-soft">
-              {{ item.title }}
+              <MirrorText :text="item.title" />
             </router-link>
           </h2>
           <p class="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-tiny text-white-30">

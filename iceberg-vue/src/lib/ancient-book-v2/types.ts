@@ -119,6 +119,8 @@ export interface Token {
   pn?: string
   /** 词条索引（-1 = 非词条） */
   ii: number
+  /** 镜像字（「廻戮戈」逐字左右翻转） */
+  mr?: boolean
   /** 是否西文 */
   isEng?: boolean
   /** 专名号 */

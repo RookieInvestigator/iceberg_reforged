@@ -175,7 +175,7 @@ function onHandleTouchCancel() {
             <div class="v2sheet-head">
               <button type="button" class="v2sheet-head__title" @click="copyTitle(rendered.title)"
                 :aria-label="titleCopied ? t('titleCopied') : t('copyTitle')">
-                <span class="v2-entry-title">{{ titleCopied ? t('titleCopied') : rendered.title }}</span>
+                <span class="v2-entry-title"><MirrorText :text="titleCopied ? t('titleCopied') : rendered.title" /></span>
               </button>
               <EntrySearchButton :title="rendered.title" touch />
             </div>
