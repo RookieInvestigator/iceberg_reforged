@@ -59,11 +59,12 @@
 
 ### 工程
 
-- **根目录改为 npm workspaces**（`iceberg-vue` 为唯一工作区），根 `package-lock.json`
-  入库：CI 的 `npm install` 在 workspace 模式下装的依赖树与子包 `npm ci` 不再漂移
-  （此前 workspace 化后未提交根 lock，CF Pages `npm ci` 因依赖树不一致报
-  `Cannot read properties of null (reading 'edgesOut')` 构建失败）。
-  根 `build` 脚本改为 `npm run build --workspace=iceberg-vue`。
+- **CF Pages 构建修复**：根目录撤销 npm workspaces（workspace 化会让根 lock 漏掉
+  Linux 平台的 rollup 原生可选依赖，CI clean-install 后 vite 启动报
+  `Cannot find module @rollup/rollup-linux-x64-gnu`）。根 `package.json` 恢复为
+  纯脚本 shim（`npm --prefix iceberg-vue ci && …`），依赖解析完全由
+  `iceberg-vue/package-lock.json` 单一来源负责——该 lock 含全部平台的 rollup
+  原生包条目，本地 Windows 与 CI Linux 均验证通过。
 - **全库清理「模仿 / 借鉴」类注释**：溯源表述全部改写为独立陈述，功能与行为零改动。
 - **`.gitignore` 收紧**：`.tmp-*/` 统一覆盖临时目录，交付物快照 zip 不入库。
 - 631 个单测全绿。
