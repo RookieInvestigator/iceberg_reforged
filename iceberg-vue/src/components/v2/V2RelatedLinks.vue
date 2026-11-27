@@ -42,21 +42,17 @@ const groups = computed(() => [
 </template>
 
 <style scoped>
-/* 只管组内与组间节奏；末组下方到动作条的留白不在这里 ——
-   margin-bottom 会与 .v2entry-actions 的 margin-top 折叠（相邻兄弟取 max），
-   改大也只生效几个 px。那段留白由 V2EntryBody 用 padding-bottom 给。 */
 .v2rel__group { margin: 0; }
 .v2rel__group + .v2rel__group { margin-top: 0.75rem; }
 .v2rel__label {
-  margin: 0 0 0.375rem;
+  margin: 0 0 0.3rem;
   font-size: var(--font-micro); font-weight: 700;
   text-transform: uppercase;
-  /* 与 V2EntryBody 的参考标签同节奏：中文下 0.15em 过松 */
   letter-spacing: 0.08em;
   color: var(--white-50);
 }
 .v2rel__list {
-  display: flex; flex-wrap: wrap; gap: 6px;
+  display: flex; flex-wrap: wrap; gap: 4px;
   margin: 0; padding: 0; list-style: none;
 }
 .v2rel__chip {
@@ -65,9 +61,23 @@ const groups = computed(() => [
   transition: color 0.15s, background-color 0.15s, border-color 0.15s;
 }
 .v2rel__chip:hover { color: var(--white-90); background: var(--white-05); }
-/* 桌面弹窗：单行流式小 chips */
-.v2rel--card .v2rel__chip { min-height: 24px; padding: 2px 8px; font-size: var(--font-xs); }
-/* 移动抽屉：44px 触控块 */
-.v2rel--sheet .v2rel__chip { min-height: 44px; padding: 10px 12px; font-size: var(--font-xs); }
-.v2rel--sheet .v2rel__chip:hover { border-color: var(--white-10); }
+/* 桌面弹窗：单行流式小 chips，左负距让文字左边沿与分组标签对齐 */
+.v2rel--card .v2rel__list { margin-left: -8px; gap: 2px 4px; }
+.v2rel--card .v2rel__chip { min-height: 26px; padding: 2px 8px; font-size: var(--font-xs); text-align: left; }
+/* 移动抽屉：轻描边触控胶囊，避免透明热区撑开大段空白 */
+.v2rel--sheet .v2rel__list { margin-left: 0; gap: 6px; }
+.v2rel--sheet .v2rel__chip {
+  min-height: 38px;
+  padding: 7px 12px;
+  font-size: var(--font-xs);
+  line-height: 1.35;
+  text-align: left;
+  background: var(--white-03);
+  border-color: var(--white-08);
+}
+.v2rel--sheet .v2rel__chip:hover,
+.v2rel--sheet .v2rel__chip:active {
+  background: var(--white-06);
+  border-color: var(--white-16);
+}
 </style>

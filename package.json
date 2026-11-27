@@ -2,7 +2,16 @@
   "name": "iceberg-reforged",
   "private": true,
   "version": "0.0.0",
+  "workspaces": [
+    "iceberg-vue"
+  ],
   "scripts": {
-    "build": "npm --prefix iceberg-vue ci && npm --prefix iceberg-vue run build && node scripts/build-cf.mjs"
+    "dev": "npm run dev --workspace=iceberg-vue",
+    "build": "npm run build --workspace=iceberg-vue && node scripts/build-cf.mjs",
+    "lint": "npm run typecheck --workspace=iceberg-vue",
+    "test": "npm run test --workspace=iceberg-vue"
+  },
+  "overrides": {
+    "nanoid": "^3.3.18"
   }
 }

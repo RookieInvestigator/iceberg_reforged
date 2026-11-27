@@ -83,9 +83,16 @@ onUnmounted(() => document.removeEventListener('keydown', onKey))
 </template>
 
 <style scoped>
-/* 动作条「紧贴面板底部」：默认 .modal-footer 的 8px 上下 padding 偏松，
-   改用与 sheet 的 .v2sheet-foot 共享的 --v2-dock-padding 变量（见 styles/v2.css）。 */
+/* 详情卡收紧头部与内容区边距（无需 V2EntryBody 负 margin 回抽）。
+   动作条紧贴面板底部，复用 styles/v2.css 的 --v2-dock-padding。 */
+:deep(.modal-header) { padding: 14px 22px 12px; }
+:deep(.modal-body) { padding: 14px 22px 20px; }
 :deep(.modal-footer) { padding: var(--v2-dock-padding); }
+
+@media (max-width: 640px) {
+  :deep(.modal-header) { padding: 12px 18px 10px; }
+  :deep(.modal-body) { padding: 12px 18px 18px; }
+}
 
 /* 箭头锚点：不参与平移，箭头才能留在边缘 */
 .v2card-wrap { position: relative; }

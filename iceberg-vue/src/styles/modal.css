@@ -17,12 +17,17 @@
 
 /* 面板基底 */
 .modal-panel {
+  --modal-px: 24px;
+  --modal-header-pt: 16px;
+  --modal-header-pb: 13px;
+  --modal-body-pt: 18px;
+  --modal-body-pb: 22px;
   background: var(--color-modal-bg, #1a1a1a);
   border: 1px solid var(--white-08);
   border-radius: 16px;
   padding: 0;
   width: 90vw;
-  max-height: 80vh; 
+  max-height: 82vh; 
   position: relative;
   display: flex;
   flex-direction: column; /* 讓 Header, Body, Footer 縱向排列 */
@@ -42,11 +47,11 @@
   display: flex; 
   align-items: center; 
   justify-content: space-between;
-  padding: 24px 32px 16px;
+  padding: var(--modal-header-pt) var(--modal-px) var(--modal-header-pb);
   background: var(--color-modal-bg, #1a1a1a);
-  border-bottom: 1px solid var(--white-04);
+  border-bottom: 1px solid var(--white-05);
 }
-.modal-header h2 { font-size: 1rem; font-weight: 700; color: var(--color-text-primary); letter-spacing: .05em; overflow-wrap: break-word; }
+.modal-header h2 { font-size: 1rem; font-weight: 700; line-height: 1.35; color: var(--color-text-primary); letter-spacing: .04em; overflow-wrap: break-word; }
 .modal-header .modal-close {
   /* 图标按钮统一规格（与标题旁搜索键同档）：32px 圆角盒，hover 才露底；
      X 字形光学偏小，图标取 20px 与 16px 的搜索键找平 */
@@ -60,7 +65,7 @@
 
 /* 獨立滾動的內容區 */
 .modal-body { 
-  padding: 24px 32px 32px; 
+  padding: var(--modal-body-pt) var(--modal-px) var(--modal-body-pb); 
   overflow-y: auto;
   flex: 1; /* 自動填滿剩餘高度 */
 }
@@ -68,7 +73,7 @@
 /* 底部動作條層（常駐不滾動，與面板同底） */
 .modal-footer {
   flex-shrink: 0;
-  padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+  padding: 6px 16px calc(6px + env(safe-area-inset-bottom, 0px));
   background: var(--color-modal-bg, #1a1a1a);
   border-top: 1px solid var(--white-08);
 }
@@ -78,9 +83,9 @@
   position: sticky; 
   bottom: 0; 
   z-index: 10;
-  padding: 16px 32px 20px;
+  padding: 11px var(--modal-px) 13px;
   background: var(--color-modal-bg, #1a1a1a);
-  border-top: 1px solid var(--white-04);
+  border-top: 1px solid var(--white-05);
   text-align: center; 
   font-size: var(--font-micro);
   color: var(--color-accent);
@@ -88,8 +93,8 @@
 
 /* 设置内提示 */
 .setting-hint {
-  font-size: var(--font-micro); line-height: 1.4;
-  color: var(--color-accent); padding: 0 4px;
+  font-size: var(--font-micro); line-height: 1.45;
+  color: var(--color-accent); padding: 0 2px;
 }
 
 /* 设置内警告：耗性能背景模式（冰山/液态）橙色提示 */
@@ -108,14 +113,16 @@
 /* 断点与 Tailwind sm(640px) 对齐 */
 @media (max-width: 640px) {
   .modal-panel { 
+    --modal-px: 18px;
+    --modal-header-pt: 14px;
+    --modal-header-pb: 11px;
+    --modal-body-pt: 14px;
+    --modal-body-pb: 18px;
     max-width: 92vw !important; 
     max-height: 85vh; 
     /* 不設 padding：內距由內部各層提供，避免疊加 */
   }
-  /* 統一等比例縮小內部間距 */
-  .modal-header { padding: 20px 20px 12px; }
-  .modal-body { padding: 16px 20px 20px; }
-  .modal-footer-hint { padding: 12px 20px calc(16px + env(safe-area-inset-bottom, 0px)); }
+  .modal-footer-hint { padding: 10px var(--modal-px) calc(12px + env(safe-area-inset-bottom, 0px)); }
   /* 关闭按钮触摸目标 ≥40×40px（padding 扩展点击区 + 负 margin 抵消布局位移，视觉不变） */
   .modal-header .modal-close { padding: 12px; margin: -12px; }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { hostOf, linkDisplay, sourceLabel } from './sourceLabel'
+import { extractUrlTitle, hostOf, linkDisplay, sourceLabel } from './sourceLabel'
 
 describe('hostOf / sourceLabel', () => {
   it('去协议与 www、转小写；非 http(s) 回退空串', () => {
@@ -17,10 +17,38 @@ describe('hostOf / sourceLabel', () => {
 })
 
 describe('linkDisplay（词条链接与参考链接统一口径）', () => {
-  it('人工 label 优先，副文案是域名', () => {
+  it('人工 label 优先，副文案是域名；占位纯词不追加标题', () => {
     expect(linkDisplay('百度百科', 'https://baike.baidu.com/item/x')).toEqual({
       name: '百度百科', host: 'baike.baidu.com', showHost: true,
     })
+  })
+
+  it('尽可能组合「网站名 · 页面标题」，同时避免重复站点名或域名占位', () => {
+    expect(linkDisplay('', 'https://zh.wikipedia.org/zh-hans/%E6%B0%B4%E7%8C%B4%E5%AD%90')).toEqual({
+      name: '维基百科 · 水猴子', host: 'zh.wikipedia.org', showHost: true,
+    })
+    expect(linkDisplay('百度百科', 'https://baike.baidu.com/item/%E9%98%B4%E9%98%B3%E7%9C%BC/7981406')).toEqual({
+      name: '百度百科 · 阴阳眼', host: 'baike.baidu.com', showHost: true,
+    })
+    expect(linkDisplay('那年月的“鸡血疗法”闹剧', 'https://epaper.gmw.cn/wzb/html/2013-01/17/nw.D110000wzb_20130117_2-08.htm')).toEqual({
+      name: '光明日报 · 那年月的“鸡血疗法”闹剧', host: 'epaper.gmw.cn', showHost: true,
+    })
+    expect(linkDisplay('kpzg.people.com.cn', 'http://kpzg.people.com.cn/n1/2016/0729/c404390-28595983.html')).toEqual({
+      name: '人民网', host: 'kpzg.people.com.cn', showHost: true,
+    })
+    expect(linkDisplay('', 'https://github.com/RookieInvestigator/Iceberg-Archive/blob/main/%E7%9B%97%E8%82%BE%E4%BC%A0%E8%AF%B4.pdf').name)
+      .toBe('GitHub · RookieInvestigator/Iceberg-Archive · 盗肾传说')
+    expect(linkDisplay('', 'https://www.reddit.com/r/UnresolvedMysteries/comments/3vypa3/since_1780_more_than_60_chinese_porcelain_seals/').name)
+      .toBe('Reddit · r/UnresolvedMysteries · since 1780 more than 60 chinese porcela…')
+    expect(linkDisplay('', 'https://web.archive.org/web/20130916013543/https://culture.ifeng.com/8/detail_2012_08/26/17099039_0.shtml').name)
+      .toBe('互联网档案馆 · 凤凰网')
+  })
+
+  it('过滤 CMS 编号、微信短 token 等无意义路径段', () => {
+    expect(extractUrlTitle('https://www.thepaper.cn/newsDetail_forward_11152898')).toBe('')
+    expect(extractUrlTitle('https://mp.weixin.qq.com/s/9DQCVoHp_baj_-yDZmaYUg')).toBe('')
+    expect(extractUrlTitle('https://www.hnmuseum.com/zh-hans/zuixintuijie/%E9%A9%AC%E7%8E%8B%E5%A0%86%E4%B8%80%E5%8F%B7%E6%B1%89%E5%A2%93t%E5%BD%A2%E5%B8%9B%E7%94%BB'))
+      .toBe('马王堆一号汉墓t形帛画')
   })
 
   it('label 缺失或等于 url 时按域名派生（旧副表把 url 当 label 写过）', () => {

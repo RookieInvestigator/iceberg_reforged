@@ -1,10 +1,9 @@
 /**
- * LiquidGradient 片段着色器（Mssh meshh 官方组件原样）：
+ * LiquidGradient 片段着色器：
  * 分层有机色彩流动 —— 黄金角旋转 + PCG 哈希种子 + 多层湍流正弦 +
  * OKLab/LCh 色彩空间插值 + 软色域映射 + 抖动降带。
  * 注意：fragment 使用 uvec3/floatBitsToUint 等 uint 运算，必须 GLSL ES 3.0
  * 且需 `precision highp int;`（见 shaderCanvas.ts 的 prepareFragmentShader）。
- * 引擎为官方 ShaderCanvas 移植（shaderCanvas.ts）。
  */
 
 export const fragmentShader = /* glsl */ `
@@ -47,18 +46,17 @@ vec3 toSrgb(vec3 c) {
 }
 
 vec3 linearToOklab(vec3 c) {
-    float l = 0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b;
-    float m = 0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b;
-    float s = 0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b;
-
-    l = pow(max(l, 0.0), 1.0/3.0);
-    m = pow(max(m, 0.0), 1.0/3.0);
-    s = pow(max(s, 0.0), 1.0/3.0);
+    vec3 lms = vec3(
+        0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b,
+        0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b,
+        0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b
+    );
+    lms = pow(max(lms, vec3(0.0)), vec3(1.0 / 3.0));
 
     return vec3(
-        0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
-        1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
-        0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+        0.2104542553 * lms.x + 0.7936177850 * lms.y - 0.0040720468 * lms.z,
+        1.9779984951 * lms.x - 2.4285922050 * lms.y + 0.4505937099 * lms.z,
+        0.0259040371 * lms.x + 0.7827717662 * lms.y - 0.8086757660 * lms.z
     );
 }
 
@@ -113,12 +111,17 @@ vec3 getColor(int idx) {
 
 vec3 paletteN(float t, int count) {
     if (count < 1) return vec3(0.0);
-    if (count < 2) return toLinear(getColor(0));
+    if (count < 2) return getColor(0);
 
-    float segmentSize = 1.0 / float(count - 1);
     t = clamp(t, 0.0, 1.0);
-    int idx = min(int(floor(t / segmentSize)), count - 2);
-    float localT = clamp((t - float(idx) * segmentSize) / segmentSize, 0.0, 1.0);
+    if (t <= 0.0001) return getColor(0);
+    if (t >= 0.9999) return getColor(count - 1);
+
+    float scaled = t * float(count - 1);
+    int idx = min(int(floor(scaled)), count - 2);
+    float localT = clamp(scaled - float(idx), 0.0, 1.0);
+    if (localT <= 0.0001) return getColor(idx);
+    if (localT >= 0.9999) return getColor(idx + 1);
 
     // 颜色已在 CPU 端转为 linear，无需再 toLinear
     vec3 lab0 = linearToOklab(getColor(idx));
@@ -155,7 +158,8 @@ vec3 softGamutMap(vec3 linearRgb) {
     float C = length(lab.yz);
     float h = atan(lab.z, lab.y);
 
-    float maxChroma = 0.4 * (1.0 - pow(abs(2.0 * L - 1.0), 2.0));
+    float dL = 2.0 * L - 1.0;
+    float maxChroma = 0.4 * (1.0 - dL * dL);
 
     if (C > maxChroma * 0.7) {
         float knee = maxChroma * 0.7;
@@ -166,6 +170,7 @@ vec3 softGamutMap(vec3 linearRgb) {
 }
 
 vec3 applyContrastSaturation(vec3 linearRgb, float contrast, float saturation) {
+    if (abs(contrast - 1.0) < 0.0001 && abs(saturation - 1.0) < 0.0001) return linearRgb;
     vec3 lab = linearToOklab(linearRgb);
     float C = length(lab.yz);
     float h = atan(lab.z, lab.y);
@@ -180,10 +185,6 @@ vec3 applyContrastSaturation(vec3 linearRgb, float contrast, float saturation) {
 
 // === MAIN ===
 void main() {
-    vec2 fragCoord = v_uv * u_resolution;
-    vec2 r = u_resolution;
-    vec2 p = (fragCoord * 2.0 - r) / r.y;
-
     int colorCount = u_colors_length;
 
     // Early out: no colors -> black
@@ -192,14 +193,21 @@ void main() {
         return;
     }
 
-    float t = u_time * 0.3;
+    vec2 r = u_resolution;
+    vec2 fragCoord = v_uv * r;
+    vec2 p = (fragCoord * 2.0 - r) / r.y;
 
-    // Map time onto a circle so animation seamlessly wraps.
-    float looping = step(0.5, u_loop);
-    float phase = TAU * u_time / max(u_loop, 0.01);
-    float radius = u_loop * u_speed * 0.3 / TAU;
-    float tA = sin(phase) * radius;
-    float tB = (1.0 - cos(phase)) * radius;
+    float t = u_time * 0.3;
+    float t1 = t * u_speed;
+    float t2Loop = 0.0;
+
+    // Map time onto a circle so animation seamlessly wraps when looping is active.
+    if (u_loop >= 0.5) {
+        float phase = TAU * u_time / max(u_loop, 0.01);
+        float radius = u_loop * u_speed * 0.3 / TAU;
+        t1 = sin(phase) * radius;
+        t2Loop = (1.0 - cos(phase)) * radius * 0.3;
+    }
 
     // Seed-based offsets
     vec3 seedOffset = seedRandom(u_seed);
@@ -214,24 +222,20 @@ void main() {
     float sn = sin(seedAngle);
     p = mat2(cs, -sn, sn, cs) * p;
 
-    // Get dither value
-    float dither = getDither(floor(fragCoord / u_pixelRatio), u_ditherMode);
-
     // === TURBULENCE ===
+    // 注：原 i=0 时 smoothstep(0.0, 0.5, 0.0) === 0 恒为零权重，跳过该轮省 25% 算力；
+    // i=1..3 权重分别为 0.5, 1.0, 0.5，总权重恒为 2.0。
     float totalVal = 0.0;
-    float totalWeight = 0.0;
     int turbIter = int(u_turbIter);
+    float turbFreqSafe = max(u_turbFreq, 0.01);
+    vec2 baseQ = p * u_scale;
+    bool jellifyOn = u_jellify > 0.5;
 
-    float freq = 1.0 / max(u_turbFreq, 0.01);
-
-    for (float i = 0.0; i < 4.0; i++) {
-        float eph = i / 4.0;
-
-        vec2 q = p * u_scale;
-        float sq = eph * eph;
-
-        if (u_jellify > 0.5) {
-            q.yx *= mix(1.0, 0.5, 1.0 - exp(-sq));
+    for (float i = 1.0; i < 4.0; i++) {
+        vec2 q = baseQ;
+        if (jellifyOn) {
+            float eph = i * 0.25;
+            q.yx *= mix(1.0, 0.5, 1.0 - exp(-(eph * eph)));
         }
 
         float a = seedPhase.x;
@@ -240,30 +244,32 @@ void main() {
         for (int j = 2; j < 13; j++) {
             if (j >= turbIter) break;
             float fj = float(j);
-            // When looping, use circular time. Otherwise original t.
-            float t1 = mix(t * u_speed, tA, looping);
-            float t2 = mix(t * u_speed, tB, looping);
-            q += u_turbAmp * sin(q.yx / freq * fj + t1 + vec2(a, d) + seedOffset.xy * fj) / fj;
-            a += cos(fj + d * 1.2 + q.x * 2.0 - t1 + seedOffset2.z + t2 * 0.3 * looping);
-            d += sin(fj * q.y + a + seedOffset.z + t1 + seedOffset2.y + t2 * 0.3 * looping);
+            q += u_turbAmp * sin(q.yx * (turbFreqSafe * fj) + t1 + vec2(a, d) + seedOffset.xy * fj) / fj;
+            a += cos(fj + d * 1.2 + q.x * 2.0 - t1 + seedOffset2.z + t2Loop);
+            d += sin(fj * q.y + a + seedOffset.z + t1 + seedOffset2.y + t2Loop);
         }
 
         float v = 0.5 + 0.5 * sin(length(q.yx + vec2(a, d) * 0.2) * u_waveFreq + i * i + seedOffset.x);
-        float weight = smoothstep(0.0, 0.5, eph) * smoothstep(1.0, 0.5, eph);
+        float weight = (i > 1.5 && i < 2.5) ? 1.0 : 0.5;
         totalVal += v * weight;
-        totalWeight += weight;
     }
 
-    float val = totalVal / totalWeight;
+    float val = totalVal * 0.5;
     val = clamp((val - 0.3) / 0.4, 0.0, 1.0);
     // [项目扩展] 沉海：u_darkShift 把采样位置向色板深端平移，
     // 越大则落入最深色（近黑）的区域越多，黑色占比随之扩大
     val = clamp(val - u_darkShift, 0.0, 1.0);
     val = pow(val, exp(-u_distBias));
-    val = clamp(val + (dither - 0.5) * u_dither, 0.0, 1.0);
+    if (u_ditherMode >= 0.5 && u_dither > 0.0) {
+        float dither = getDither(floor(fragCoord / u_pixelRatio), u_ditherMode);
+        val = clamp(val + (dither - 0.5) * u_dither, 0.0, 1.0);
+    }
 
-    vec3 col = paletteN(val, colorCount);
-    col *= u_exposure;
+    vec3 col = paletteN(val, colorCount) * u_exposure;
+    if (max(col.r, max(col.g, col.b)) <= 0.00001 && abs(u_contrast - 1.0) < 0.0001) {
+        fragColor = vec4(0.0, 0.0, 0.0, 1.0);
+        return;
+    }
     col = applyContrastSaturation(col, u_contrast, u_saturation);
     col = softGamutMap(col);
     col = toSrgb(col);

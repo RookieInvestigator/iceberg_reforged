@@ -378,7 +378,7 @@ function viewInIceberg(e: GlossaryEntry) {
 .hb-back:hover { color: var(--white-85); }
 
 
-/* 吸顶导航：显隐过渡与 .v2navwrap.v2-hidden 同语义（上滚显、下滚隐） */
+/* 吸顶导航：上滚显、下滚隐 */
 .hb-nav { transition: opacity 0.25s ease, transform 0.25s ease, visibility 0s; }
 .hb-nav.hb-hidden {
   opacity: 0; transform: translateY(-8px); visibility: hidden;

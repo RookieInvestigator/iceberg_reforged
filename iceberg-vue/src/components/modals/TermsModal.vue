@@ -15,15 +15,15 @@ const sections = computed(() => [t('termsService'), t('termsAccount'), t('termsI
 
 <template>
   <BaseModal :title="t('termsTitle')" size="md" @close="$emit('close')">
-    <div class="space-y-4 text-sm text-white-55 leading-relaxed">
+    <div class="space-y-3.5 text-sm text-white-55 leading-relaxed">
       <p>{{ t('termsIntro') }}</p>
-      <div class="border-t border-white-05 pt-5 space-y-5">
+      <div class="border-t border-white-05 pt-3.5 space-y-4">
         <section v-for="(s, i) in sections" :key="i">
-          <h3 class="text-sm font-bold text-white-85 tracking-wide mb-1.5">{{ s.title }}</h3>
+          <h3 class="text-sm font-bold text-white-85 tracking-wide mb-1">{{ s.title }}</h3>
           <p class="text-xs text-white-55 leading-relaxed m-0">{{ s.body }}</p>
         </section>
       </div>
-      <p class="border-t border-white-05 pt-3 text-xs text-white-30">{{ t('termsEffective') }}</p>
+      <p class="border-t border-white-05 pt-3.5 text-xs text-white-30">{{ t('termsEffective') }}</p>
     </div>
   </BaseModal>
 </template>

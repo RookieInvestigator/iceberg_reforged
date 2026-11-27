@@ -6,7 +6,7 @@ import { useStore } from '@nanostores/vue';
 import { searchQuery, searchMode, searchFuzzyMode, NEW_MARK_WINDOW_DAYS } from '../../lib/filterStore';
 import { detailMode, readItems, showReadMark, showTrail } from '../../lib/settingsStore';
 import { useI18n } from '../../lib/useI18n';
-import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, RELATED_MAP_KEY, ID_ALIASES_KEY, type RenderItem } from '../../lib/injectionKeys';
+import { FILTER_VISIBLE_KEY, DIM_ITEMS_KEY, RENDER_ITEMS_KEY, DESC_MAP_KEY, RELATED_MAP_KEY, ENTITIES_MAP_KEY, ID_ALIASES_KEY, type RenderItem } from '../../lib/injectionKeys';
 import { useSearchWorker } from '../../lib/iceberg/useSearchWorker';
 import { useRelatedIndex } from '../../lib/iceberg/useRelatedIndex';
 import { useFilterPipeline } from '../../lib/iceberg/useFilterPipeline';
@@ -26,6 +26,7 @@ const V2Sheet = defineAsyncComponent(() => import('./V2Sheet.vue'));
 const renderItemsRef = inject(RENDER_ITEMS_KEY)
 const descMap = inject(DESC_MAP_KEY, new Map<string, string>())
 const relatedMap = inject(RELATED_MAP_KEY, new Map<string, string[]>())
+const entitiesMap = inject(ENTITIES_MAP_KEY, new Map())
 const filterVisible = inject(FILTER_VISIBLE_KEY, null)
 // perf：dim 模式变暗集合（宿主视图提供，模板 :class 消费）
 const dimItems = inject(DIM_ITEMS_KEY, null)
@@ -52,7 +53,7 @@ const itemModAt = new Map(allItems.map(i => [i.id, i.modifiedAt || 0]));
 
 // ── codeq 拆分：搜索 Worker / 相关词条索引 / 过滤管线 / Tooltip 控制器 ──
 const { searchResults, initSearch } = useSearchWorker(query, sMode, fuzzyMode)
-const { pickRelated } = useRelatedIndex(itemMap, relatedMap)
+const { pickRelated } = useRelatedIndex(itemMap, relatedMap, entitiesMap)
 useFilterPipeline(allItems, { filterVisible, dimItems, searchResults, resolveId, newCutoff, itemModAt })
 // 可见文档序索引 / 匹配集（wallState 单遍维护）：前后导航 O(1) 查表、随机池 O(1)
 const navIdx = navIndex
@@ -80,7 +81,7 @@ function markRead(id: string) {
   const cur = readItems.get();
   // perf：上限 2000（约 16KB），超出丢弃最早记录，防 localStorage 无界增长
   if (!cur.includes(id)) readItems.set([...cur, id].slice(-2000));
-  // O(1) 定向标记：只改这一个元素，不重跑全量（与 applyItemMarks 的 read 判定同语义，
+  // O(1) 定向标记：只改这一个元素，不重跑全量（read 判定与 applyItemMarks 一致，
   // 元素 data-id 即当前 id）
   if (!showReadMark.get()) return;
   const el = getItemEl(id) ?? document.querySelector<HTMLElement>(`.iceberg-item[data-id="${CSS.escape(id)}"]`);

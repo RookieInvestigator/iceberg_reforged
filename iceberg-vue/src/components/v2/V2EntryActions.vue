@@ -9,12 +9,13 @@
 //
 // 自身不画分隔线/背景/留白：那是底栏（.modal-footer / .v2sheet-foot）的事，
 // 本件只出「一行按钮」，因此 card 与 sheet 两种宿位共用同一份外观。
-import { computed, inject, ref } from 'vue';
+import { computed, defineAsyncComponent, inject, ref } from 'vue';
 import { Heart, Star, Copy, Check, MessageCircle, ChevronLeft, ChevronRight, PencilLine } from '@lucide/vue';
 import { useI18n } from '../../lib/useI18n';
 import type { EntryView } from '../../lib/iceberg/entryView';
 import { ENTRY_IA_KEY } from '../../lib/iceberg/v2/keys';
-import FeedbackModal from '../modals/FeedbackModal.vue';
+
+const FeedbackModal = defineAsyncComponent(() => import('../modals/FeedbackModal.vue'));
 
 const props = defineProps<{
   item: EntryView

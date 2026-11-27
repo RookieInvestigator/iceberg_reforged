@@ -18,7 +18,7 @@ const links = [
 
 <template>
   <BaseModal :title="t('homeLinks')" size="sm" @close="$emit('close')">
-    <div class="space-y-4 text-sm text-white-55 leading-relaxed">
+    <div class="space-y-3.5 text-sm text-white-55 leading-relaxed">
       <p>{{ t('linksIntro') }}</p>
 
       <a v-for="(link, i) in links" :key="i" :href="link.url" target="_blank" rel="noopener noreferrer"

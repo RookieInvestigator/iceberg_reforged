@@ -1,8 +1,7 @@
 <script setup lang="ts">
 /**
- * LiquidGradient —— 流动液态渐变背景（Mssh meshh 官方组件 Vue 移植）。
- * 填充父容器，纯装饰（aria-hidden）；props 与参考实现一致，默认值为官方 defaultConfig。
- * 引擎为官方 ShaderCanvas 移植（src/lib/shaderCanvas.ts）。
+ * LiquidGradient —— 流动液态渐变背景。
+ * 填充父容器，纯装饰（aria-hidden）；引擎见 src/lib/shaderCanvas.ts。
  * WebGL2 不可用时回退为静态渐变。
  */
 import { computed, onActivated, onDeactivated, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -51,6 +50,8 @@ const props = withDefaults(
     brightness?: number
     /** [项目扩展] 渲染帧率上限，默认 60（60Hz 显示下等同不封顶）。滚动自适应等场景可动态下调 */
     fps?: number
+    /** [项目扩展] 冻结时间帧（减弱动效开启时，仅在尺寸或 uniform 变化时重绘单帧） */
+    frozen?: boolean
   }>(),
   {
     colorA: '#001220',
@@ -76,6 +77,7 @@ const props = withDefaults(
     darkShift: 0,
     brightness: 1,
     fps: 60,
+    frozen: false,
   },
 )
 
@@ -113,6 +115,7 @@ onMounted(() => {
       resolutionScale: bgResolutionScale(),
       fps: props.fps,
     })
+    if (props.frozen) engine.setFrozen(true)
   } catch {
     failed.value = true
   }
@@ -129,10 +132,20 @@ onDeactivated(() => {
   engine?.pause()
 })
 
-// props 是响应式对象 → watch 深层监听，运行时调参实时生效
-watch(props, syncUniforms)
-// fps 动态调整（滚动自适应降帧等）：只更新引擎帧率上限，无需重建
+// 仅监听真实 shader uniform 字段，避免 fps / brightness / frozen 变更误触全量 GL uniform 重传
+watch(
+  () => [
+    props.colorA, props.colorB, props.colorC, props.colorD, props.colorE,
+    props.seed, props.speed, props.loop, props.scale,
+    props.turbAmp, props.turbFreq, props.turbIter, props.waveFreq,
+    props.distBias, props.jellify, props.ditherMode, props.dither,
+    props.exposure, props.contrast, props.saturation, props.darkShift,
+  ],
+  syncUniforms,
+)
+// fps / frozen 动态调整：只更新引擎状态，无需重传 uniforms
 watch(() => props.fps, (fps) => engine?.setFps(fps ?? 30))
+watch(() => props.frozen, (frozen) => engine?.setFrozen(!!frozen))
 
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', onVisibilityChange)

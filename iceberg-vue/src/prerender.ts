@@ -50,12 +50,12 @@ const OTD_COUNT = parseCSV(onThisDayRaw).length
 // canonical / og:url 一律指向 site.config.json 里的域名（无论从哪个部署访问）。
 
 /**
- * 与浏览器端**同一条装配链**：normalizeData → 副表解析 → 标量订正 → 分类装配。
+ * 与浏览器端**同一条装配链**：normalizeData → 副表解析 → 标量订正 → 分类装配
+ * （复用 `useIcebergDataSource` 的装配顺序，而不是另写一份数据读取 —— 抽两份必然漂移）。
  *
  * 分类聚合页要直出「被副表订正过的」标题和正文：只读原始 iceberg.json 会漏掉
  * `overrides.csv` 的覆盖值与 `categories.csv` 的副分类（挂了副分类的词条在原始
- * 数据里只有主分类，用它筛选就会漏词条）。因此这里复刻 `useIcebergDataSource`
- * 的装配顺序，而不是另写一份数据读取 —— 抽两份必然漂移。
+ * 数据里只有主分类，用它筛选就会漏词条）。
  */
 const assembledItems: Array<IcebergItem & { tier: string }> = (() => {
   const normalized = normalizeData(raw)
@@ -489,13 +489,26 @@ function threeDHtml(): string {
   </div>`
 }
 
+function starsHtml(): string {
+  const total = Object.values(data.tiers).reduce((n, t) => n + (t?.length || 0), 0)
+  return `<div class="max-w-3xl mx-auto px-6 py-10 text-white">
+    <h1 class="text-2xl font-black tracking-wider">词条星图</h1>
+    <p class="mt-3 text-sm leading-7 text-gray-400">把 ${total} 条词条按语义实体（地名 / 时间 / 名词 / 发布平台）摊在一张可无限拖拽的星图上：词条是星，关系是线。需要启用 JavaScript 才能进入完整星图。</p>
+    <p class="mt-4 text-sm"><a href="${base}" class="text-sky-300 hover:text-sky-200">← 返回冰山图</a></p>
+    ${nav()}
+  </div>`
+}
+
 export async function prerender({ url }: { url: string }) {
   // /dive 是 DEV 专用实验页，不参与预渲染与 sitemap
   const categoryRoutes = CATEGORY_NAMES.map((name) => `/category/${categorySlug(name)}`)
-  const baseLinks = new Set(['/home', '/handbook', '/features', '/on-this-day', '/ancient-book', '/3d', ...categoryRoutes])
+  const baseLinks = new Set(['/home', '/handbook', '/features', '/on-this-day', '/ancient-book', '/stars', '/3d', ...categoryRoutes])
 
   if (url === '/') {
     return { html: homeHtml(), links: baseLinks, head: headFor('/', SITE, SITE_DESC) }
+  }
+  if (url === '/legacy') {
+    return { html: homeHtml(), links: baseLinks, head: headFor('/legacy', `${SITE}（旧版）`, `${SITE_DESC}旧版主图界面。`) }
   }
   if (url === '/home') {
     return { html: homeNavHtml(), links: baseLinks, head: headFor('/home', `首页 · ${SITE}`, '中文兔子洞冰山图站点导航') }
@@ -561,6 +574,9 @@ export async function prerender({ url }: { url: string }) {
   }
   if (url === '/ancient-book') {
     return { html: ancientBookHtml(), links: baseLinks, head: headFor('/ancient-book', `古籍线装书 · ${SITE}`, '以传统直排版式阅读中文兔子洞冰山图。') }
+  }
+  if (url === '/stars') {
+    return { html: starsHtml(), links: baseLinks, head: headFor('/stars', `词条星图 · ${SITE}`, '把全部词条按语义实体摊在一张无限星图上：词条是星，关系是线。') }
   }
   if (url === '/3d') {
     return { html: threeDHtml(), links: baseLinks, head: headFor('/3d', `3D 冰山 · ${SITE}`, '三维冰山：以3D界面浏览中文兔子洞冰山图。') }

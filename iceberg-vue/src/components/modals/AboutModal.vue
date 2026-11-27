@@ -15,21 +15,21 @@ const GITHUB_URL = 'https://github.com/RookieInvestigator/iceberg_reforged';
 
 <template>
   <BaseModal :title="t('aboutTitle')" size="md" @close="$emit('close')">
-    <div class="space-y-4 text-sm text-white-55 leading-relaxed">
+    <div class="space-y-3.5 text-sm text-white-55 leading-relaxed">
       <p>{{ t('aboutDescription') }}</p>
 
-      <div class="border-t border-white-05 pt-4 grid grid-cols-2 gap-2 text-center">
-        <div class="rounded-lg bg-white-03 py-3">
+      <div class="border-t border-white-05 pt-3.5 grid grid-cols-2 gap-2.5 text-center">
+        <div class="rounded-lg bg-white-03 py-2.5">
           <div class="text-lg font-bold text-white-85">{{ props.entryCount }}</div>
           <div class="mt-0.5 text-xs text-white-40">{{ t('aboutEntries') }}</div>
         </div>
-        <div class="rounded-lg bg-white-03 py-3">
+        <div class="rounded-lg bg-white-03 py-2.5">
           <div class="text-lg font-bold text-white-85">{{ props.buildDate || '—' }}</div>
           <div class="mt-0.5 text-xs text-white-40">{{ t('aboutBuildDate') }}</div>
         </div>
       </div>
 
-      <div class="border-t border-white-05 pt-4 space-y-3">
+      <div class="border-t border-white-05 pt-3.5 flex flex-col items-start gap-2.5">
         <button type="button" class="inline-flex items-center gap-2 text-xs text-white-50 no-underline bg-transparent border-none p-0 cursor-pointer transition-colors duration-200 hover:text-white-80" @click="$emit('open-copyright')">
           <span>{{ t('copyrightLink') }}</span>
           <span aria-hidden="true">→</span>

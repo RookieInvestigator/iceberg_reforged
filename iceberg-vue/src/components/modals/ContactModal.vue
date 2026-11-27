@@ -13,9 +13,9 @@ const contacts = [
 
 <template>
   <BaseModal :title="t('contactTitle')" size="sm" @close="$emit('close')">
-    <div class="space-y-4 text-sm text-white-55 leading-relaxed">
+    <div class="space-y-3.5 text-sm text-white-55 leading-relaxed">
       <p>{{ t('contactIntro') }}</p>
-      <div class="border-t border-white-05 pt-4 space-y-3 text-xs">
+      <div class="border-t border-white-05 pt-3.5 space-y-2.5 text-xs">
         <div v-for="(c, i) in contacts" :key="i" class="flex items-center gap-2">
           <span class="text-white-30 w-24 shrink-0">{{ c.label || t(c.labelKey) }}</span>
           <span v-if="!c.url" class="text-white-15 italic">—</span>

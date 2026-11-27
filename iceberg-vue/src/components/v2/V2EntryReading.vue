@@ -37,17 +37,17 @@ const { t } = useI18n()
 
 <style scoped>
 .v2reading-title {
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-size: var(--font-micro);
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--white-40);
+  color: var(--white-45);
 }
 .v2reading-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;

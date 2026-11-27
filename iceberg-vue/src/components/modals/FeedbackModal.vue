@@ -111,7 +111,7 @@ async function submit() {
 
     <!-- 表单：整条预填 + 说明 -->
     <template v-else>
-      <div class="space-y-3">
+      <div class="space-y-3.5">
         <label class="block">
           <span class="fb-label">{{ t('feedbackFieldTitle') }}</span>
           <input v-model="fTitle" class="fb-input" />
@@ -120,7 +120,7 @@ async function submit() {
           <span class="fb-label">{{ t('feedbackFieldDesc') }}</span>
           <textarea v-model="fDesc" rows="4" class="fb-input resize-y"></textarea>
         </label>
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-2 gap-2.5">
           <label class="block">
             <span class="fb-label">{{ t('feedbackFieldCategory') }}</span>
             <select v-model="fCategory" class="fb-input">
@@ -150,10 +150,12 @@ async function submit() {
         </label>
         <p v-if="changedCount === 0" class="text-xs text-white-30">{{ t('feedbackNoteOnly') }}</p>
         <p v-if="errorMsg" class="text-xs text-danger" role="alert">{{ errorMsg }}</p>
-        <button @click="submit" :disabled="sending"
-          class="w-full py-2 rounded-md text-xs font-medium bg-white text-black hover:bg-white-85 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
-          {{ sending ? t('feedbackSending') : t('feedbackSubmit') }}
-        </button>
+        <div class="pt-1">
+          <button @click="submit" :disabled="sending"
+            class="w-full py-2 rounded-md text-xs font-medium bg-white text-black hover:bg-white-85 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+            {{ sending ? t('feedbackSending') : t('feedbackSubmit') }}
+          </button>
+        </div>
       </div>
     </template>
   </BaseModal>
@@ -161,7 +163,7 @@ async function submit() {
 
 <style scoped>
 .fb-label {
-  display: block; margin-bottom: 6px;
+  display: block; margin-bottom: 5px;
   font-size: var(--font-micro); font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.12em; color: var(--white-45);
 }

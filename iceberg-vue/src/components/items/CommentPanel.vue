@@ -154,7 +154,7 @@ watch(() => props.itemId, (id) => { if (supabaseReady) load() })
 <template>
   <div v-if="supabaseReady && opened" class="cmt">
     <!-- 展开状态：宿主（动作条评论按钮）控制 opened -->
-    <div class="cmt-hd flex items-center gap-1.5 mb-2.5">
+    <div class="cmt-hd flex items-center gap-1.5 mb-2">
       <MessageCircle class="shrink-0" :size="12" :stroke-width="1.7" aria-hidden="true" />
       <span class="text-tiny font-bold text-white-40 tracking-[0.06em]">{{ t('commentsTitle') }}</span>
       <span v-if="comments.length" class="text-tiny text-white-45">{{ comments.length }}</span>
@@ -162,7 +162,7 @@ watch(() => props.itemId, (id) => { if (supabaseReady) load() })
     </div>
 
     <!-- 输入（P1-12: maxlength=2000 与数据库 CHECK 一致；取消匿名评论，未登录仅提示） -->
-    <div v-if="u" class="mb-3">
+    <div v-if="u" class="mb-2.5">
       <textarea v-model="text"
         ref="inputEl"
         :placeholder="t('commentAsLogin').replace('{name}', u.displayName)"
@@ -176,18 +176,18 @@ watch(() => props.itemId, (id) => { if (supabaseReady) load() })
         </button>
       </div>
     </div>
-    <p v-else class="text-xs text-white-45 py-2 italic">{{ t('commentLoginHint') }}</p>
+    <p v-else class="text-xs text-white-45 py-1.5 italic">{{ t('commentLoginHint') }}</p>
 
     <!-- 列表 -->
-    <div v-if="loadError" class="cmt-error flex items-center justify-between gap-2 text-xs text-white-50 py-2">
+    <div v-if="loadError" class="cmt-error flex items-center justify-between gap-2 text-xs text-white-50 py-1.5">
       <span>{{ t('commentsLoadFailed') }}</span>
       <button @click="load" class="cmt-retry text-tiny px-2.5 py-0.5 rounded-xs bg-white-06 border border-white-10 text-white-60 cursor-pointer hover:bg-white-12 hover:text-white-90 max-sm:min-h-10 max-sm:px-2.5 max-sm:py-2">{{ t('retry') }}</button>
     </div>
-    <div v-else-if="loading" class="cmt-loading text-xs text-white-45 py-2">{{ t('loadingComments') }}</div>
-    <div v-else-if="comments.length === 0" class="cmt-empty text-xs text-white-45 py-2">{{ t('noCommentsYet') }}</div>
-    <div v-else class="cmt-list flex flex-col gap-1">
+    <div v-else-if="loading" class="cmt-loading text-xs text-white-45 py-1.5">{{ t('loadingComments') }}</div>
+    <div v-else-if="comments.length === 0" class="cmt-empty text-xs text-white-45 py-1.5">{{ t('noCommentsYet') }}</div>
+    <div v-else class="cmt-list flex flex-col gap-0.5">
       <div v-for="c in comments" :key="c.id" class="cmt-item py-2 border-b border-white-03 last:border-none">
-        <div class="flex items-baseline gap-1.5 mb-1">
+        <div class="flex items-baseline gap-1.5 mb-0.5">
           <span class="text-xs font-bold text-white-45">{{ c.author_name }}</span>
           <span class="text-micro text-white-45">{{ timeAgo(c.created_at) }}</span>
           <button v-if="u && u.id === c.user_id" @click="doDelete(c.id)"

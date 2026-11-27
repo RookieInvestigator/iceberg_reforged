@@ -8,7 +8,7 @@ import {
   toPlainText,
 } from './richText'
 
-// 术语表单一事实源（HandbookView 与 V2 徽章共用）：tab 定义、深链构造、md 解析。
+// 术语表单一事实源（HandbookView 与词条徽章共用）：tab 定义、深链构造、md 解析。
 // 富文本原语（行内标记 / 引用块 / 换行规整）统一在 lib/richText.ts，这里只做手册专属的
 // 文件结构解析（## 节 → ### 条目）并向后兼容地转出共用原语。
 export const HANDBOOK_TABS = [

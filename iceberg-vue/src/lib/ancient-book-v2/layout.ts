@@ -35,7 +35,7 @@ export const FONT_STACKS: Record<FontFamily, string> = {
   kai: "'Huiji Zhengkai', 'HanaMinA', serif",
   // 朱雀仿宋：民国铅印仿宋，笔画瘦硬，适合排「志怪」这类笔记体
   fangsong: "'Zhuque Fangsong', 'HanaMinA', serif",
-  // 仲春仿宋：聚珍仿宋二号长体复刻，长体、老笔形，最有老铅印味
+  // 仲春仿宋：聚珍仿宋二号长体，长体、老笔形，最有老铅印味
   sotyr: "'Sotyr Fangsong', 'HanaMinA', serif",
 }
 

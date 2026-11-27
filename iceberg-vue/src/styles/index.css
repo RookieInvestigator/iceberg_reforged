@@ -144,7 +144,7 @@
   }
   /* ===== 桌面端 hover —— 两模式语义分离 =====
      tooltip 模式：hover 有 marker 背景承担对比度 → 黑字**无需描边/阴影**
-     （隐藏镜像描边层 + text-shadow 移除）；tooltip-active 同语义（data-detail 守卫不泄漏）。
+     （隐藏镜像描边层 + text-shadow 移除）；tooltip-active 同规则（data-detail 守卫不泄漏）。
      modal 模式：hover 无 marker 背景，仅透明度反馈 → 描边/光晕**保持原样**。 */
   @media (min-width: 1024px) {
     /* —— tooltip 模式 —— */
@@ -162,7 +162,7 @@
     html:not([data-detail="modal"]) .iceberg-item:hover .item-tag,
     html:not([data-detail="modal"]) .iceberg-item.tooltip-active .item-tag { color: #000 !important; }
     /* 多分类渐变字：字形填充由 -webkit-text-fill-color 承担（color 在 clip 模式下
-       不参与填充），hover 黑字必须改它，与上条同语义；去掉 background-image
+       不参与填充），hover 黑字必须改它（同上条规则）；去掉 background-image
        免得抗锯齿边缘渗出渐变彩边 */
     html:not([data-detail="modal"]) .iceberg-item.multi-cat:hover .item-title,
     html:not([data-detail="modal"]) .iceberg-item.multi-cat.tooltip-active .item-title {

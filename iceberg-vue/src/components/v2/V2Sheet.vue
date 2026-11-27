@@ -164,7 +164,7 @@ function onHandleTouchCancel() {
       <div ref="swipeNextHint" class="v2swipe-hint v2swipe-hint--next" aria-hidden="true">
         <ChevronLeft :size="22" :stroke-width="1.8" />
       </div>
-      <div class="shrink-0 flex justify-center pt-3 pb-2 touch-none"
+      <div class="shrink-0 flex justify-center pt-2.5 pb-1 touch-none"
         @touchstart="onHandleTouchStart" @touchmove="onHandleTouchMove" @touchend="onHandleTouchEnd" @touchcancel="onHandleTouchCancel">
         <div class="sheet-handle"></div>
       </div>
@@ -194,12 +194,15 @@ function onHandleTouchCancel() {
 </template>
 
 <style scoped>
-/* 标题行：间距沿用原值（上 2 / 下 8）；移动端无 × 关闭键（下滑/点遮罩关闭），标题占满行宽 */
+/* 标题行：收紧顶部与下方徽章间距 */
 .v2sheet-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
-  margin: 2px 0 8px;
+  margin: 0 0 10px;
+}
+.v2sheet-head :deep(.entry-search-btn--touch) {
+  margin-right: -10px;
 }
 .v2sheet-head__title {
   flex: 1;

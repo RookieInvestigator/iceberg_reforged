@@ -73,7 +73,7 @@ function clearData() {
 
 <template>
   <BaseModal :title="t('settings')" size="md" :showFooter="true" @close="$emit('close')">
-    <div class="space-y-4">
+    <div class="space-y-3.5">
 
       <div class="flex gap-2">
         <button @click="applySimpleMode()" class="flex-1 py-2 rounded-md text-xs font-medium border border-white-10 text-white-60 hover:text-white hover:bg-white-05 transition-colors">{{ t('simpleMode') }}</button>

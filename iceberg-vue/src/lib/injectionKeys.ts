@@ -1,6 +1,6 @@
 import type { InjectionKey, ShallowRef } from 'vue'
 import type { IcebergItem } from './data'
-import type { CategoryRecord, ContributorRecord, ExtraRecord, ReadingRecord } from './iceberg/appendix'
+import type { CategoryRecord, ContributorRecord, EntityRecord, ExtraRecord, ReadingRecord } from './iceberg/appendix'
 
 /**
  * 主冰山图（IndexNextView）全量下发数据的注入键（codeq 第二波：11 个字符串 key 全部类型化，
@@ -47,6 +47,9 @@ export const EXTRA_MAP_KEY: InjectionKey<Map<string, ExtraRecord[]>> = Symbol('e
 
 /** 分类副表（categories.csv）全量记录：`item_id → CategoryRecord[]`（role=main 覆盖主分类 / extra 追加副分类，见 lib/iceberg/appendix.ts） */
 export const CATEGORIES_MAP_KEY: InjectionKey<Map<string, CategoryRecord[]>> = Symbol('categoriesMap')
+
+/** 抽取实体副表（entities.csv）：`item_id → {places,times,nouns}` */
+export const ENTITIES_MAP_KEY: InjectionKey<Map<string, EntityRecord>> = Symbol('entitiesMap')
 
 export const OPEN_ON_THIS_DAY_KEY: InjectionKey<() => void> = Symbol('openOnThisDay')
 export const ID_ALIASES_KEY: InjectionKey<Map<string, string>> = Symbol('idAliases')

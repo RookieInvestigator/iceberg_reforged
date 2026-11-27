@@ -33,6 +33,11 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>__SITE_ORIGIN__/stars/</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>__SITE_ORIGIN__/3d/</loc>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>

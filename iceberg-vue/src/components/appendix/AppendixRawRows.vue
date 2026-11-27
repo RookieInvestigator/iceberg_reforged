@@ -4,7 +4,7 @@
 // 关键约定：**控件按表的声明渲染**，不按「所有表都长一样」猜 ——
 //   · role 下拉只在有 role 列的表出现（contributors 没有，出过幽灵空下拉）；
 //   · by / at 输入框只在有这两列的表出现；
-//   · 行体（原/改对照、关联选择器）只给对应的表。
+//   · 行体（原/改值编辑、关联选择器）只给对应的表。
 import { computed, ref } from 'vue'
 import type { AppendixEditor, Row } from '../../lib/iceberg/useAppendixEditor'
 
@@ -90,7 +90,7 @@ function origValueOf(row: Row): string {
           </div>
         </div>
 
-        <!-- categories：主分类对照 + 分类下拉 -->
+        <!-- categories：原值显示 + 分类下拉 -->
         <div v-else-if="def.key === 'categories'" class="pair">
           <div class="box box-orig"><span class="ok">原</span><div class="bv">主分类 {{ ed.upstream.value.category }}</div></div>
           <div class="box box-new">
@@ -157,6 +157,16 @@ function origValueOf(row: Row): string {
                 @input="ed.setCell(def, idx, 'note', ($event.target as HTMLInputElement).value)" />
             </div>
           </div>
+        </div>
+
+        <!-- entities：地名 / 时间 / 核心名词（`|` 分隔） -->
+        <div v-else-if="def.key === 'entities'" class="bv">
+          <input class="cell" :value="row.places || ''" placeholder="地名（| 分隔）"
+            @input="ed.setCell(def, idx, 'places', ($event.target as HTMLInputElement).value)" />
+          <input class="cell" :value="row.times || ''" placeholder="时间/年代（| 分隔）"
+            @input="ed.setCell(def, idx, 'times', ($event.target as HTMLInputElement).value)" />
+          <input class="cell" :value="row.nouns || ''" placeholder="核心名词（| 分隔）"
+            @input="ed.setCell(def, idx, 'nouns', ($event.target as HTMLInputElement).value)" />
         </div>
 
         <!-- contributors：署名行（by/at 已在行首），正文无需控件 -->

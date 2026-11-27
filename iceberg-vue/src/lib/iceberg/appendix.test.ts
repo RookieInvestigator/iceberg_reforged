@@ -27,14 +27,14 @@ import {
  */
 
 const EMPTY_RAW = {
-  overrides: '', categories: '', references: '', reading: '', related: '', contributors: '', extra: '',
+  overrides: '', categories: '', references: '', reading: '', related: '', contributors: '', extra: '', entities: '',
 }
 
 describe('APPENDIX_TABLES 表定义', () => {
-  it('七张表，key / file 唯一', () => {
-    expect(APPENDIX_TABLES).toHaveLength(7)
-    expect(new Set(APPENDIX_TABLES.map((t) => t.key)).size).toBe(7)
-    expect(new Set(APPENDIX_TABLES.map((t) => t.file)).size).toBe(7)
+  it('八张表，key / file 唯一', () => {
+    expect(APPENDIX_TABLES).toHaveLength(8)
+    expect(new Set(APPENDIX_TABLES.map((t) => t.key)).size).toBe(8)
+    expect(new Set(APPENDIX_TABLES.map((t) => t.file)).size).toBe(8)
   })
 
   it('每张表的 idColumn 与键列都必须在 headers 里（否则编辑器/解析会静默落空）', () => {
@@ -158,6 +158,29 @@ describe('parseAppendix', () => {
     expect(apx.related.get('a')).toEqual(['b'])
     expect(apx.related.get('b')).toEqual(['a', 'c'])
     expect(apx.related.get('c')).toEqual(['b'])
+  })
+
+  it('entities：地名 / 时间 / 核心名词 / 平台按 | 分隔解析（旧 CSV 无 platforms 列时为空）', () => {
+    const apx = parseAppendix({
+      ...EMPTY_RAW,
+      entities:
+        'item_id,places,times,nouns,platforms\n' +
+        'be29bf68,东北|香港|韩国,1990年代|1980年代,都市传说|诈尸|猫,天涯|贴吧\n' +
+        'old12345,北京,,,\n',
+    })
+    expect(apx.entities.get('be29bf68')).toEqual({
+      places: ['东北', '香港', '韩国'],
+      times: ['1990年代', '1980年代'],
+      nouns: ['都市传说', '诈尸', '猫'],
+      platforms: ['天涯', '贴吧'],
+    })
+    // 旧格式（无 platforms 列）也能解析，platforms 为空数组
+    const legacy = parseAppendix({
+      ...EMPTY_RAW,
+      entities: 'item_id,places,times,nouns\nold12345,北京,,\n',
+    })
+    expect(legacy.entities.get('old12345')?.platforms).toEqual([])
+    expect(apx.entities.size).toBe(2)
   })
 })
 

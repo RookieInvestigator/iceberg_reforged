@@ -5,9 +5,12 @@ import { canonicalUrl } from '../lib/site'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/',             component: () => import('../views/v2/IndexNextView.vue') },
+    // 主图：V3（第三代实现）。旧版主图整体迁往 /legacy，/v2、/v3 是历史入口的重定向
+    { path: '/',             component: () => import('../views/v3/IndexV3View.vue') },
+    { path: '/legacy',       component: () => import('../views/v2/IndexNextView.vue') },
+    { path: '/v2',           redirect: '/legacy' },
+    { path: '/v3',           redirect: '/' },
     // 第一代主图入口保留为重定向，老书签不 404（归档见 data/archive/legacy-v1-2026-10/）
-    { path: '/legacy',       redirect: '/' },
     { path: '/home',         component: () => import('../views/HomeView.vue') },
     { path: '/handbook',     component: () => import('../views/HandbookView.vue') },
     { path: '/features',     component: () => import('../views/FeaturesView.vue') },
@@ -15,15 +18,15 @@ const router = createRouter({
     // 分类聚合页：词条没有独立 URL（深链是 #id 的 hash），全站可索引正文一度只有 8 页。
     // 按 15 个分类聚合后，1461 条正文全部落在真实 URL 上（体积约等于逐条预渲染的 1/22）。
     { path: '/category/:slug',   component: () => import('../views/CategoryView.vue') },
-    // 词条星图（/words）已降级为 DEV 专用页面，只在 import.meta.env.DEV 区块注册
-    { path: '/minimal',      redirect: '/' },
-    { path: '/v2',           redirect: '/' },
+    { path: '/minimal',      redirect: '/legacy' },
     { path: '/on-this-day',  component: () => import('../views/OnThisDayView.vue') },
-    // 沉浸式全屏画面：AppShell 据此隐藏公告条与自动弹窗（3D 冰山 / 古籍）
-    // 古籍 v2：夹注分栏 / 句读三档 / 版心可配（算法见 lib/ancient-book-v2/NOTICE.md）
+    // 沉浸式全屏画面：AppShell 据此隐藏公告条与自动弹窗（3D 冰山 / 古籍 / 星图）
     { path: '/ancient-book', component: () => import('../views/AncientBookV2View.vue'), meta: { immersive: true } },
-    // v1 保留一版便于对照，确认 v2 稳定后删除
     { path: '/ancient-book-v1', component: () => import('../views/AncientBookView.vue'), meta: { immersive: true } },
+    // 词条星图：把词条按语义实体（地名 / 时间 / 名词 / 平台）摊在一张无限星图上，
+    // 与 3D 冰山同为沉浸式全屏画面。旧路径 /words 保留重定向，老链接不 404。
+    { path: '/stars',        component: () => import('../views/WordsView.vue'), meta: { immersive: true } },
+    { path: '/words',        redirect: '/stars' },
     { path: '/3d',           component: () => import('../views/Iceberg3DView.vue'), meta: { immersive: true } },
     { path: '/:pathMatch(.*)*', component: () => import('../views/NotFoundView.vue') },
   ],
@@ -53,10 +56,6 @@ if (import.meta.env.DEV) {
   router.addRoute({ path: '/feedback-review', component: () => import('../views/FeedbackReviewView.vue'), meta: { devTool: true } })
   // 深潜巡游（/dive）：实验性 WebGL 页面，仅限本地开发访问，生产构建不产出路由与 chunk
   router.addRoute({ path: '/dive', component: () => import('../views/SubmarineDiveView.vue') })
-  // 词条星图：把词条按「同分类 / 共标签」的关系摊在一张无限画布上。
-  // 原本是正式路由，现降级为开发工具（外套 DevShell 顶栏，见 DEV 页面导航），
-  // 生产构建不产出路由与 chunk，站内也不再有任何入口指向它。
-  router.addRoute({ path: '/words', component: () => import('../views/WordsView.vue'), meta: { devTool: true } })
 }
 
 // P1-13：消费 404.html 重定向携带的 ?r=（原始 path + search + hash 的一次 encodeURIComponent），

@@ -10,6 +10,10 @@
  * 1432 词条全量重排，弹窗打开瞬间的卡顿主因之一）。加锁时给 body 补偿
  * 等宽 padding-right，视口宽度不变，reflow 范围缩到最小。
  */
+import { atom } from 'nanostores'
+
+export const overlayActive = atom(false)
+
 let tokens = new Set<symbol>()
 let locked = false
 let originalOverflow = { body: '', html: '' }
@@ -21,6 +25,7 @@ export function lockOverlay(): () => void {
 
   if (!locked) {
     locked = true
+    overlayActive.set(true)
     const body = document.body
     const html = document.documentElement
     originalOverflow = { body: body.style.overflow, html: html.style.overflow }
@@ -36,6 +41,7 @@ export function lockOverlay(): () => void {
     tokens.delete(token)
     if (tokens.size === 0 && locked) {
       locked = false
+      overlayActive.set(false)
       document.body.style.overflow = originalOverflow.body
       document.documentElement.style.overflow = originalOverflow.html
       document.body.style.paddingRight = originalPaddingRight

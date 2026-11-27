@@ -38,7 +38,6 @@ docs/plans/
 
 # ── 工具产物（临时对比/导出，不入库） ────────────
 /outputs/
-.tmp-iceberg-research/
 
 # ── 历史项目（已压缩归档至 data/archive/legacy-2026-08/） ──
 iceberg-astro/
@@ -62,8 +61,14 @@ skills-lock.json
 fonts.googleapis.com/
 wasm---wasm/
 
+# ── 临时目录 / 交付物快照（不入库） ───────────────
+.tmp-*/
+/*-review-bundle/
+/*-review-bundle.zip
+/iceberg_reforged.zip
+
 # ── 系统 ────────────────────────────────────────
 .DS_Store
 
 # 古籍排版研究用的第三方仓库克隆（临时，不入库）
-.tmp-guji-research/
+# （.tmp-*/ 已统一覆盖）

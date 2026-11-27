@@ -12,6 +12,7 @@
  * | 关联词条   | `related.csv`    | `source_id,target_id`           | (source_id,target_id)  | 双向索引，见下方 parse |
  * | 署名       | `contributors.csv` | `item_id,by,at`               | (item_id,by)           | 谁贡献过这个词条；`at` 只存档不展示 |
  * | 标记       | `extra.csv`      | `item_id,flag,note`             | (item_id,flag)         | 行的存在即标记为真；`flag ∈ {warn,need}`，`note` 是 tooltip 文案 |
+ * | 语义实体   | `entities.csv`   | `item_id,places,times,nouns,platforms` | (item_id)       | 从标题与描述抽取的地名 / 时间 / 核心名词 / 发布平台（`|` 分隔），供词条星图与关联评分使用 |
  *
  * ## 越界不静默
  *
@@ -23,6 +24,7 @@
  */
 import { isSafeHttpUrl } from '../data'
 import { parseCSV } from '../csv'
+import { parseEntityList } from './entityExtract'
 
 export type AppendixKey =
   | 'overrides'
@@ -32,6 +34,7 @@ export type AppendixKey =
   | 'related'
   | 'contributors'
   | 'extra'
+  | 'entities'
 
 export interface AppendixTableDef {
   key: AppendixKey
@@ -126,6 +129,16 @@ export const APPENDIX_TABLES: readonly AppendixTableDef[] = [
     keyColumns: ['item_id', 'flag'],
     writtenBy: '副表编辑器手填',
   },
+  {
+    key: 'entities',
+    file: 'entities.csv',
+    label: '抽取实体（地名 / 时间 / 名词 / 平台）',
+    area: '语义实体',
+    headers: ['item_id', 'places', 'times', 'nouns', 'platforms'],
+    idColumn: 'item_id',
+    keyColumns: ['item_id'],
+    writtenBy: 'scripts/generate_entities.mjs 抽取 + 副表编辑器微调',
+  },
 ] as const
 
 /**
@@ -208,6 +221,14 @@ export interface ExtraRecord {
   note: string
 }
 
+/** 抽取实体：`entities.csv` 的一行（从标题/描述抽取的规范化语义特征） */
+export interface EntityRecord {
+  places: string[]
+  times: string[]
+  nouns: string[]
+  platforms: string[]
+}
+
 export interface AppendixData {
   /** item_id → 订正记录（按 CSV 顺序；同 (item_id,field) 多行时 last-wins，由 overrides.ts 决定） */
   overrides: Map<string, OverrideRecord[]>
@@ -223,6 +244,8 @@ export interface AppendixData {
   contributors: Map<string, ContributorRecord[]>
   /** item_id → 标记记录（保序去重 (item_id,flag)） */
   extra: Map<string, ExtraRecord[]>
+  /** item_id → 抽取实体（地名 / 时间 / 核心名词） */
+  entities: Map<string, EntityRecord>
   /** 越界写法（去重，形如 `overrides.csv:category（应写 categories.csv）`），调用方必须外显 */
   violations: string[]
 }
@@ -235,6 +258,7 @@ export interface AppendixRaw {
   related: string
   contributors: string
   extra: string
+  entities: string
 }
 
 /** 读全部副表（构建期 raw 文本）。键名与 APPENDIX_TABLES 的 key 一致 */
@@ -245,7 +269,7 @@ export function readAppendixRaw(): AppendixRaw {
     eager: true,
   }) as Record<string, string>
   const out: AppendixRaw = {
-    overrides: '', categories: '', references: '', reading: '', related: '', contributors: '', extra: '',
+    overrides: '', categories: '', references: '', reading: '', related: '', contributors: '', extra: '', entities: '',
   }
   for (const def of APPENDIX_TABLES) {
     out[def.key] = mods[`../../data/appendix/${def.file}`] || ''
@@ -263,6 +287,7 @@ export function parseAppendix(raw: AppendixRaw): AppendixData {
     related: new Map(),
     contributors: new Map(),
     extra: new Map(),
+    entities: new Map(),
     violations: [],
   }
   const violations = new Set<string>()
@@ -379,6 +404,19 @@ export function parseAppendix(raw: AppendixRaw): AppendixData {
     if (list.some((r) => r.flag === flag)) continue
     list.push({ flag, note: (row.note || '').trim() })
     out.extra.set(id, list)
+  }
+
+  // ── entities.csv：item_id → {places,times,nouns,platforms}（`|` 分隔，last-wins）────
+  // platforms 列是后加的，旧 CSV 无此列时 parseEntityList(undefined) 返回空数组，兼容
+  for (const row of parseCSV(raw.entities || '')) {
+    const id = (row.item_id || '').trim()
+    if (!id) continue
+    out.entities.set(id, {
+      places: parseEntityList(row.places),
+      times: parseEntityList(row.times),
+      nouns: parseEntityList(row.nouns),
+      platforms: parseEntityList(row.platforms),
+    })
   }
 
   out.violations = [...violations]

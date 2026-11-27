@@ -12,12 +12,35 @@ export interface ReportMeta {
   [key: string]: string | number | boolean | undefined
 }
 
+export function formatError(err: unknown): string {
+  if (err instanceof Error) return err.message ? `${err.name}: ${err.message}` : err.name
+  if (typeof err === 'object' && err !== null) {
+    const rec = err as Record<string, unknown>
+    const code = typeof rec.code === 'string' || typeof rec.code === 'number' ? String(rec.code).trim() : ''
+    const status = typeof rec.status === 'number' && rec.status > 0 ? rec.status : null
+    const msg = typeof rec.message === 'string' ? rec.message.trim() : ''
+    const details = typeof rec.details === 'string' ? rec.details.trim() : ''
+    const hint = typeof rec.hint === 'string' ? rec.hint.trim() : ''
+    const prefix = code ? `[${code}] ` : status ? `[HTTP ${status}] ` : ''
+    const primary = msg || details || hint
+    if (primary) {
+      const extra = details && details !== primary ? ` (${details})` : ''
+      return `${prefix}${primary}${extra}`
+    }
+    try {
+      return JSON.stringify(rec)
+    } catch {
+      return Object.prototype.toString.call(err)
+    }
+  }
+  return String(err)
+}
+
 export function reportError(context: string, err: unknown, extra?: ReportMeta): void {
   const meta: ReportMeta = {
     version: pkg.version,
     route: typeof window !== 'undefined' ? window.location.pathname + window.location.search : '',
     ...extra,
   }
-  const message = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
-  console.error(`[iceberg:${context}]`, message, meta)
+  console.error(`[iceberg:${context}]`, formatError(err), meta)
 }

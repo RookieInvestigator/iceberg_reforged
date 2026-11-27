@@ -12,6 +12,7 @@ import {
   CONTRIBUTORS_MAP_KEY,
   DEFAULT_COLOR_KEY,
   DESC_MAP_KEY,
+  ENTITIES_MAP_KEY,
   EXTRA_MAP_KEY,
   FILTER_VISIBLE_KEY,
   DIM_ITEMS_KEY,
@@ -112,6 +113,7 @@ export function useIcebergDataSource() {
   provide(CONTRIBUTORS_MAP_KEY, appendix.contributors)
   provide(EXTRA_MAP_KEY, appendix.extra)
   provide(CATEGORIES_MAP_KEY, appendix.categories)
+  provide(ENTITIES_MAP_KEY, appendix.entities)
 
   return {
     /** 首帧数据对象（静态字段如 categoryColors / tagMap 用它，不随引号风格变） */
@@ -129,6 +131,7 @@ export function useIcebergDataSource() {
     categoriesMap: appendix.categories,
     contributorsMap: appendix.contributors,
     extraMap: appendix.extra,
+    entitiesMap: appendix.entities,
     appendix,
   }
 }

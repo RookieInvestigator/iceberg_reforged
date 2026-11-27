@@ -46,7 +46,7 @@ if (!ia) throw new Error('[V2EntryBody] 缺少 ENTRY_IA_KEY：交互实例须由
 // 这里只用评论区的开关与可用性；动作条已拆到 V2EntryActions，由外壳停靠在滚动区外
 const { commentsOpen, supabaseReady } = ia
 
-// A3：探索轨迹面包屑（栈来自 V2Interactivity；回跳走 navigate-from 复用统一入口）。
+// 探索轨迹面包屑（栈由外壳提供；回跳走 navigate-from 复用统一入口）。
 // 放 body 顶部，桌面卡与移动抽屉都有；超 4 环折叠为首 + … + 末，切词条复位。
 const trailOn = useStore(showTrail);
 const trailState = inject(TRAIL_KEY, null)
@@ -134,7 +134,7 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
       <EntryMarks :itemId="item.id" />
     </EntryMetaBadges>
 
-    <!-- 描述：核心阅读区（15px / 1.8 与 v1 对齐，属展示级例外，不收编进 5 阶梯）。
+    <!-- 描述：核心阅读区（15px / 1.8，属展示级例外，不收编进 5 阶梯）。
          正文支持行内标记与 `> ` 引用块，解析与渲染与手册共用 lib/richText + ui/RichText -->
     <RichText
       v-if="item.desc"
@@ -188,47 +188,45 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
 </template>
 
 <style scoped>
-/* ── 间距节奏 ──
- * 描述上下 32（长描述收为 16）；分区之间 12 / 6；动作条上 10；关联区落底 14（用 padding）。
- * 注意：本容器是普通 block 流，相邻兄弟 margin 会折叠 —— 任何「加大间距」的改动
- * 若写在 margin-bottom 上都可能被折叠吃掉，需实测实得值。 */
-/* card：modal-body 顶 24 + header 底 16 = 40 偏松，首个块回抽贴回标题。
-   用 :first-child 而非固定给徽章 —— 有下潜链时上移的应是面包屑，徽章保持正常流；
-   否则徽章的 -12 会吃掉面包屑的 8px 下间距并造成重叠。 */
-.v2entry-body--card > :first-child { margin-top: -12px; }
-/* 面包屑是细辅助行，比徽章多收 4px，免得与标题之间显得空 */
-.v2entry-body--card > .trail:first-child { margin-top: -16px; }
-
+/* ── 间距节奏（「该收窄收窄，该有呼吸感就有呼吸感」）──
+ * 顶部面包屑 / 徽章紧贴容器上内边距，不再用负 margin 硬抽；
+ * 主描述区保持上下 22px 呼吸感（长描述 16px，窄屏/抽屉 18px / 14px）；
+ * 若描述即为末块，底边距收为 4px 与容器 20px 底边距合成 24px 对称留白；
+ * 拓展区（阅读 / 关联 / 评论）用 18px 上距 + 14px 上内距均衡分隔线呼吸。 */
 .v2entry-desc {
-  margin: 32px 0;
+  margin: 22px 0;
   /* 15px / 1.8 刻意不走 5 阶梯（收进去会跳到 14 或 16，视觉变化过大） */
   font-size: 15px;
   line-height: 1.8;
   -webkit-font-smoothing: antialiased;
   color: var(--white-85);
 }
-/* 长描述内容本身占空间，回归紧凑 */
+/* 长描述内容本身占空间，略微收紧但仍保留阅读呼吸感 */
 .v2entry-desc--tight { margin: 16px 0; }
+.v2entry-desc:last-child { margin-bottom: 4px; }
 .v2entry-desc--empty { color: var(--white-55); font-style: italic; }
 
-/* 链接区：外链与参考组竖向堆叠，间距统一由 gap 给 */
+/* 链接区：外链与参考组竖向堆叠，微间距收紧 */
 .v2entry-links {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 .v2entry-link {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  max-width: 100%;
   font-size: var(--font-xs);
   color: var(--white-60);
   text-decoration: none;
   transition: color 0.15s;
 }
 .v2entry-link:hover { color: var(--white-90); }
-/* 下划线只画在站点名上：域名与图标保持弱化，两者混排时不会连成一条长下划线 */
+/* 下划线只画在站点+标题上：域名与图标保持弱化，两者混排时不会连成一条长下划线 */
 .v2entry-link__name {
+  overflow-wrap: anywhere;
   text-decoration: underline;
   text-underline-offset: 4px;
   text-decoration-color: var(--white-20);
@@ -240,33 +238,23 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
 .v2entry-link:hover .v2entry-link__icon { opacity: 0.9; }
 .v2entry-linklist { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
 
-/* 分区（关联 / 评论）：原为两套（12/4 与 10/8），统一到 12/6 —— 各自仅差 2px，
-   视觉几乎无感，但两区节奏一致 */
+/* 分区（推荐阅读 / 关联词条 / 评论）：分隔线上下均衡留白（上方 16~20px，下方 14px） */
 .v2entry-sec {
-  margin-top: 12px;
-  padding-top: 6px;
-  border-top: 1px solid var(--white-05);
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--white-06);
 }
-/* 关联区落底留白：推荐词条紧贴动作条顶边显得拥挤。
-   用 padding-bottom 而非 margin-bottom —— margin 会与 .v2entry-actions 的
-   margin-top:10px 折叠成 max()，加多少都吃掉大半。
-   padding 不参与折叠，实得 = 14 + 10 = 24，比内部分隔线的 18（12 上边距 + 6 内边距）
-   再拉开一档：动作条是常驻 chrome，与正文的分离应强于正文内部的分隔。 */
-.v2entry-sec--related { padding-bottom: 6px; }
-/* 相邻两分区（关联 → 评论）：评论展开时两区之间的留白由
-   关联区落底 padding（6） + 上一区 margin-top 折叠（=0）= 6 决定，
-   不另设重叠抑制 —— 评论本身就是大块视觉。 */
+.v2entry-sec + .v2entry-sec {
+  margin-top: 14px;
+}
 
-/* A3：探索轨迹面包屑 —— 刻意做弱：细字重（300）、低透明度、不抢正文。
-   层次只靠透明度区分，不靠字重（700 过重）。
-   分隔符与省略号是纯装饰，压到 --white-15/20；历史项 --white-30 为可点最低可辨档；
-   当前项 --white-55 只比历史亮一档，hover 才升到 --white-70。 */
+/* A3：探索轨迹面包屑 —— 刻意做弱：细字重（300）、低透明度、不抢正文。 */
 .trail {
   display: flex; align-items: baseline; flex-wrap: wrap;
   column-gap: 6px; row-gap: 2px;
-  margin: 0 0 8px;
+  margin: 0 0 6px;
   font-size: var(--font-tiny);
-  line-height: 1.6;
+  line-height: 1.55;
   font-weight: 300;
 }
 .trail-sep { color: var(--white-15); font-weight: 300; }
@@ -286,20 +274,14 @@ const descSpacing = computed(() => ((props.item?.desc || '').length > 100 ? 'v2e
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-/* ── 末块回收：动作条在滚动区外的底栏，末块把 .modal-body 的 32px 底内边距减到 16px。
- * 用 .v2entry-links / .v2entry-sec 显式列出而不写 :last-child —— 描述本身
- * 的 32px 上下呼吸应当保留，不参与回收。 */
-.v2entry-body--card > .v2entry-links:last-child,
-.v2entry-body--card > .v2entry-sec:last-child { margin-bottom: -16px; }
-
-@media (max-width: 640px) {
-  /* 窄屏容器 padding 本就更小（header 底 12 + body 顶 16 = 28，桌面为 40），
-     回抽量相应减半，否则内容会贴到标题 */
-  .v2entry-body--card > :first-child { margin-top: -8px; }
-  .v2entry-body--card > .trail:first-child { margin-top: -10px; }
-  /* 窄屏纵向空间宝贵，描述上下留白各收一档 */
-  .v2entry-desc { margin: 24px 0; }
-  .v2entry-desc--tight { margin: 12px 0; }
+@media (max-width: 1023px) {
+  .v2entry-desc { margin: 18px 0; }
+  .v2entry-desc--tight { margin: 14px 0; }
+  .v2entry-desc:last-child { margin-bottom: 2px; }
+  .v2entry-sec {
+    margin-top: 14px;
+    padding-top: 12px;
+  }
+  .v2entry-sec + .v2entry-sec { margin-top: 12px; }
 }
-
 </style>

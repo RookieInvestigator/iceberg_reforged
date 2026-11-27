@@ -187,7 +187,7 @@
    sheet 走自建 .v2sheet-foot（同参数复用）—— padding 用变量单点定义，
    改一处两处生效。 */
 :root {
-  --v2-dock-padding: 4px 12px calc(4px + env(safe-area-inset-bottom, 0px));
+  --v2-dock-padding: 5px 12px calc(5px + env(safe-area-inset-bottom, 0px));
 }
 .v2-dock {
   padding: var(--v2-dock-padding);
@@ -198,4 +198,9 @@
 /* 抽屉面板底栏：行为是 flex 末块，紧贴底部；外观走 .v2-dock */
 .v2sheet-foot {
   /* 占位由 .v2-dock 提供外观，自身只声明语义类 */
+}
+@media (max-width: 1023px) {
+  .v2-dock {
+    padding: 4px 4px calc(4px + env(safe-area-inset-bottom, 0px));
+  }
 }

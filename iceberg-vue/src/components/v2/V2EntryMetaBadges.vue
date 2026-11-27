@@ -94,18 +94,19 @@ const badges = computed<Badge[]>(() => {
 /* 视觉：tier 弱框 / 分类色描边 / 标签裸字；结构 ul/li，圆角走 v2 三档 */
 .meta-row {
   display: flex; flex-wrap: wrap; align-items: center;
-  column-gap: 0.75rem; row-gap: 0.375rem;
+  column-gap: 0.5rem; row-gap: 0.35rem;
   margin: 0; padding: 0; list-style: none;
 }
 .meta-item { display: inline-flex; }
 .meta-chip {
   display: inline-flex; align-items: center;
   font-size: var(--font-tiny); font-weight: 500;
+  line-height: 1.45;
   text-decoration: none;
 }
 .meta-chip--tier,
 .meta-chip--category {
-  padding: 1px 0.375rem;
+  padding: 1px 0.4375rem;
   border-radius: 8px;
   border: 1px solid var(--white-15);
   background: var(--white-03);

@@ -1,97 +1,221 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue'
-import { ChevronLeft, ChevronRight } from '@lucide/vue'
+import { useRoute } from 'vue-router'
+import { ChevronLeft, ChevronRight, ArrowUpRight, ArrowRight } from '@lucide/vue'
 import csvRaw from '../../data/on-this-day.csv?raw'
 import { parseCSV } from '../../lib/csv'
 import { useI18n } from '../../lib/useI18n'
 import { useStore } from '@nanostores/vue'
 import { detailMode } from '../../lib/settingsStore'
+import {
+  formatMMDDLabel,
+  formatYearShort,
+  getAdjacentRecordedDate,
+  getSortedRecordedDates,
+  normalizeOnThisDayEvents,
+  parseDateParam,
+  sortEventsByYearDesc,
+  toMMDD,
+} from '../../lib/onThisDay'
 import BaseModal from '../modals/BaseModal.vue'
 
 const { t, lang } = useI18n()
+const route = useRoute()
 const emit = defineEmits(['close'])
 const mode = useStore(detailMode)
 
 let closeTimer = 0
 onUnmounted(() => clearTimeout(closeTimer))
 
+const isMainRoute = computed(() => route.path === '/' || route.path === '/legacy')
+const fromSource = computed(() => (isMainRoute.value ? 'v2' : undefined))
+
 function goItem(id: string) {
-  // P1-4: 移动端（<1024）合成 mouseover 被 ItemInteractivity 宽度判定拦截，
-  // 跳过 scrollIntoView + 合成 mouseover 路径，直接 dispatch 弹窗事件（setModalItem 内部再分流到底部抽屉）
-  if (window.innerWidth < 1024) {
-    document.dispatchEvent(new CustomEvent('open-item-modal', { detail: id }));
-    emit('close');
-    return;
+  if (isMainRoute.value || window.innerWidth < 1024 || mode.value === 'modal') {
+    document.dispatchEvent(new CustomEvent('open-item-modal', { detail: id }))
+    emit('close')
+    return
   }
-  if (mode.value === 'modal') {
-    document.dispatchEvent(new CustomEvent('open-item-modal', { detail: id }));
+
+  window.location.hash = id
+  const itemEl = document.querySelector<HTMLElement>(`.iceberg-item[data-id="${id}"]`)
+  const visible = !!itemEl && itemEl.isConnected && itemEl.offsetParent !== null && itemEl.getClientRects().length > 0
+  if (visible && itemEl) {
+    itemEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    itemEl.classList.add('tooltip-active')
+    closeTimer = window.setTimeout(() => {
+      itemEl.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true }))
+    }, 700)
   } else {
-    window.location.hash = id;
-    const el = document.querySelector(`.iceberg-item[data-id="${id}"]`);
-    // 词条可能因筛选被隐藏（display:none → offsetParent 为 null）或已不存在，
-    // 此时 800ms 后的合成 mouseover 会静默失败：改为直接 dispatch 弹窗事件兜底
-    const itemEl = el as HTMLElement | null;
-    const visible = !!itemEl && itemEl.isConnected && itemEl.offsetParent !== null && itemEl.getClientRects().length > 0;
-    if (visible) {
-      const target = itemEl!;
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      target.classList.add('tooltip-active');
-      closeTimer = window.setTimeout(() => {
-        target.dispatchEvent(new MouseEvent('mouseover', { bubbles: true, cancelable: true }));
-      }, 800);
-    } else {
-      document.dispatchEvent(new CustomEvent('open-item-modal', { detail: id }));
-    }
+    document.dispatchEvent(new CustomEvent('open-item-modal', { detail: id }))
   }
-  emit('close');
+  emit('close')
 }
+
+const allEvents = normalizeOnThisDayEvents(parseCSV(csvRaw))
+const recordedDates = getSortedRecordedDates(allEvents)
 
 const today = new Date()
 const cur = ref(today)
-function toMMDD(d: Date) { return `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
-function pad(n: number) { return String(n).padStart(2, '0') }
-const all = parseCSV(csvRaw) as any[]
-const events = computed(() => all.filter(e => e.date === toMMDD(cur.value)))
-function goPrev() { const d = new Date(cur.value); d.setDate(d.getDate() - 1); cur.value = d }
-function goNext() { const d = new Date(cur.value); d.setDate(d.getDate() + 1); cur.value = d }
-function goToday() { cur.value = new Date() }
-const monthLocales: Record<string, string> = { zh: 'zh-CN', en: 'en-US', ja: 'ja-JP' };
-const getMonthName = (d: Date) => new Intl.DateTimeFormat(monthLocales[lang.value] || 'zh-CN', { month: 'short' }).format(d)
+const curMMDD = computed(() => toMMDD(cur.value))
+const isToday = computed(() => curMMDD.value === toMMDD(today))
+
+const events = computed(() =>
+  sortEventsByYearDesc(allEvents.filter((e) => e.date === curMMDD.value)),
+)
+
+const prevRecorded = computed(() => getAdjacentRecordedDate(recordedDates, curMMDD.value, -1))
+const nextRecorded = computed(() => getAdjacentRecordedDate(recordedDates, curMMDD.value, 1))
+
+function goPrev() {
+  const d = new Date(cur.value)
+  d.setDate(d.getDate() - 1)
+  cur.value = d
+}
+function goNext() {
+  const d = new Date(cur.value)
+  d.setDate(d.getDate() + 1)
+  cur.value = d
+}
+function goToday() {
+  cur.value = new Date()
+}
+function jumpToRecorded(mmdd: string | null) {
+  if (!mmdd) return
+  const parsed = parseDateParam(mmdd, cur.value.getFullYear())
+  if (parsed) cur.value = parsed
+}
+
+const dateLabel = computed(() => formatMMDDLabel(curMMDD.value, lang.value))
+
+const fullPageRoute = computed(() => ({
+  path: '/on-this-day',
+  query: {
+    date: curMMDD.value,
+    ...(fromSource.value ? { from: fromSource.value } : {}),
+  },
+}))
 </script>
 
 <template>
   <BaseModal :title="t('onThisDay')" size="lg" @close="$emit('close')">
-    <!-- 日期导航 -->
-    <div class="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-      <button @click="goPrev" class="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center rounded-full hover:bg-white-08 text-white-60 hover:text-white transition-colors">
-        <ChevronLeft :size="14" :stroke-width="2" />
+    <!-- 极简日期切换 -->
+    <div class="mb-4 flex items-center justify-between border-b border-white-06 pb-3">
+      <div class="flex items-center gap-1">
+        <button
+          type="button"
+          :aria-label="t('prevDay')"
+          class="flex h-10 w-10 items-center justify-center rounded-md text-white-55 transition-colors hover:bg-white-08 hover:text-white md:h-8 md:w-8"
+          @click="goPrev"
+        >
+          <ChevronLeft :size="15" :stroke-width="2" />
+        </button>
+
+        <span class="min-w-[5rem] text-center text-base font-bold tracking-tight tabular-nums text-white-95">
+          {{ dateLabel }}
+        </span>
+
+        <button
+          type="button"
+          :aria-label="t('nextDay')"
+          class="flex h-10 w-10 items-center justify-center rounded-md text-white-55 transition-colors hover:bg-white-08 hover:text-white md:h-8 md:w-8"
+          @click="goNext"
+        >
+          <ChevronRight :size="15" :stroke-width="2" />
+        </button>
+      </div>
+
+      <button
+        v-if="!isToday"
+        type="button"
+        class="min-h-8 px-2 text-xs text-white-50 transition-colors hover:text-white-90"
+        @click="goToday"
+      >
+        {{ t('today') }}
       </button>
-      <span class="text-white font-bold text-base sm:text-lg tracking-tight">{{ getMonthName(cur) }} {{ pad(cur.getDate()) }}</span>
-      <button @click="goNext" class="w-11 h-11 md:w-8 md:h-8 flex items-center justify-center rounded-full hover:bg-white-08 text-white-60 hover:text-white transition-colors">
-        <ChevronRight :size="14" :stroke-width="2" />
-      </button>
-      <button @click="goToday" class="min-h-11 md:min-h-8 px-2 flex items-center text-micro sm:text-tiny text-white-45 hover:text-white-80 tracking-wider ml-1">{{ t('today') }}</button>
     </div>
 
-    <!-- Events -->
-    <div v-if="events.length === 0" class="py-12 text-center text-white-45 text-sm">{{ t('noEvents') }}</div>
-    <div v-else class="space-y-4 sm:space-y-5">
-      <article v-for="(event, i) in events" :key="i" class="flex gap-1.5">
-        <span v-if="event.year" class="shrink-0 w-10 text-right text-xs font-mono text-white-45 pt-0.5 pr-1.5">{{ event.year }}</span>
-        <span v-else class="shrink-0 w-10" />
-        <div class="min-w-0 -ml-0.5">
-          <h3 class="text-white-85 text-sm font-medium leading-snug break-words">{{ event.title }}</h3>
-          <p v-if="event.desc" class="text-white-45 text-xs leading-relaxed mt-0.5 sm:mt-1">{{ event.desc }}</p>
-          <div v-if="event.link || event.item" class="flex gap-3 sm:gap-4 mt-1.5 sm:mt-2">
-            <a v-if="event.link" :href="event.link" target="_blank" rel="noopener" class="text-micro text-white-30 hover:text-white-60 tracking-wider">{{ t('source') }}</a>
-            <a v-if="event.item" @click.prevent="goItem(event.item)" href="#" class="text-micro text-white-30 hover:text-white-60 tracking-wider cursor-pointer">{{ t('explore') }}</a>
+    <!-- 空状态：无边框纯文字 + 邻近有记录日快跳 -->
+    <div v-if="events.length === 0" class="py-10 text-center">
+      <p class="text-sm text-white-45">{{ t('noEvents') }}</p>
+      <div v-if="prevRecorded || nextRecorded" class="mt-4 flex items-center justify-center gap-4 text-xs tabular-nums text-white-55">
+        <button
+          v-if="prevRecorded"
+          type="button"
+          class="inline-flex min-h-8 items-center gap-1 transition-colors hover:text-accent-soft"
+          @click="jumpToRecorded(prevRecorded)"
+        >
+          <span aria-hidden="true">←</span>
+          <span>{{ formatMMDDLabel(prevRecorded, lang) }}</span>
+        </button>
+        <span v-if="prevRecorded && nextRecorded" class="text-white-15" aria-hidden="true">·</span>
+        <button
+          v-if="nextRecorded"
+          type="button"
+          class="inline-flex min-h-8 items-center gap-1 transition-colors hover:text-accent-soft"
+          @click="jumpToRecorded(nextRecorded)"
+        >
+          <span>{{ formatMMDDLabel(nextRecorded, lang) }}</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 当日记录 -->
+    <div v-else class="divide-y divide-white-05">
+      <article
+        v-for="(event, i) in events"
+        :key="`${event.year}-${event.title}-${i}`"
+        class="grid grid-cols-[3.75rem_minmax(0,1fr)] items-baseline gap-3 py-3.5 first:pt-0 last:pb-0 sm:gap-4"
+      >
+        <span class="text-right font-mono text-xs tabular-nums text-white-45">
+          {{ formatYearShort(event.year, lang, t('otdYearUnknown')) }}
+        </span>
+
+        <div class="min-w-0">
+          <h3 class="break-words text-sm font-semibold leading-snug text-white-92">
+            {{ event.title }}
+          </h3>
+          <p v-if="event.desc" class="mt-1 break-words text-xs leading-[1.7] text-white-52">
+            {{ event.desc }}
+          </p>
+          <div v-if="event.link || event.item" class="mt-2 flex flex-wrap items-center gap-4">
+            <a
+              v-if="event.link"
+              :href="event.link"
+              target="_blank"
+              rel="noopener"
+              class="inline-flex items-center gap-1 text-tiny text-white-42 transition-colors hover:text-accent-soft"
+            >
+              <span>{{ t('source') }}</span>
+              <ArrowUpRight :size="11" :stroke-width="2" />
+            </a>
+            <a
+              v-if="event.item"
+              href="#"
+              class="inline-flex items-center gap-1 text-tiny text-white-42 transition-colors hover:text-accent-soft"
+              @click.prevent="goItem(event.item)"
+            >
+              <span>{{ t('explore') }}</span>
+              <ArrowRight :size="11" :stroke-width="2" />
+            </a>
           </div>
         </div>
       </article>
     </div>
 
-    <template #footer-hint>
-      <router-link to="/on-this-day" class="text-micro text-white-45 hover:text-white-80 tracking-wider">{{ t('viewAll') }} &rarr;</router-link>
+    <!-- 进入完整页面入口 -->
+    <template #footer>
+      <div class="flex items-center justify-end px-2 py-1.5">
+        <router-link
+          :to="fullPageRoute"
+          class="inline-flex min-h-8 items-center gap-1.5 rounded-md border border-accent/35 bg-accent/12 px-3 py-1.5 text-xs font-medium text-accent-soft transition-colors hover:bg-accent/22 hover:text-white"
+          @click="emit('close')"
+        >
+          <span>{{ t('openOnThisDayPage') }}</span>
+          <ArrowRight :size="13" :stroke-width="2" aria-hidden="true" />
+        </router-link>
+      </div>
     </template>
   </BaseModal>
 </template>

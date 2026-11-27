@@ -110,6 +110,8 @@ function interactionsFake() {
   return chain
 }
 
+let rpcMockError: unknown = null
+
 vi.mock('./supabase', () => ({
   supabase: {
     auth: { getUser: () => Promise.resolve({ data: { user: { id: 'u1' } } }) },
@@ -117,6 +119,7 @@ vi.mock('./supabase', () => ({
     // interaction_counts RPC —— 从 iRows 分组聚合计数（匿名路径）
     rpc: (fn: string, args?: Record<string, unknown>) => {
       calls.push(['rpc', fn, JSON.stringify(args || {})])
+      if (rpcMockError) return Promise.resolve({ data: null, error: rpcMockError })
       if (fn === 'interaction_counts') {
         const pType = (args as { p_type?: string })?.p_type
         const pIds = ((args as { p_ids?: string[] })?.p_ids || []) as string[]
@@ -132,7 +135,8 @@ vi.mock('./supabase', () => ({
   isSupabaseReady: () => true,
 }))
 
-import { fetchComments, toggleInteraction, syncFavorites, fetchMyFavorites } from './supabaseData'
+import { fetchComments, fetchInteractionCount, toggleInteraction, syncFavorites, fetchMyFavorites } from './supabaseData'
+import { formatError, reportError } from './report'
 
 beforeEach(() => {
   calls.length = 0
@@ -271,5 +275,64 @@ describe('fetchMyFavorites（F11 错误检查）', () => {
   it('查询失败抛出错误', async () => {
     resetInteractions([], { select: true })
     await expect(fetchMyFavorites()).rejects.toThrow('select denied')
+  })
+})
+
+// ==========================================
+// interaction-count 降级与 PostgREST 错误可读性回归
+// ==========================================
+describe('fetchInteractionCount & reportError 错误降级与可读性', () => {
+  beforeEach(() => {
+    rpcMockError = null
+    vi.restoreAllMocks()
+  })
+
+  it('PGRST202（migration 未在线上执行）静默降级返回 0 且不上报 console.error', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    rpcMockError = {
+      code: 'PGRST202',
+      details: 'Searched for the function public.interaction_counts with parameters p_ids, p_type, but no matches were found in the schema cache.',
+      hint: null,
+      message: 'Could not find the function public.interaction_counts(p_ids, p_type) in the schema cache',
+    }
+    expect(await fetchInteractionCount('item', 'id-1', 'like')).toBe(0)
+    expect(errSpy).not.toHaveBeenCalled()
+  })
+
+  it('网络不可达（Failed to fetch）降级为 warn 返回 0 且不刷 console.error', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    rpcMockError = {
+      message: 'TypeError: Failed to fetch',
+      details: 'TypeError: Failed to fetch',
+      hint: '',
+      code: '',
+    }
+    expect(await fetchInteractionCount('item', 'id-1', 'like')).toBe(0)
+    expect(errSpy).not.toHaveBeenCalled()
+    expect(warnSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('未知服务端错误通过 reportError 上报可读信息（不再输出 [object Object]）', async () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    rpcMockError = {
+      code: '500',
+      message: 'internal server error',
+      details: 'connection pool exhausted',
+      hint: '',
+    }
+    expect(await fetchInteractionCount('item', 'id-1', 'like')).toBe(0)
+    expect(errSpy).toHaveBeenCalledTimes(1)
+    expect(errSpy.mock.calls[0][0]).toBe('[iceberg:supabase]')
+    expect(errSpy.mock.calls[0][1]).toBe('[500] internal server error (connection pool exhausted)')
+    expect(String(errSpy.mock.calls[0][1])).not.toContain('[object Object]')
+  })
+
+  it('formatError / reportError 兼容 Error 实例与纯对象', () => {
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(formatError(new TypeError('bad input'))).toBe('TypeError: bad input')
+    expect(formatError({ foo: 'bar' })).toBe('{"foo":"bar"}')
+    reportError('supabase', { code: '42501', message: 'permission denied' }, { op: 'interaction-count' })
+    expect(errSpy.mock.calls[0][1]).toBe('[42501] permission denied')
   })
 })

@@ -37,8 +37,8 @@ const blocks = computed<RichBlock[]>(() =>
   margin: 0;
   white-space: pre-line;
 }
-/* 段落之间 0.8em；引用块前后稍宽（0.9em）—— 与手册释义同一套节奏 */
-.rt > * + * { margin-top: 0.8em; }
+/* 段落之间 0.75em；引用块前后稍宽（0.85em）—— 与手册释义同一套节奏 */
+.rt > * + * { margin-top: 0.75em; }
 .rt-quote {
   margin: 0;
   padding: 0.15em 0 0.15em 0.85em;
@@ -47,5 +47,5 @@ const blocks = computed<RichBlock[]>(() =>
   white-space: pre-line;
 }
 .rt > * + .rt-quote,
-.rt > .rt-quote + * { margin-top: 0.9em; }
+.rt > .rt-quote + * { margin-top: 0.85em; }
 </style>

@@ -1,8 +1,8 @@
 import { prefersReducedMotion } from './motion'
 /**
- * ShaderCanvas —— WebGL2 全屏着色器画布（Mssh meshh 官方 ShaderCanvas 的 Vue/TS 移植）。
+ * ShaderCanvas —— WebGL2 全屏着色器画布。
  *
- * 官方行为（与 meshh 源码保持一致）：
+ * 引擎行为：
  * - WebGL2 上下文：{ alpha: false, antialias: true, premultipliedAlpha: false }
  * - 全屏三角形（6 顶点两个三角形），fragment shader 为 GLSL ES 3.0
  * - fragment 头部由调用方注入（prepareFragmentShader：version + 三个 precision
@@ -57,13 +57,47 @@ export interface ShaderCanvas {
   setUniforms(partial: Record<string, unknown>): void
   /** [项目扩展] 动态调整帧率上限（0 = 不限）。滚动自适应：滚动时降帧让 GPU 给合成让路 */
   setFps(fps: number): void
-  /** 更新 heightmap 纹理 */
+  /** 动态切换冻结（减弱动效：静态只重绘脏帧，不空转 rAF） */
+  setFrozen(frozen: boolean): void
+  /** 更新高度图配置 */
   setHeightmap(heightmap: HeightmapOptions | undefined): void
   /** 暂停渲染循环（keep-alive 失活时调用，节省 GPU/CPU） */
   pause(): void
   /** 恢复渲染循环 */
   resume(): void
   dispose(): void
+}
+
+export function computeBackingSize(
+  clientWidth: number,
+  clientHeight: number,
+  dpr: number,
+  resolutionScale: number,
+  maxBacking = 1440,
+): { width: number; height: number; actualRatio: number } {
+  const pixelRatio = Math.min(Math.max(dpr || 1, 1), 2) * Math.max(0.1, Math.min(resolutionScale, 1))
+  let width = Math.max(1, Math.floor(clientWidth * pixelRatio))
+  let height = Math.max(1, Math.floor(clientHeight * pixelRatio))
+  const longest = Math.max(width, height)
+  if (longest > maxBacking) {
+    const s = maxBacking / longest
+    width = Math.max(1, Math.floor(width * s))
+    height = Math.max(1, Math.floor(height * s))
+  }
+  const actualRatio = clientWidth > 0 ? width / clientWidth : 1
+  return { width, height, actualRatio }
+}
+
+export function uniformValuesEqual(a: unknown, b: unknown): boolean {
+  if (Object.is(a, b)) return true
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false
+    for (let i = 0; i < a.length; i++) {
+      if (!Object.is(a[i], b[i])) return false
+    }
+    return true
+  }
+  return false
 }
 
 /** 官方顶点着色器：a_position ∈ [-1,1]，v_uv ∈ [0,1] */
@@ -135,21 +169,7 @@ function hexToRgb(value: string): [number, number, number] {
   return [((int >> 16) & 255) / 255, ((int >> 8) & 255) / 255, (int & 255) / 255]
 }
 
-/** setColorArray：u_colors[i] 逐元素上传（vec4，alpha=1）+ 设置 u_colors_length。
- *  颜色在 CPU 端转 linear（gamma 2.2），shader 中无需每像素重复 pow。 */
-function setColorArray(gl: WebGL2RenderingContext, program: WebGLProgram, values: string[]) {
-  const colors = values.slice(0, 8)
-  gl.uniform1i(gl.getUniformLocation(program, 'u_colors_length'), colors.length)
-  colors.forEach((color, index) => {
-    const [sr, sg, sb] = hexToRgb(color)
-    const r = Math.pow(sr, 2.2)
-    const g = Math.pow(sg, 2.2)
-    const b = Math.pow(sb, 2.2)
-    gl.uniform4f(gl.getUniformLocation(program, `u_colors[${index}]`), r, g, b, 1)
-  })
-}
-
-/** 官方 updateHeightmapTexture：在离屏 canvas 上绘制 diamond 或文字遮罩，上传为纹理 */
+/** updateHeightmapTexture：在离屏 canvas 上绘制 diamond 或文字遮罩，上传为纹理 */
 function updateHeightmapTexture(
   gl: WebGL2RenderingContext,
   texture: WebGLTexture,
@@ -208,12 +228,20 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
   canvas.style.cssText = 'display:block;width:100%;height:100%;'
   container.appendChild(canvas)
 
-  // 全屏三角形着色器没有几何边缘，MSAA 无收益，关闭省显存带宽
-  const gl = canvas.getContext('webgl2', { alpha: false, antialias: false, premultipliedAlpha: false })
-  if (!gl) {
+  // 全屏三角形着色器无深度/模板/抗锯齿需求，指定 low-power 避免独立显卡强制唤醒
+  const rawGl = canvas.getContext('webgl2', {
+    alpha: false,
+    antialias: false,
+    depth: false,
+    stencil: false,
+    premultipliedAlpha: false,
+    powerPreference: 'low-power',
+  })
+  if (!rawGl) {
     canvas.remove()
     throw new Error('WebGL2 not supported')
   }
+  const gl: WebGL2RenderingContext = rawGl
 
   const program = createProgram(gl, VERTEX_SHADER, fragmentShader)
   if (!program) {
@@ -238,11 +266,26 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
   const time = gl.getUniformLocation(program, 'u_time')
   const pixelRatioLocation = gl.getUniformLocation(program, 'u_pixelRatio')
 
-  // ── 用户 uniform：location 惰性缓存，每帧全量上传 ──
+  // ── 用户 uniform：location 惰性缓存 ──
   const locations = new Map<string, WebGLUniformLocation | null>()
   const getLocation = (name: string) => {
     if (!locations.has(name)) locations.set(name, gl.getUniformLocation(program, name))
-    return locations.get(name)
+    return locations.get(name) ?? null
+  }
+
+  function setColorArray(values: string[]) {
+    const colors = values.slice(0, 8)
+    gl.uniform1i(getLocation('u_colors_length'), colors.length)
+    for (let index = 0; index < colors.length; index++) {
+      const [sr, sg, sb] = hexToRgb(colors[index])
+      gl.uniform4f(
+        getLocation(`u_colors[${index}]`),
+        Math.pow(sr, 2.2),
+        Math.pow(sg, 2.2),
+        Math.pow(sb, 2.2),
+        1,
+      )
+    }
   }
 
   // ── heightmap 纹理（官方支持，LiquidGradient 未使用） ──
@@ -256,67 +299,77 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
-    gl.uniform1i(gl.getUniformLocation(program, 'u_image_heightmap'), 0)
+    gl.uniform1i(getLocation('u_image_heightmap'), 0)
   }
 
-  // ── 值容器：用户 uniform + 内置变量 ──
+  // ── 值容器：仅在变更时标脏上传，避免冗余 CPU/GL 同步 ──
   const values: Record<string, unknown> = { ...uniforms }
   let uniformsDirty = true
   let sizeDirty = true
-  const reducedMotion = prefersReducedMotion()
+  let needsStaticDraw = true
+  let frozen = prefersReducedMotion()
+  let lastClientWidth = canvas.clientWidth
+  let lastClientHeight = canvas.clientHeight
 
-  const resize = () => {
-    // backing store = CSS 尺寸 × min(DPR,2) × resolutionScale；CSS 布局尺寸不受影响
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2) * resolutionScale
-    let width = Math.max(1, Math.floor(canvas.clientWidth * pixelRatio))
-    let height = Math.max(1, Math.floor(canvas.clientHeight * pixelRatio))
-    // [性能] 绝对上限：有机渐变属低频内容，分辨率超过 MAX_BACKING 后等比降采样
-    // （CSS 放大，视觉无损）。注意 resolutionScale 是乘在 dpr 上的，高分屏（dpr≥1.5）
-    // 上"半分辨率"实际退化到接近全分辨率，片元量翻 2~4 倍——此上限兜底，全页面生效。
-    const MAX_BACKING = 1440
-    const longest = Math.max(width, height)
-    if (longest > MAX_BACKING) {
-      const s = MAX_BACKING / longest
-      width = Math.max(1, Math.floor(width * s))
-      height = Math.max(1, Math.floor(height * s))
-    }
-    const actualRatio = canvas.clientWidth > 0 ? width / canvas.clientWidth : 1
+  const applyResize = (cw = lastClientWidth, ch = lastClientHeight) => {
+    lastClientWidth = cw
+    lastClientHeight = ch
+    const { width, height, actualRatio } = computeBackingSize(
+      cw,
+      ch,
+      window.devicePixelRatio || 1,
+      resolutionScale,
+    )
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = width
       canvas.height = height
       sizeDirty = true
     }
-    // 尺寸未变化时跳过 viewport/uniform 上传，减少每帧 CPU 开销
     if (sizeDirty) {
       gl.viewport(0, 0, width, height)
       gl.uniform2f(resolution, width, height)
       gl.uniform1f(pixelRatioLocation, actualRatio)
       sizeDirty = false
+      needsStaticDraw = true
     }
   }
-  resize()
+  applyResize()
 
-  const observer = new ResizeObserver(resize)
-  observer.observe(canvas)
-
-  // ── 渲染循环（官方：每帧 resize + 全量上传 uniforms + 绘制） ──
   let frame = 0
   let disposed = false
   let paused = false
   const start = performance.now()
   let lastDraw = -Infinity
 
-  const render = (now: number) => {
-    if (disposed || paused) return
-    // 先排下一帧再判断节流，保证封顶时循环不断流；u_time 用真实时间，动画速度不受影响
-    frame = requestAnimationFrame(render)
-    if (minFrameTime > 0 && now - lastDraw < minFrameTime) return
-    lastDraw = now
-    resize()
-    gl.useProgram(program)
-    gl.uniform1f(time, reducedMotion ? 0 : (now - start) / 1000)
+  function scheduleIfNeeded() {
+    if (disposed || paused || frame) return
+    if (!frozen || needsStaticDraw || uniformsDirty || sizeDirty) {
+      frame = requestAnimationFrame(render)
+    }
+  }
 
-    // heightmap 变化时重绘纹理（官方 key 对比逻辑）
+  const observer = new ResizeObserver((entries) => {
+    const entry = entries[0]
+    const cw = entry ? Math.round(entry.contentRect.width) : canvas.clientWidth
+    const ch = entry ? Math.round(entry.contentRect.height) : canvas.clientHeight
+    applyResize(cw, ch)
+    if (frozen) scheduleIfNeeded()
+  })
+  observer.observe(canvas)
+
+  const render = (now: number) => {
+    frame = 0
+    if (disposed || paused) return
+    if (!frozen && minFrameTime > 0 && now - lastDraw < minFrameTime) {
+      frame = requestAnimationFrame(render)
+      return
+    }
+    lastDraw = now
+    if (sizeDirty) applyResize()
+
+    gl.useProgram(program)
+    gl.uniform1f(time, frozen ? 0 : (now - start) / 1000)
+
     if (heightmapTexture && heightmapRef) {
       const key = [
         heightmapRef.label ?? '',
@@ -336,12 +389,10 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
       }
     }
 
-    // 静态 uniform 只在首次或 setUniforms 后上传，避免每帧全量上传
     if (uniformsDirty) {
       for (const [name, value] of Object.entries(values)) {
-        // 官方：colors 数组走 setColorArray（含 u_colors_length）
         if (name === 'u_colors' && Array.isArray(value)) {
-          setColorArray(gl, program, value as string[])
+          setColorArray(value as string[])
           continue
         }
         const location = getLocation(name)
@@ -359,7 +410,6 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
           const [r, g, b] = hexToRgb(value)
           gl.uniform3f(location, r, g, b)
         } else if (Array.isArray(value) && value.every((v) => typeof v === 'number')) {
-          // 兜底：vec2/3/4 数字数组（官方仅 colors 数组走特殊分支，这里按长度上传）
           if (value.length >= 4) gl.uniform4f(location, value[0], value[1], value[2], value[3])
           else if (value.length === 3) gl.uniform3f(location, value[0], value[1], value[2])
           else if (value.length === 2) gl.uniform2f(location, value[0], value[1])
@@ -369,22 +419,26 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
     }
 
     gl.drawArrays(gl.TRIANGLES, 0, 6)
+    needsStaticDraw = false
+    if (!frozen) frame = requestAnimationFrame(render)
   }
   frame = requestAnimationFrame(render)
 
-  // ── 页面不可见就停画：标签页切走/最小化时没有像素被看见，
-  //    继续跑全屏 fragment shader 纯属白烧 GPU 与电。
-  //    回来时按真实时间继续（u_time 基于 performance.now，动画进度不会跳）。──
+  // ── 页面不可见就停画：标签页切走/最小化时没有像素被看见 ──
   const pauseLoop = () => {
     if (paused || disposed) return
     paused = true
-    cancelAnimationFrame(frame)
+    if (frame) {
+      cancelAnimationFrame(frame)
+      frame = 0
+    }
   }
   const resumeLoop = () => {
     if (!paused || disposed) return
     paused = false
     lastDraw = -Infinity
-    frame = requestAnimationFrame(render)
+    needsStaticDraw = true
+    scheduleIfNeeded()
   }
   const onVisibilityChange = () => {
     if (document.hidden) pauseLoop()
@@ -396,21 +450,42 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
   const onContextLost = (e: Event) => {
     e.preventDefault()
     disposed = true
-    cancelAnimationFrame(frame)
+    if (frame) {
+      cancelAnimationFrame(frame)
+      frame = 0
+    }
   }
   canvas.addEventListener('webglcontextlost', onContextLost)
 
   return {
     canvas,
     setUniforms(partial) {
-      Object.assign(values, partial)
+      let changed = false
+      for (const [k, v] of Object.entries(partial)) {
+        if (!uniformValuesEqual(values[k], v)) {
+          values[k] = v
+          changed = true
+        }
+      }
+      if (!changed) return
       uniformsDirty = true
+      needsStaticDraw = true
+      if (frozen) scheduleIfNeeded()
     },
     setFps(fps) {
       minFrameTime = fps && fps > 0 ? 1000 / fps : 0
     },
+    setFrozen(nextFrozen) {
+      const f = nextFrozen || prefersReducedMotion()
+      if (frozen === f) return
+      frozen = f
+      needsStaticDraw = true
+      scheduleIfNeeded()
+    },
     setHeightmap(heightmap) {
       heightmapRef = heightmap
+      needsStaticDraw = true
+      if (frozen) scheduleIfNeeded()
     },
     pause() { pauseLoop() },
     resume() { resumeLoop() },
@@ -418,7 +493,10 @@ export function createShaderCanvas(container: HTMLElement, options: ShaderCanvas
       if (disposed) return
       disposed = true
       paused = true
-      cancelAnimationFrame(frame)
+      if (frame) {
+        cancelAnimationFrame(frame)
+        frame = 0
+      }
       observer.disconnect()
       document.removeEventListener('visibilitychange', onVisibilityChange)
       canvas.removeEventListener('webglcontextlost', onContextLost)

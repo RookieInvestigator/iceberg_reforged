@@ -5,7 +5,7 @@
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 3000 --host 0.0.0.0",
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -40,8 +40,5 @@
     "vite-prerender-plugin": "^0.5.13",
     "vitest": "^4.1.10",
     "vue-tsc": "^2.2.0"
-  },
-  "overrides": {
-    "nanoid": "^3.3.18"
   }
 }

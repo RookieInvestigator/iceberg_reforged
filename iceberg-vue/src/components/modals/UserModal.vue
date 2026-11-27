@@ -203,18 +203,18 @@ const hl = () => heatLabel()
         <span class="ml-auto text-tiny px-2 py-0.5 rounded bg-white-06 text-white-50">{{ hl() }}</span>
       </div>
 
-      <div class="flex gap-4 mt-4 mb-2">
+      <div class="flex gap-4 mt-3.5">
         <button v-if="!editingNick" @click="editNickVal = u.displayName; editingNick = true" class="text-xs text-white-30 bg-transparent border-none cursor-pointer p-0 transition-colors duration-200 hover:text-white-70">{{ t('editNickname') }}</button>
         <button @click="doSync()" class="text-xs text-white-30 bg-transparent border-none cursor-pointer p-0 transition-colors duration-200 hover:text-white-70">{{ t('syncFavoritesBtn') }}</button>
         <button @click="signOut()" class="text-xs text-white-30 bg-transparent border-none cursor-pointer p-0 transition-colors duration-200 hover:text-white-70">{{ t('signOutBtn') }}</button>
       </div>
 
-      <div v-if="statsError" class="text-xs text-danger mt-3 text-center">
+      <div v-if="statsError" class="text-xs text-danger mt-3.5 text-center">
         {{ t('statsError') }}
-        <button @click="refreshStats()" class="block text-center mt-4 w-full text-xs text-white-30 bg-transparent border-none cursor-pointer p-0 transition-colors duration-200 hover:text-white-70">{{ t('retry') }}</button>
+        <button @click="refreshStats()" class="block text-center mt-2 w-full text-xs text-white-30 bg-transparent border-none cursor-pointer p-0 transition-colors duration-200 hover:text-white-70">{{ t('retry') }}</button>
       </div>
 
-      <div v-if="stats" class="grid grid-cols-4 gap-2 mt-4 pt-4 border-t border-white-08">
+      <div v-if="stats" class="grid grid-cols-4 gap-2 mt-3.5 pt-3.5 border-t border-white-08">
         <div class="text-center">
           <span class="text-[1.15rem] font-bold text-white-70 block leading-[1.2]">{{ stats.favorites }}</span>
           <span class="text-micro text-white-25 uppercase tracking-[0.05em] mt-1 block">{{ t('statFavorites') }}</span>
@@ -233,11 +233,11 @@ const hl = () => heatLabel()
         </div>
       </div>
 
-      <div v-if="cat()" class="mt-4 text-xs text-white-30 text-center">
+      <div v-if="cat()" class="mt-3 text-xs text-white-30 text-center">
         {{ t('favCategory') }} <span class="text-white-60 font-medium">{{ cat() }}</span>
       </div>
 
-      <div class="mt-4 pt-4 border-t border-white-08">
+      <div class="mt-3.5 pt-3.5 border-t border-white-08">
         <div class="text-micro font-bold text-white-40 uppercase tracking-[0.08em] mb-2">{{ t('myFeedback') }}</div>
         <div v-if="!myFeedback.length" class="text-xs text-white-25 text-center py-1">{{ t('feedbackEmpty') }}</div>
         <div v-else class="space-y-1.5 max-h-40 overflow-y-auto no-scrollbar">
@@ -255,13 +255,13 @@ const hl = () => heatLabel()
 
     <!-- === 未登录 === -->
     <template v-else>
-      <div class="flex mb-5 border-b border-white-08">
-        <button @click="tab = 'login'; reset()" class="flex-1 py-2.5 text-sm text-center font-medium bg-transparent border-none border-b-2 cursor-pointer -mb-px transition-colors duration-200 hover:text-white-50" :class="tab === 'login' ? 'text-white-85 border-b-white-50' : 'text-white-30 border-b-transparent'">{{ t('login') }}</button>
-        <button @click="tab = 'register'; reset()" class="flex-1 py-2.5 text-sm text-center font-medium bg-transparent border-none border-b-2 cursor-pointer -mb-px transition-colors duration-200 hover:text-white-50" :class="tab === 'register' ? 'text-white-85 border-b-white-50' : 'text-white-30 border-b-transparent'">{{ t('register') }}</button>
+      <div class="flex mb-4 border-b border-white-08">
+        <button @click="tab = 'login'; reset()" class="flex-1 py-2 text-sm text-center font-medium bg-transparent border-none border-b-2 cursor-pointer -mb-px transition-colors duration-200 hover:text-white-50" :class="tab === 'login' ? 'text-white-85 border-b-white-50' : 'text-white-30 border-b-transparent'">{{ t('login') }}</button>
+        <button @click="tab = 'register'; reset()" class="flex-1 py-2 text-sm text-center font-medium bg-transparent border-none border-b-2 cursor-pointer -mb-px transition-colors duration-200 hover:text-white-50" :class="tab === 'register' ? 'text-white-85 border-b-white-50' : 'text-white-30 border-b-transparent'">{{ t('register') }}</button>
       </div>
 
       <template v-if="otpSent">
-        <div class="mb-6 p-4 rounded-md border bg-[color-mix(in_srgb,var(--color-success)_5%,transparent)] border-[color-mix(in_srgb,var(--color-success)_10%,transparent)]">
+        <div class="mb-4 p-3.5 rounded-md border bg-[color-mix(in_srgb,var(--color-success)_5%,transparent)] border-[color-mix(in_srgb,var(--color-success)_10%,transparent)]">
           <p class="text-sm text-success m-0 leading-[1.4]">{{ t('emailSent') }} <strong>{{ email }}</strong></p>
           <p class="text-xs mt-1 m-0 text-[color-mix(in_srgb,var(--color-success)_60%,transparent)]">{{ t('emailSentSub') }}</p>
         </div>
@@ -269,39 +269,44 @@ const hl = () => heatLabel()
       </template>
 
       <template v-else>
-        <div v-if="tab === 'register'" class="mb-4">
-          <label class="block text-xs text-white-40 mb-1 uppercase tracking-[0.05em]" for="um-nick">{{ t('nicknameLbl') }}</label>
-          <input id="um-nick" v-model="nick" type="text" class="w-full box-border px-2.5 py-2 text-sm rounded-md bg-white-06 border border-white-10 text-white-85 transition-colors duration-200 placeholder:text-white-15 focus:border-white-30 focus:bg-white-08 max-sm:text-base" :placeholder="t('nicknamePlaceholder')" autocomplete="username" :aria-invalid="!!errorMsg" />
-        </div>
-        <div class="mb-4">
-          <label class="block text-xs text-white-40 mb-1 uppercase tracking-[0.05em]" for="um-email">{{ t('emailLbl') }}</label>
-          <input id="um-email" v-model="email" type="email" class="w-full box-border px-2.5 py-2 text-sm rounded-md bg-white-06 border border-white-10 text-white-85 transition-colors duration-200 placeholder:text-white-15 focus:border-white-30 focus:bg-white-08 max-sm:text-base" :placeholder="t('emailPlaceholder')" autocomplete="email" :aria-invalid="!!errorMsg" />
-        </div>
-        <div class="mb-4">
-          <label class="block text-xs text-white-40 mb-1 uppercase tracking-[0.05em]" for="um-password">{{ t('passwordLbl') }}</label>
-          <input
-            id="um-password"
-            v-model="password"
-            type="password"
-            class="w-full box-border px-2.5 py-2 text-sm rounded-md bg-white-06 border border-white-10 text-white-85 transition-colors duration-200 placeholder:text-white-15 focus:border-white-30 focus:bg-white-08 max-sm:text-base"
-            :placeholder="t('passwordPlaceholder')"
-            :autocomplete="tab === 'register' ? 'new-password' : 'current-password'"
-            :aria-invalid="!!errorMsg"
-            @keyup.enter="tab === 'register' ? doRegister() : doLogin()"
-          />
+        <div class="space-y-3">
+          <div v-if="tab === 'register'">
+            <label class="block text-xs text-white-40 mb-1.5 uppercase tracking-[0.05em]" for="um-nick">{{ t('nicknameLbl') }}</label>
+            <input id="um-nick" v-model="nick" type="text" class="w-full box-border px-2.5 py-2 text-sm rounded-md bg-white-06 border border-white-10 text-white-85 transition-colors duration-200 placeholder:text-white-15 focus:border-white-30 focus:bg-white-08 max-sm:text-base" :placeholder="t('nicknamePlaceholder')" autocomplete="username" :aria-invalid="!!errorMsg" />
+          </div>
+          <div>
+            <label class="block text-xs text-white-40 mb-1.5 uppercase tracking-[0.05em]" for="um-email">{{ t('emailLbl') }}</label>
+            <input id="um-email" v-model="email" type="email" class="w-full box-border px-2.5 py-2 text-sm rounded-md bg-white-06 border border-white-10 text-white-85 transition-colors duration-200 placeholder:text-white-15 focus:border-white-30 focus:bg-white-08 max-sm:text-base" :placeholder="t('emailPlaceholder')" autocomplete="email" :aria-invalid="!!errorMsg" />
+          </div>
+          <div>
+            <label class="block text-xs text-white-40 mb-1.5 uppercase tracking-[0.05em]" for="um-password">{{ t('passwordLbl') }}</label>
+            <input
+              id="um-password"
+              v-model="password"
+              type="password"
+              class="w-full box-border px-2.5 py-2 text-sm rounded-md bg-white-06 border border-white-10 text-white-85 transition-colors duration-200 placeholder:text-white-15 focus:border-white-30 focus:bg-white-08 max-sm:text-base"
+              :placeholder="t('passwordPlaceholder')"
+              :autocomplete="tab === 'register' ? 'new-password' : 'current-password'"
+              :aria-invalid="!!errorMsg"
+              @keyup.enter="tab === 'register' ? doRegister() : doLogin()"
+            />
+          </div>
+
+          <div class="pt-1">
+            <button v-if="tab === 'login'" @click="doLogin" :disabled="loading" class="w-full px-4 py-2.5 text-sm font-semibold rounded-md bg-white-12 border-none text-white-85 cursor-pointer transition-colors duration-200 enabled:hover:bg-white-20 disabled:opacity-40 disabled:cursor-not-allowed">
+              {{ loading ? t('loggingIn') : t('login') }}
+            </button>
+            <button v-else @click="doRegister" :disabled="loading" class="w-full px-4 py-2.5 text-sm font-semibold rounded-md bg-white-12 border-none text-white-85 cursor-pointer transition-colors duration-200 enabled:hover:bg-white-20 disabled:opacity-40 disabled:cursor-not-allowed">
+              {{ loading ? t('registering') : t('register') }}
+            </button>
+          </div>
         </div>
 
-        <button v-if="tab === 'login'" @click="doLogin" :disabled="loading" class="w-full px-4 py-2.5 text-sm font-semibold rounded-md bg-white-12 border-none text-white-85 cursor-pointer transition-colors duration-200 mt-2 enabled:hover:bg-white-20 disabled:opacity-40 disabled:cursor-not-allowed">
-          {{ loading ? t('loggingIn') : t('login') }}
-        </button>
-        <button v-else @click="doRegister" :disabled="loading" class="w-full px-4 py-2.5 text-sm font-semibold rounded-md bg-white-12 border-none text-white-85 cursor-pointer transition-colors duration-200 mt-2 enabled:hover:bg-white-20 disabled:opacity-40 disabled:cursor-not-allowed">
-          {{ loading ? t('registering') : t('register') }}
-        </button>
         <p v-if="tab === 'register'" class="text-xs text-white-30 mt-3 text-center">
           {{ t('termsAgree') }}<button @click="showTerms = true" class="bg-transparent border-none cursor-pointer p-0 text-xs text-white-50 hover:text-white-85 transition-colors duration-200">《{{ t('termsTitle') }}》</button>
         </p>
 
-        <button v-if="tab === 'login'" @click="doMagicLink" :disabled="loading" class="block text-center mt-4 w-full text-xs text-white-30 bg-transparent border-none cursor-pointer p-0 transition-colors duration-200 hover:text-white-70">
+        <button v-if="tab === 'login'" @click="doMagicLink" :disabled="loading" class="block text-center mt-3 w-full text-xs text-white-30 bg-transparent border-none cursor-pointer p-0 transition-colors duration-200 hover:text-white-70">
           {{ t('magicLink') }}
         </button>
 

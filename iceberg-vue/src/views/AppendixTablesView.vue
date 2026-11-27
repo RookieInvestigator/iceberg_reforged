@@ -22,6 +22,7 @@ const TAB_LABELS: Record<AppendixKey, string> = {
   related: '关联',
   contributors: '署名',
   extra: '标记',
+  entities: '语义实体',
 }
 
 const COL_LABELS: Record<AppendixKey, Record<string, string>> = {
@@ -32,6 +33,7 @@ const COL_LABELS: Record<AppendixKey, Record<string, string>> = {
   related: { source_id: '词条', target_id: '关联词条' },
   contributors: { item_id: '词条', by: '姓名', at: '日期' },
   extra: { item_id: '词条', flag: '标记', note: '备注' },
+  entities: { item_id: '词条', places: '地名', times: '时间', nouns: '核心名词' },
 }
 
 const activeKey = ref<AppendixKey>('overrides')

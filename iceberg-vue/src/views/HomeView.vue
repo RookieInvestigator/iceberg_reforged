@@ -173,7 +173,7 @@ onUnmounted(() => {
 
           <p class="m-0 text-xs text-white-35">{{ statsText }}</p>
 
-          <!-- 主卡区：冰山图 2×2（左下），古籍 / 3D 各占右上右下 -->
+          <!-- 主卡区：冰山图 2×2（左下），星图 / 古籍各占右上右下（3D 冰山降至文字入口） -->
           <div class="ds-cards">
             <button class="ds-cta ds-card--main" @click="router.push('/')">
               <span class="ds-main-top">
@@ -182,18 +182,19 @@ onUnmounted(() => {
               </span>
               <span class="ds-cta-arrow" aria-hidden="true">→</span>
             </button>
+            <button class="ds-cta" @click="router.push('/stars')">
+              <span class="ds-cta-title">{{ t('homeCtaStarsTitle') }}</span>
+              <span class="ds-cta-desc">{{ t('homeCtaStarsDesc') }}</span>
+            </button>
             <button class="ds-cta" @click="router.push('/ancient-book')">
               <span class="ds-cta-title">{{ t('homeCta3Title') }}</span>
               <span class="ds-cta-desc">{{ t('homeCta3Desc') }}</span>
-            </button>
-            <button class="ds-cta" @click="router.push('/3d')">
-              <span class="ds-cta-title">{{ t('homeCta2Title') }}</span>
-              <span class="ds-cta-desc">{{ t('homeCta2Desc') }}</span>
             </button>
           </div>
 
           <!-- 文字入口 -->
           <nav class="flex flex-wrap gap-[1.1rem]" aria-label="Secondary">
+            <button class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="router.push('/3d')">{{ t('homeCta2Title') }}</button>
             <button class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="router.push('/features')">{{ t('navFeatures') }}</button>
             <button class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="router.push('/handbook')">{{ t('homeGlossary') }}</button>
             <button type="button" class="border-none bg-transparent p-0 text-left text-xs text-white-32 no-underline cursor-pointer transition-colors duration-200 hover:text-white-85" @click="showAbout = true">{{ t('homeAbout') }}</button>

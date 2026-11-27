@@ -23,8 +23,50 @@ export interface CommentPage {
   hasMore: boolean
 }
 
+/**
+ * 判断错误是否为「迁移未上线 / RPC 或表不存在 / 请求已取消」等可静默降级情形：
+ * - PostgREST: PGRST202（函数不在 schema cache，常见于 migration.sql 尚未执行）、PGRST205
+ * - Postgres: 42883（undefined_function）、42P01（undefined_table）
+ * - HTTP 404 / "Could not find" / "not found" / "does not exist" / "no matches were found"
+ * - AbortError / ABORT_ERR（快速切页或卸载取消请求）
+ */
+function isGracefulCountDegrade(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  const rec = err as Record<string, unknown>
+  const code = typeof rec.code === 'string' || typeof rec.code === 'number' ? String(rec.code) : ''
+  const name = typeof rec.name === 'string' ? rec.name : ''
+  const status = typeof rec.status === 'number' ? rec.status : 0
+  if (
+    code === 'PGRST202' ||
+    code === 'PGRST205' ||
+    code === '42883' ||
+    code === '42P01' ||
+    code === 'ABORT_ERR' ||
+    name === 'AbortError' ||
+    status === 404
+  ) {
+    return true
+  }
+  const text = [rec.message, rec.details, rec.hint]
+    .filter((v): v is string => typeof v === 'string' && v.length > 0)
+    .join(' ')
+  return /404|not found|could not find|does not exist|no matches were found|AbortError/i.test(text)
+}
+
+/** 浏览器离线 / 网络不可达（如预览环境或网络被阻断）：只读计数降级为 warn 而非 error 刷红 */
+function isNetworkCountError(err: unknown): boolean {
+  if (!err || typeof err !== 'object') return false
+  const rec = err as Record<string, unknown>
+  const status = typeof rec.status === 'number' ? rec.status : undefined
+  const text = [rec.message, rec.details]
+    .filter((v): v is string => typeof v === 'string' && v.length > 0)
+    .join(' ')
+  return status === 0 || /failed to fetch|load failed|networkerror|fetcherror|network request failed/i.test(text)
+}
+
 /** 获取某词条的评论列表（分页） */
 export async function fetchComments(itemId: string, userId?: string, opts?: { offset?: number; limit?: number }): Promise<CommentPage> {
+  if (!itemId || !isSupabaseReady()) return { rows: [], hasMore: false }
   const offset = opts?.offset ?? 0
   const limit = opts?.limit ?? 50
   // F10：offset 必须真正生效 —— 用 range 分页（闭区间取 limit+1 条用于判定 hasMore），
@@ -46,14 +88,21 @@ export async function fetchComments(itemId: string, userId?: string, opts?: { of
 
   // 批量取登录用户的显示名（P0-6：RPC 只返回有 display_name 的用户，
   // 未设昵称/新用户在此回退「匿名用户」展示，避免泄漏邮箱前缀）
-  let nameMap = new Map<string, string>()
+  const nameMap = new Map<string, string>()
   try {
     const uids = [...new Set(page.filter(c => c.user_id).map(c => c.user_id!))]
     if (uids.length) {
-      const { data: names } = await supabase.rpc('batch_user_display', { uids })
+      const { data: names, error: namesErr } = await supabase.rpc('batch_user_display', { uids })
+      if (namesErr && !isGracefulCountDegrade(namesErr) && !isNetworkCountError(namesErr)) {
+        reportError('supabase', namesErr, { op: 'batch_user_display' })
+      }
       if (names) for (const n of names as any[]) nameMap.set(n.user_id, n.display_name)
     }
-  } catch (e) { reportError('supabase', e, { op: 'batch_user_display' }) }
+  } catch (e) {
+    if (!isGracefulCountDegrade(e) && !isNetworkCountError(e)) {
+      reportError('supabase', e, { op: 'batch_user_display' })
+    }
+  }
 
   // 批量取点赞数：interactions_select 只允许读本人行，
   // 匿名计数改走 SECURITY DEFINER RPC interaction_counts（分组聚合，不暴露 user_id 明细）。
@@ -62,15 +111,18 @@ export async function fetchComments(itemId: string, userId?: string, opts?: { of
     try {
       const { data: agg, error: aggErr } = await supabase
         .rpc('interaction_counts', { p_type: 'like', p_ids: ids.map(String) })
-      // RPC 404（migration 未在线上执行）静默降级，不刷红
-      const notFound = aggErr && /404|not found|does not exist/i.test(
-        JSON.stringify((aggErr as { message?: string; details?: string }).message || (aggErr as { details?: string }).details || ''))
-      if (aggErr && !notFound) reportError('supabase', aggErr, { op: 'comment-like-counts' })
+      // RPC 404 / PGRST202（migration 未在线上执行）静默降级，不刷红
+      if (aggErr && !isGracefulCountDegrade(aggErr)) {
+        if (isNetworkCountError(aggErr)) console.warn('[supabase:comment-like-counts]', aggErr)
+        else reportError('supabase', aggErr, { op: 'comment-like-counts' })
+      }
       const countMap = new Map<string, number>()
       for (const l of (agg || []) as { target_id: string; cnt: number }[]) countMap.set(String(l.target_id), Number(l.cnt) || 0)
       likeCounts = ids.map(id => ({ id, count: countMap.get(String(id)) || 0 }))
     } catch (e) {
-      reportError('supabase', e, { op: 'comment-like-counts' })
+      if (!isGracefulCountDegrade(e) && !isNetworkCountError(e)) {
+        reportError('supabase', e, { op: 'comment-like-counts' })
+      }
       likeCounts = ids.map(id => ({ id, count: 0 }))
     }
   }
@@ -103,12 +155,31 @@ export async function fetchComments(itemId: string, userId?: string, opts?: { of
 
 /** 获取某词条的评论总数（只读降级：失败返回 0 并上报） */
 export async function fetchCommentCount(itemId: string): Promise<number> {
-  const { count, error } = await supabase
-    .from('comments')
-    .select('*', { count: 'exact', head: true })
-    .eq('item_id', itemId)
-  if (error) { reportError('supabase', error, { op: 'comment-count' }); return 0 }
-  return count || 0
+  if (!itemId || !isSupabaseReady()) return 0
+  try {
+    const { count, error } = await supabase
+      .from('comments')
+      .select('*', { count: 'exact', head: true })
+      .eq('item_id', itemId)
+    if (error) {
+      if (isGracefulCountDegrade(error)) return 0
+      if (isNetworkCountError(error)) {
+        console.warn('[supabase:comment-count]', error)
+        return 0
+      }
+      reportError('supabase', error, { op: 'comment-count' })
+      return 0
+    }
+    return count || 0
+  } catch (e) {
+    if (isGracefulCountDegrade(e)) return 0
+    if (isNetworkCountError(e)) {
+      console.warn('[supabase:comment-count]', e)
+      return 0
+    }
+    reportError('supabase', e, { op: 'comment-count' })
+    return 0
+  }
 }
 
 /** 发表评论（登录或匿名） */
@@ -149,20 +220,29 @@ function throwIfError<T extends { error: unknown }>(res: T): T {
 }
 
 /** 获取某目标的互动计数（走 interaction_counts RPC；只读降级：失败返回 0 并上报） */
-export async function fetchInteractionCount(targetType: 'item' | 'comment', targetId: string, type: InteractionType) {
+export async function fetchInteractionCount(_targetType: 'item' | 'comment', targetId: string, type: InteractionType) {
+  if (!targetId || !isSupabaseReady()) return 0
   try {
     const { data, error } = await supabase
       .rpc('interaction_counts', { p_type: type, p_ids: [String(targetId)] })
-    // migration.sql 尚未在线上执行时 RPC 404 —— 静默降级为 0，不上报刷红
+    // migration.sql 尚未在线上执行时 RPC 404 / PGRST202 —— 静默降级为 0，不上报刷红
     if (error) {
-      const notFound = typeof error === 'object' && error !== null &&
-        /404|not found|does not exist/i.test(JSON.stringify((error as { message?: string; details?: string }).message || (error as { details?: string }).details || ''))
-      if (!notFound) reportError('supabase', error, { op: 'interaction-count' })
+      if (isGracefulCountDegrade(error)) return 0
+      if (isNetworkCountError(error)) {
+        console.warn('[supabase:interaction-count]', error)
+        return 0
+      }
+      reportError('supabase', error, { op: 'interaction-count' })
       return 0
     }
     const row = (data as { target_id: string; cnt: number }[] | null)?.[0]
     return row ? Number(row.cnt) || 0 : 0
   } catch (e) {
+    if (isGracefulCountDegrade(e)) return 0
+    if (isNetworkCountError(e)) {
+      console.warn('[supabase:interaction-count]', e)
+      return 0
+    }
     reportError('supabase', e, { op: 'interaction-count' })
     return 0
   }
@@ -202,6 +282,7 @@ export async function toggleInteraction(targetType: 'item' | 'comment', targetId
 
 /** 获取当前用户对一批目标的互动状态 */
 export async function fetchMyInteractions(targetType: 'item' | 'comment', targetIds: string[], type: InteractionType) {
+  if (!targetIds.length || !isSupabaseReady()) return new Set<string>()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return new Set<string>()
   const { data } = await throwIfError(

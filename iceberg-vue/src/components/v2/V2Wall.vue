@@ -19,7 +19,7 @@ const filterVisible = inject(FILTER_VISIBLE_KEY, shallowRef(null as Set<string> 
 const dimItems = inject(DIM_ITEMS_KEY, shallowRef(null as Set<string> | null))
 const dimSet = computed(() => dimItems.value)
 
-// 声明式排序：按 sortMode 生成每层有序数组（与 v1 IndexView 同语义）
+// 声明式排序：按 sortMode 生成每层有序数组
 const srt = useStore(sortMode)
 const tierItems = computed(() => {
   const out: Record<string, any[]> = {}

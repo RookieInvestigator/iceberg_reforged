@@ -20,8 +20,8 @@ withDefaults(
 const route = useRoute()
 
 const PAGES = [
+  { path: '/legacy', label: '旧版主图' },
   { path: '/dev-data', label: '数据总览' },
-  { path: '/words', label: '词条星图' },
   { path: '/appendix-edit', label: '副表编辑' },
   { path: '/appendix-tables', label: '整表编辑' },
   { path: '/feedback-review', label: '反馈审核' },

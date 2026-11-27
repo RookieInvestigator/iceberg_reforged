@@ -56,7 +56,7 @@ export default defineConfig({
           const dist = path.resolve(__dirname, 'dist')
           const assetsDir = path.join(dist, 'assets')
           if (!fs.existsSync(assetsDir)) return
-          const base = process.env.CF_PAGES_BRANCH ? '/' : '/iceberg_reforged/'
+          const base = process.env.GITHUB_ACTIONS ? '/iceberg_reforged/' : '/'
 
           // 入口 HTML → 该路由首屏 chunk 前缀（与 prerender 的路由一一对应；
           // /ancient-book 与 /3d 同样在列：前者自带古籍样式 chunk，后者 three.js 最重，
@@ -504,10 +504,15 @@ export default defineConfig({
       },
     },
   ],
-  base: process.env.CF_PAGES_BRANCH ? '/' : '/iceberg_reforged/',
+  base: process.env.GITHUB_ACTIONS ? '/iceberg_reforged/' : '/',
+  server: {
+    host: '0.0.0.0',
+    port: 3000,
+    allowedHosts: true,
+  },
   define: { __DATA_HASH__: JSON.stringify(DATA_HASH) },
   resolve: {
-    alias: { '@': '/src' },
+    alias: { '@': path.resolve(__dirname, 'src') },
   },
   // F08：仅移除 debug 日志与 debugger，保留 console.error/warn 作为生产可观察性出口
   esbuild: {

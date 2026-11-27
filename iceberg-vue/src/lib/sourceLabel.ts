@@ -129,6 +129,7 @@ export const SOURCE_LABELS: Record<string, string> = {
   '163.com': '网易',
   'news.163.com': '网易新闻',
   'qq.com': '腾讯',
+  'new.qq.com': '腾讯新闻',
   'news.qq.com': '腾讯新闻',
   'toutiao.cn': '今日头条',
   'kepuchina.cn': '科普中国',
@@ -308,12 +309,154 @@ export function sourceLabel(url: string): string {
   return host
 }
 
+const CJK_OR_KANA_RE = /[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]/
+const OPAQUE_SEGMENT_RE = /^(?:index|default|main|home|view|list|list-info|detail|article|articleinfo|articles|content|abstract|subject|node|monster|thread|question|watch|wiki|w|s|l|p|r|a|v|t|cn|en|zh|zh-hans|zh-hant|zh-cn|zh-tw|zh-hk|zhs|ens|html|archives|story|posts|blog|post|topic|doulist|note|group|collectiondetail|wp-content|uploads|statics|treasures|broken-news|dzdqs-data|tw-mswx|newsdetail|artists|frontend|site|web|mind\d*|blog-post[_-]?\d*)$/i
+const CMS_ID_RE = /^(?:t\d+_\d+|n\d+|p-?\d+|ac\d+|av\d+|bv[0-9a-z]+|detail[_-]\d+|content[_-]\d+|news\d+|newsdetail[_-]forward[_-]\d+|doc-[a-z0-9]+|article[_-][a-z0-9_-]+|nw\.[a-z0-9_-]+|[a-z]\d+[a-z0-9_-]*|c\d+-\d+|p020\d+)$/i
+const WIKI_PREFIX_RE = /^(?:wiki|w|zh|zh-hans|zh-hant|zh-cn|zh-tw|zh-hk)$/i
+
+function safeDecode(s: string): string {
+  try {
+    return decodeURIComponent(s)
+  } catch {
+    return s
+  }
+}
+
+function isOpaqueSegment(raw: string): boolean {
+  const s = raw.trim()
+  if (!s) return true
+  if (CJK_OR_KANA_RE.test(s)) return false
+  if (s.length <= 1) return true
+  if (/^[\d._-]+$/.test(s)) return true
+  if (OPAQUE_SEGMENT_RE.test(s) || CMS_ID_RE.test(s)) return true
+  if (/^[a-f0-9-]{8,}$/i.test(s)) return true
+  if (!/[\s_-]/.test(s) && /^[a-z0-9]{1,24}$/i.test(s) && (/\d/.test(s) || s.length <= 12)) return true
+  if (/^[a-z0-9_-]{6,}$/i.test(s) && /\d/.test(s) && !/[a-z]{3,}/i.test(s)) return true
+  return false
+}
+
+function clampTitle(title: string, max = 64): string {
+  const clean = title.replace(/\s+/g, ' ').trim()
+  if (clean.length <= max) return clean
+  return `${clean.slice(0, max - 1).trimEnd()}…`
+}
+
+function extractDirectPageTitle(rawUrl: string): string {
+  let u: URL
+  try {
+    u = new URL(rawUrl)
+  } catch {
+    return ''
+  }
+  const host = u.hostname.replace(/^www\./i, '').toLowerCase()
+  const segs = u.pathname.split('/').filter(Boolean).map(safeDecode)
+
+  // 微信公众号文章 /s/<opaque-token> 无标题语义
+  if (host === 'mp.weixin.qq.com' && segs[0] === 's') return ''
+
+  // GitHub: owner/repo · 文件名
+  if (host === 'github.com' && segs.length >= 2) {
+    const repo = `${segs[0]}/${segs[1]}`
+    const last = segs[segs.length - 1]
+    if (segs.length > 2 && last && !isOpaqueSegment(last)) {
+      const cleanFile = last.replace(/\.(md|pdf|txt|s?html?)$/i, '').replace(/_/g, ' ').trim()
+      return clampTitle(`${repo} · ${cleanFile}`)
+    }
+    return clampTitle(repo)
+  }
+
+  // Reddit: r/subreddit · post slug
+  if (host === 'reddit.com' || host.endsWith('.reddit.com')) {
+    const rIdx = segs.indexOf('r')
+    const sub = rIdx >= 0 && segs[rIdx + 1] ? `r/${segs[rIdx + 1]}` : ''
+    const cIdx = segs.indexOf('comments')
+    const slug = cIdx >= 0 && segs[cIdx + 2] ? segs[cIdx + 2].replace(/[_-]+/g, ' ').trim() : ''
+    if (sub && slug && !isOpaqueSegment(slug)) return clampTitle(`${sub} · ${slug}`)
+    return clampTitle(slug || sub)
+  }
+
+  // 百度百科 /item/<词条名>/<可选数字ID>
+  if (host === 'baike.baidu.com' && segs[0] === 'item' && segs[1]) {
+    const title = segs[1].replace(/_/g, ' ').trim()
+    if (!isOpaqueSegment(title)) return clampTitle(title)
+  }
+
+  // Wiki 家族（Wikipedia / Wikisource / Moegirl / Fandom / Wikidot / Screamer / Namu / 求闻 / WikiWand）
+  if (/(?:wikipedia\.org|wikisource\.org|moegirl\.org\.cn|fandom\.com|wikidot\.com|screamer\.wiki|namu\.wiki|qiuwenbaike\.cn|wikiwand\.com)$/.test(host)) {
+    const filtered = segs.filter((s) => !WIKI_PREFIX_RE.test(s))
+    if (filtered.length) {
+      const rawTitle = filtered[filtered.length - 1]
+      const cleanTitle = rawTitle.replace(/_/g, ' ').replace(/^Category:/i, '分类:').trim()
+      const allowSlug = !isOpaqueSegment(cleanTitle) || (host.endsWith('wikidot.com') && /^[a-z0-9-]+$/i.test(rawTitle) && rawTitle.length >= 4)
+      if (allowSlug) {
+        const hash = safeDecode(u.hash.replace(/^#/, '')).replace(/_/g, ' ').trim()
+        const withHash = hash && (CJK_OR_KANA_RE.test(hash) || /[a-z]{3,}/i.test(hash)) && !/^[a-f0-9_-]{6,}$/i.test(hash)
+          ? `${cleanTitle} § ${hash}`
+          : cleanTitle
+        return clampTitle(withHash)
+      }
+    }
+  }
+
+  // 中国哲学书电子化计划：保留作品与篇名路径
+  if (host === 'ctext.org' && segs.length >= 2) {
+    const clean = segs.filter((s) => !/^(?:zhs|zh|ens|en)$/i.test(s)).map((s) => s.replace(/-/g, ' ').trim()).filter(Boolean)
+    if (clean.length) return clampTitle(clean.join(' / '))
+  }
+
+  // 通用路径回溯扫描（从右向左挑可读中文或英文多词 slug）
+  for (let i = segs.length - 1; i >= 0; i--) {
+    let s = segs[i].replace(/\.(s?html?|aspx?|php|jsp|md|pdf)$/i, '').trim()
+    if (!s || CMS_ID_RE.test(s) || OPAQUE_SEGMENT_RE.test(s)) continue
+    if (CJK_OR_KANA_RE.test(s)) {
+      s = s
+        .replace(/-[a-z]{1,4}\d{0,3}(?:-[a-z]{1,4}\d{0,3})*-\d{5,}$/i, '')
+        .replace(/-\d{6,}$/, '')
+        .replace(/[_-]+/g, ' ')
+        .trim()
+      if (!isOpaqueSegment(s)) return clampTitle(s)
+      continue
+    }
+    const strippedNumPrefix = s.replace(/^\d{3,}-/, '')
+    const spaced = strippedNumPrefix.replace(/[_-]+/g, ' ').trim()
+    const words = spaced.split(/\s+/).filter((w) => /^[a-z]{2,}$/i.test(w))
+    if (!isOpaqueSegment(strippedNumPrefix) && words.length >= 2) {
+      return clampTitle(spaced)
+    }
+  }
+
+  // Query 参数回退（如 ?title= / ?word= / ?keyword=）
+  for (const key of ['title', 'word', 'keyword', 'q']) {
+    const val = (u.searchParams.get(key) || '').trim()
+    if (val && (CJK_OR_KANA_RE.test(val) || (!isOpaqueSegment(val) && val.length >= 4))) {
+      return clampTitle(val)
+    }
+  }
+
+  return ''
+}
+
+/** 从 URL 结构尽量提取可读的「页面标题」（纯离线/同步，不发外网请求） */
+export function extractUrlTitle(url: string): string {
+  const raw = (url || '').trim()
+  if (!raw) return ''
+  const archive = /^https?:\/\/web\.archive\.org\/web\/\d+(?:[a-z_]+)?\/(https?:\/\/.+)$/i.exec(raw)
+  if (archive) {
+    const innerUrl = archive[1]
+    const innerSite = sourceLabel(innerUrl)
+    const innerTitle = extractDirectPageTitle(innerUrl)
+    if (innerSite && innerTitle && innerTitle !== innerSite) return clampTitle(`${innerSite} · ${innerTitle}`)
+    return innerTitle || (innerSite && innerSite !== '互联网档案馆' ? innerSite : '')
+  }
+  return extractDirectPageTitle(raw)
+}
+
 export interface LinkDisplay {
-  /** 主文案：人工 label 优先（但不接受「label 就是 URL」这种占位） */
+  /** 主文案：站点名 + 页面标题（人工 label 优先；无页面标题时退回站点名） */
   name: string
   /** 副文案：域名 */
   host: string
-  /** 是否需要在 name 之后再显示域名（未知站点时两者相同，显示一次即可） */
+  /** 是否需要在 name 之后再显示域名（当 name 与域名相同或已以域名开头时省略） */
   showHost: boolean
 }
 
@@ -321,6 +464,22 @@ export interface LinkDisplay {
 export function linkDisplay(label: string | undefined, url: string): LinkDisplay {
   const l = (label || '').trim()
   const host = hostOf(url)
-  const name = l && l !== url ? l : (sourceLabel(url) || url)
-  return { name, host, showHost: !!host && name !== host }
+  const site = sourceLabel(url) || url
+  // 忽略「label 等于 URL」或「label 仅填了域名」的占位值
+  const cleanLabel = l && l !== url && l.toLowerCase() !== host ? l : ''
+
+  let name: string
+  if (cleanLabel && cleanLabel !== site) {
+    name = site && site !== host && !cleanLabel.includes(site)
+      ? `${site} · ${cleanLabel}`
+      : cleanLabel
+  } else {
+    const pageTitle = extractUrlTitle(url)
+    name = pageTitle && pageTitle !== site && !site.includes(pageTitle)
+      ? `${site} · ${pageTitle}`
+      : site
+  }
+
+  const showHost = !!host && name !== host && !name.startsWith(`${host} · `)
+  return { name, host, showHost }
 }

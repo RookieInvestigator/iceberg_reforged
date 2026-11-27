@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 guji-measure.py —— 从 guji-shot.mjs 的截图逐格量墨迹，出一份版式体检表。
 

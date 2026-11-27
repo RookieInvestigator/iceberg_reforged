@@ -152,7 +152,7 @@ function build() {
       needed: true,
     }
   })
-  // 参考轮换机制：旧粒子全部标记淡出，新粒子复用/追加
+  // 轮换机制：旧粒子全部标记淡出，新粒子复用/追加
   for (const p of ps) p.needed = false
   shuffle(newPs)
   shuffle(ps)
@@ -187,7 +187,7 @@ function frame() {
   for (let i = ps.length - 1; i >= 0; i--) {
     const p = ps[i]
     if (!p.needed) {
-      // 淡出并移除（参考 disappear）—— 提升速率让变换过程更快
+      // 淡出并移除 —— 提升速率让变换过程更快
       p.alphaNow -= 0.024
       if (p.alphaNow <= 0) { ps.splice(i, 1); continue }
       ctx.fillStyle = 'rgba(228, 240, 255, ' + Math.max(0, p.alphaNow) + ')'

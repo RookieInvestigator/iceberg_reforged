@@ -229,7 +229,7 @@ function go(): void {
 
 <template>
   <BaseModal :title="t('exportTitle')" size="md" @close="$emit('close')">
-    <div class="space-y-4">
+    <div class="space-y-3.5">
       <div>
         <div class="mb-1.5 text-[length:var(--font-micro)] font-bold text-white-50 uppercase tracking-[0.2em]">{{ t('exportFormat') }}</div>
         <div class="flex gap-1">
@@ -273,7 +273,7 @@ function go(): void {
         </div>
       </div>
 
-      <div class="pt-8">
+      <div class="pt-2">
         <button @click="go" :disabled="working"
           class="w-full py-2 rounded-md text-xs font-medium bg-white text-black hover:bg-white-85 transition-colors disabled:opacity-50">
           {{ working ? t('exporting') : t('exportTitle') }} · {{ exportCountText }}

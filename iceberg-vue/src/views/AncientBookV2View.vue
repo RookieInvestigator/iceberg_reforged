@@ -2,7 +2,6 @@
 /**
  * 古籍模式 v2 · 主视图
  *
- * 与 v1 的差别（算法层）：
  * - 夹注分栏：右列到一半切左列，一格 4 小字
  * - 句读：只有「显示 / 不显示」两种
  * - 版心：固定的黑口 + 象鼻 + 鱼尾（作者自绘 SVG），不做配置项
@@ -666,9 +665,8 @@ onMounted(() => {
   }
   useEventListener(document, 'keydown', onKey)
 
-  // 触摸事件绑在模板根节点上（见 template 的 @touchstart / @touchend / @click）。
-  // 不再 querySelector + 手动解绑：v2 的根节点类名是 .wr，早先按 .sw 去找永远拿到 null，
-  // 手机上的左右滑动与点按翻页因此从未生效。
+  // 触摸事件绑在模板根节点上（见 template 的 @touchstart / @touchend / @click），
+  // 不走 querySelector + 手动解绑。
 
   // 排版偏好变化 → 重排。
   // **font 必须在内**：字体栈写在 cssVars 的 --font-stack 里，

@@ -26,7 +26,7 @@ function copyReprint() {
 
 <template>
   <BaseModal :title="t('copyrightTitle')" size="md" @close="$emit('close')">
-    <div class="space-y-4 text-sm text-white-55 leading-relaxed">
+    <div class="space-y-3.5 text-sm text-white-55 leading-relaxed">
       <div class="text-xs text-white-55 leading-relaxed space-y-2">
         <p>{{ t('licenseNote') }}</p>
         <p class="text-center">
@@ -37,7 +37,7 @@ function copyReprint() {
         <p>{{ t('takedownNote') }}</p>
       </div>
 
-      <div class="border-t border-white-05 pt-4 text-xs text-white-55 leading-relaxed space-y-2">
+      <div class="border-t border-white-05 pt-3.5 text-xs text-white-55 leading-relaxed space-y-2">
         <p>{{ t('reprintNote') }}</p>
         <pre class="no-scrollbar max-h-36 overflow-y-auto whitespace-pre-wrap break-words rounded-lg bg-white-03 p-3 text-left text-white-55">{{ reprintPreview }}</pre>
         <p class="text-center">
@@ -47,7 +47,7 @@ function copyReprint() {
         </p>
       </div>
 
-      <div class="border-t border-white-05 pt-4 text-xs text-white-55 leading-relaxed space-y-2">
+      <div class="border-t border-white-05 pt-3.5 text-xs text-white-55 leading-relaxed space-y-2">
         <p>{{ t('reprintRosterMust') }}</p>
         <p>{{ t('reprintRoster') }} · {{ roster.length }}</p>
         <p class="whitespace-pre-wrap break-words text-left text-white-55">{{ roster.join('、') }}</p>

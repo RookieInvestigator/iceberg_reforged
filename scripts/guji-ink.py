@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 guji-ink.py —— 从 guji-shot.mjs 的截图里逐格量**真实墨迹**，判断字在字格里的落点。
 

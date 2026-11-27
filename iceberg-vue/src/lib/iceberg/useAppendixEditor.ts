@@ -259,7 +259,10 @@ export function useAppendixEditor(): AppendixEditor {
   function changeCount(id: string): number {
     void tick.value
     let n = 0
-    for (const [, store] of stores) n += (store.get(id) || []).length
+    for (const [key, store] of stores) {
+      if (key === 'entities') continue
+      n += (store.get(id) || []).length
+    }
     return n
   }
 
